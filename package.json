@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Challenge for new Scrive elm developers",
   "scripts": {
-    "postinstall": "elm-tooling install"
+    "postinstall": "elm-tooling install",
+    "start": "vite dev"
   },
   "author": "Scrive",
   "license": "MIT",
