@@ -52,6 +52,9 @@ userGroup =
     {
       "name": "status",
       "value": "busy"
+    },
+    {
+      "name": "2FA enabled",
     }
   ]
 }"""
