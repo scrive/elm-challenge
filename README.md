@@ -46,6 +46,6 @@ Good luck and enjoy the challenge.
 
 
 ```
-  npm ci
-  npm start
+npm ci
+npm start
 ```
