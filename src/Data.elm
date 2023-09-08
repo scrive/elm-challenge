@@ -54,7 +54,7 @@ userGroup =
       "value": "busy"
     },
     {
-      "name": "2FA enabled",
+      "name": "2FA enabled"
     }
   ]
 }"""

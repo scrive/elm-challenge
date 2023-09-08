@@ -55,7 +55,7 @@ view _ =
         , subheader "Here are your data:"
         , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
         , header "Now turn them into form."
-        , subheader "See README for details of the task. Good luck."
+        , subheader "See README for details of the task. Good luck 🍀 "
         ]
 
 
@@ -66,10 +66,14 @@ view _ =
 main : Program () Model Msg
 main =
     Browser.application
-        { view = \model -> { title = "Scrive elm challenge task", body = [ view model ] }
-        , init = \_ _ _ -> ( {}, Cmd.none )
-        , update = \_ model -> ( model, Cmd.none )
+        { view =
+            \model ->
+                { title = "Scrive elm challenge task"
+                , body = [ view model ]
+                }
+        , init = \_ _ _ -> init
+        , update = update
         , subscriptions = always Sub.none
-        , onUrlRequest = \_ -> NoOp
-        , onUrlChange = \_ -> NoOp
+        , onUrlRequest = always NoOp
+        , onUrlChange = always NoOp
         }
