@@ -1,8 +1,8 @@
-# Task - Settings 
+# Task - Tags 
 
 ## Instructions
 
-Your task is to implement a form for Settings part of User group data.
+Your task is to implement a form for Tags part of User group data.
 
 Feel free to use any package or technique you are used to or you would like to try out.
 
@@ -10,36 +10,19 @@ You have a data provided to you as a `JSON` string in `Data.elm` module. They ar
 
 ## Requirements
 
-The form should only display fields for values that are not null in the incoming request with option to add new ones that are not there yet. Data retention settings are 
+The form should only display fields for values in tags. 
 
-- preparation, 
-- closed, 
-- canceled, 
-- timed out, 
-- rejected, 
-- error
+You should be able to add and remove tags and edit their values.
 
-If settings are inherited, you should just display values without being able to edit them.
+Value of tag is optional - it might not be presented in the data.
 
-Root user group can't use inheritance.
+Tags should have unique names. You should not allow duplicate names of tags.
 
+Names should not be longer than 32 characters
 
 ## Nice to have
 
 - form is styled to follow nice UX/UI design
 - is responsive
 - is accessible
-
-## Data description
-
-This part of data controls how many days can the document stay in certain state (preparation, closed, canceled, timedout, rejected, error) before it is discarded. Value of `null` means that it is never discarded in this state.
-
-These settings can be also inherited from any user group above.
-
-### Inheritance
-
-User groups live in a tree structure - they can have many children User Groups which can inherit Settings and Contact details. 
-User group with `parent_id: null` is the root user group and cannot inherit anything.
-
-
 
