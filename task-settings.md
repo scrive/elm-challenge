@@ -19,10 +19,11 @@ The form should only display fields for values that are not null in the incoming
 - rejected, 
 - error
 
+Form should also contain the boolean for immediate trashing value.
+
 If settings are inherited, you should just display values without being able to edit them.
 
 Root user group can't use inheritance.
-
 
 ## Nice to have
 
