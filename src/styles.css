@@ -9,21 +9,24 @@ body {
 .loader {
   width: 47px;
   height: 47px;
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 .loader:before,
 .loader:after {
   content:"";
   display: block;
   border: 24px solid;
-  border-color: transparent transparent #000  #000;
+  border-color: transparent transparent #dbeafe  #dbeafe;
   position: absolute;
   left: 0;
   top: 0;
   animation: mvx 1.2s infinite ease-in;
 }
 .loader:before {
-  border-color:#000  #000 transparent transparent;
+  border-color:#dbeafe  #dbeafe transparent transparent;
   animation-name:mvrx;
 }
 @keyframes mvx {
