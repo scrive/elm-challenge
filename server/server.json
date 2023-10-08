@@ -1,0 +1,55 @@
+{
+ "restAPI": {
+    "id": "5",
+    "parent_id": "1",
+    "name": "A Child Usergroup",
+    "children": [
+      {
+        "id": "2",
+        "name": "Some child user group"
+      },
+      {
+        "id": "3",
+        "name": "Yet another child user group"
+      }
+    ],
+    "settings": {
+      "inherited_from": null,
+      "data_retention_policy": {
+        "idle_doc_timeout_preparation": null,
+        "idle_doc_timeout_closed": null,
+        "idle_doc_timeout_canceled": 42,
+        "idle_doc_timeout_timedout": null,
+        "idle_doc_timeout_rejected": null,
+        "idle_doc_timeout_error": null,
+        "immediate_trash": false
+      }
+    },
+    "contact_details": {
+      "inherited_from": "1",
+      "address": {
+        "preferred_contact_method": "email",
+        "email": "scrive@scrive.com",
+        "phone": null,
+        "company_name": "Scrive",
+        "address": "Grev Turegatan 11A",
+        "zip": "114 46",
+        "city": "Stockholm",
+        "country": "Sweden"
+      }
+    },
+    "tags": [
+      {
+        "name": "founded",
+        "value": "1846"
+      },
+      {
+        "name": "status",
+        "value": "busy"
+      },
+      {
+        "name": "2FA enabled"
+      }
+    ]
+  }
+}
