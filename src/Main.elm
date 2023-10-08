@@ -363,7 +363,7 @@ view model =
                                     ]
                                 ]
                             , Html.div
-                                [ Attr.class "bg-blue-100 p-4 mb-10" ]
+                                [ Attr.class "bg-blue-100 p-4 mb-10 overflow-hidden" ]
                                 [ case model.tabActive of
                                     SettingsTab ->
                                         viewSettings userGroup.settings model.showTooltip
@@ -408,20 +408,17 @@ viewTags tags =
 
 viewSettings : Settings -> Bool -> Html Msg
 viewSettings settings showTooltip =
-    Html.section []
-        [ -- Html.h3 [ Attr.class "text-2xl" ] [ text "Document Retention" ]
-          Html.p [ Attr.class "mb-10" ] [ text "How many days do you want document to stay in a certain state ?" ]
-        , Html.form [ Attr.class "flex flex-col" ]
-            [ if settings.isInherited then
-                Html.div
-                    [ Attr.id "overlay"
-                    , Attr.class "bg-gray-200 w-[100%] h-[100%]"
-                    ]
-                    []
+    Html.section [ Attr.class "relative" ]
+        [ if settings.isInherited then
+            viewDisablePageOverlay
 
-              else
-                text ""
-            , Html.fieldset [ Attr.class "mb-4" ]
+          else
+            text ""
+
+        -- Html.h3 [ Attr.class "text-2xl" ] [ text "Document Retention" ]
+        , Html.p [ Attr.class "mb-10" ] [ text "How many days do you want document to stay in a certain state ?" ]
+        , Html.form [ Attr.class "flex flex-col" ]
+            [ Html.fieldset [ Attr.class "mb-4" ]
                 [ Html.label [ Attr.class "flex items-center", Attr.for "preparation" ]
                     [ Html.span [ Attr.class "w-[94px]" ] [ text "Preparation" ]
                     , viewInputText { id = "preparation", value = settings.preparation, overrideClass = Just "mr-4 w-[45px]" }
@@ -511,20 +508,15 @@ viewInputText { id, value, overrideClass } =
 
 viewContactDetails : ContactDetails -> Bool -> Html Msg
 viewContactDetails contactDetails shouldShowDropdown =
-    Html.section []
-        [ -- [ Html.h3 [ Attr.class "text-2xl" ] [ text "Details form" ]
-          Html.p [ Attr.class "mb-10" ] [ text "User's contact details" ]
-        , Html.form [ Attr.class "flex flex-col" ]
-            [ if contactDetails.isInherited then
-                Html.div
-                    [ Attr.id "overlay"
-                    , Attr.class "bg-gray-200 w-[100%] h-[100%]"
-                    ]
-                    []
+    Html.section [ Attr.class "relative" ]
+        [ if contactDetails.isInherited then
+            viewDisablePageOverlay
 
-              else
-                text ""
-            , Html.div [ Attr.class "flex mb-20 items-center" ]
+          else
+            text ""
+        , Html.p [ Attr.class "mb-10" ] [ text "User's contact details" ]
+        , Html.form [ Attr.class "flex flex-col" ]
+            [ Html.div [ Attr.class "flex mb-20 items-center" ]
                 [ Html.div [] [ text "Choose preferred contact method" ]
                 , viewPreferredMethodDropdown { prefMethod = contactDetails.preferredContactMethod, shouldShowDropdown = shouldShowDropdown }
                 ]
@@ -626,6 +618,23 @@ viewContactDetails contactDetails shouldShowDropdown =
                     ]
                 ]
             ]
+        ]
+
+
+viewDisablePageOverlay : Html msg
+viewDisablePageOverlay =
+    Html.div []
+        [ Html.div [ Attr.class "z-12 text-red-400 mb-4" ]
+            [ Html.div [ Attr.class "flex" ]
+                [ Html.span [ Attr.class "w-[20px] flex mr-2" ] [ Icons.cautionIcon ]
+                , Html.p [] [ text "It's not possible to change data on this page" ]
+                ]
+            ]
+        , Html.div
+            [ Attr.id "overlay"
+            , Attr.class "bg-blue-100 opacity-60 w-[100%] h-[100%] absolute z-10"
+            ]
+            []
         ]
 
 
