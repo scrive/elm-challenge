@@ -9,7 +9,6 @@ import Html.Attributes as Attr
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (optional, optionalAt, required, requiredAt)
-import Set exposing (Set)
 import Util
 
 
@@ -54,12 +53,12 @@ type PreferredContactMethod
 
 type alias Settings =
     { isInherited : Bool
-    , preparation : Maybe Int
-    , closed : Maybe Int
-    , canceled : Maybe Int
-    , timedOut : Maybe Int
-    , rejected : Maybe Int
-    , error : Maybe Int
+    , preparation : String
+    , closed : String
+    , canceled : String
+    , timedOut : String
+    , rejected : String
+    , error : String
     , shouldTrash : Bool
     }
 
@@ -138,12 +137,12 @@ decodeSettings : Decoder Settings
 decodeSettings =
     Decode.succeed Settings
         |> required "inherited_from" decodeInheritFrom
-        |> requiredAt [ "data_retention_policy", "idle_doc_timeout_preparation" ] (Decode.maybe Decode.int)
-        |> requiredAt [ "data_retention_policy", "idle_doc_timeout_closed" ] (Decode.maybe Decode.int)
-        |> requiredAt [ "data_retention_policy", "idle_doc_timeout_canceled" ] (Decode.maybe Decode.int)
-        |> requiredAt [ "data_retention_policy", "idle_doc_timeout_timedout" ] (Decode.maybe Decode.int)
-        |> requiredAt [ "data_retention_policy", "idle_doc_timeout_rejected" ] (Decode.maybe Decode.int)
-        |> requiredAt [ "data_retention_policy", "idle_doc_timeout_error" ] (Decode.maybe Decode.int)
+        |> optionalAt [ "data_retention_policy", "idle_doc_timeout_preparation" ] (Decode.int |> Decode.map String.fromInt) ""
+        |> optionalAt [ "data_retention_policy", "idle_doc_timeout_closed" ] (Decode.int |> Decode.map String.fromInt) ""
+        |> optionalAt [ "data_retention_policy", "idle_doc_timeout_canceled" ] (Decode.int |> Decode.map String.fromInt) ""
+        |> optionalAt [ "data_retention_policy", "idle_doc_timeout_timedout" ] (Decode.int |> Decode.map String.fromInt) ""
+        |> optionalAt [ "data_retention_policy", "idle_doc_timeout_rejected" ] (Decode.int |> Decode.map String.fromInt) ""
+        |> optionalAt [ "data_retention_policy", "idle_doc_timeout_error" ] (Decode.int |> Decode.map String.fromInt) ""
         |> requiredAt [ "data_retention_policy", "immediate_trash" ] Decode.bool
 
 
@@ -209,6 +208,19 @@ decodeTag =
         |> optional "value" Decode.string ""
 
 
+preferredToString : PreferredContactMethod -> String
+preferredToString prf =
+    case prf of
+        Email ->
+            "Email"
+
+        Phone ->
+            "Phone"
+
+        Post ->
+            "Post"
+
+
 
 ---- VIEW ----
 
@@ -234,13 +246,15 @@ view model =
     --     , header "Now turn them into form."
     --     , subheader "See README for details of the task. Good luck 🍀 "
     --     ]
-    Html.div []
+    Html.div [ Attr.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
         [ case model.userGroup of
             Initial ->
                 text ""
 
             Loading ->
-                Html.div [] [ text "Loading ...." ]
+                Html.div []
+                    [ Html.span [ Attr.class "loader" ] []
+                    ]
 
             Error error ->
                 Html.div [ Attr.class "bg-red-500" ] [ text error ]
@@ -248,14 +262,27 @@ view model =
             Success userGroup ->
                 Html.div []
                     [ Html.div []
-                        [ Html.h1 [] [ text "Welcome to my Task !" ]
+                        [ Html.h1 [ Attr.class "" ] [ text "User Group Settings Form" ]
                         , Html.p [] [ text "Here are 3 forms presented" ]
                         ]
 
                     -- , Html.pre [ Attr.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text <| Debug.toString userGroup ]
-                    , viewSettings userGroup.settings
-                    , viewContactDetails userGroup.contactDetails
-                    , viewTags userGroup.tags
+                    , Html.div []
+                        [ Html.div []
+                            [ Html.ul []
+                                [ Html.li [] [ text "Settings" ]
+                                , Html.li [] [ text "Contact Details" ]
+                                , Html.li [] [ text "Tags" ]
+                                ]
+                            ]
+                        , Html.div
+                            []
+                            [ viewSettings userGroup.settings
+                            , viewContactDetails userGroup.contactDetails
+                            , viewTags userGroup.tags
+                            ]
+                        ]
+                    , Html.button [] [ text "Submit" ]
                     ]
         ]
 
@@ -263,7 +290,7 @@ view model =
 viewTags : Tags -> Html Msg
 viewTags tags =
     Html.section []
-        [ Html.h2 [] [ text "Tags form" ]
+        [ Html.h3 [] [ text "Tags form" ]
         , Html.p [] [ text "[placeholder for Tags description]" ]
         , Html.form []
             [ Html.label [ Attr.for "newTag" ]
@@ -288,7 +315,7 @@ viewTags tags =
 viewSettings : Settings -> Html Msg
 viewSettings settings =
     Html.section []
-        [ Html.h2 [] [ text "Settings form" ]
+        [ Html.h3 [] [ text "Settings form" ]
         , Html.p [] [ text "[placeholder for Settings description]" ]
         , Html.form []
             [ if settings.isInherited then
@@ -300,51 +327,26 @@ viewSettings settings =
 
               else
                 text ""
-            , case settings.preparation of
-                Just preparation ->
-                    Html.label [ Attr.for "preparation" ]
-                        [ text "Preparation"
-                        , Html.input [ Attr.type_ "text", Attr.id "preparation", Attr.value <| String.fromInt preparation ] []
-                        ]
-
-                Nothing ->
-                    text ""
-            , case settings.closed of
-                Just closed ->
-                    Html.label [ Attr.for "closed" ]
-                        [ text "Closed"
-                        , Html.input [ Attr.type_ "text", Attr.id "closed", Attr.value <| String.fromInt closed ] []
-                        ]
-
-                Nothing ->
-                    text ""
-            , case settings.canceled of
-                Just canceled ->
-                    Html.label [ Attr.for "canceled" ]
-                        [ text "Canceled"
-                        , Html.input [ Attr.class "input", Attr.id "canceled", Attr.type_ "text", Attr.value <| String.fromInt canceled ] []
-                        ]
-
-                Nothing ->
-                    text ""
-            , case settings.timedOut of
-                Just timedOut ->
-                    Html.label [ Attr.for "timedOut" ]
-                        [ text "Timed out"
-                        , Html.input [ Attr.type_ "text", Attr.id "timedOut", Attr.value <| String.fromInt timedOut ] []
-                        ]
-
-                Nothing ->
-                    text ""
-            , case settings.error of
-                Just error ->
-                    Html.label [ Attr.for "error" ]
-                        [ text "Error"
-                        , Html.input [ Attr.type_ "text", Attr.id "error", Attr.value <| String.fromInt error ] []
-                        ]
-
-                Nothing ->
-                    text ""
+            , Html.label [ Attr.for "preparation" ]
+                [ text "Preparation"
+                , Html.input [ Attr.type_ "text", Attr.id "preparation", Attr.value settings.preparation ] []
+                ]
+            , Html.label [ Attr.for "closed" ]
+                [ text "Closed"
+                , Html.input [ Attr.type_ "text", Attr.id "closed", Attr.value settings.closed ] []
+                ]
+            , Html.label [ Attr.for "canceled" ]
+                [ text "Canceled"
+                , Html.input [ Attr.class "input", Attr.id "canceled", Attr.type_ "text", Attr.value settings.canceled ] []
+                ]
+            , Html.label [ Attr.for "timedOut" ]
+                [ text "Timed out"
+                , Html.input [ Attr.type_ "text", Attr.id "timedOut", Attr.value settings.timedOut ] []
+                ]
+            , Html.label [ Attr.for "error" ]
+                [ text "Error"
+                , Html.input [ Attr.type_ "text", Attr.id "error", Attr.value settings.error ] []
+                ]
             , Html.label [ Attr.for "shouldTrash" ]
                 [ text "Should Trash ?"
                 , Html.input [ Attr.type_ "checkbox", Attr.id "shouldTrash", Attr.checked settings.shouldTrash ] []
@@ -356,7 +358,7 @@ viewSettings settings =
 viewContactDetails : ContactDetails -> Html Msg
 viewContactDetails contactDetails =
     Html.section []
-        [ Html.h2 [] [ text "Contact Details form" ]
+        [ Html.h3 [] [ text "Contact Details form" ]
         , Html.p [] [ text "[placeholder for Contact details description]" ]
         , Html.form []
             [ if contactDetails.isInherited then
@@ -368,6 +370,17 @@ viewContactDetails contactDetails =
 
               else
                 text ""
+            , Html.div []
+                [ Html.div [] [ text "Choose preferred contact method" ]
+                , Html.div []
+                    [ Html.div [] [ text <| preferredToString contactDetails.preferredContactMethod ]
+                    , Html.div []
+                        [ Html.div [] [ text "Email" ]
+                        , Html.div [] [ text "Phone" ]
+                        , Html.div [] [ text "Post" ]
+                        ]
+                    ]
+                ]
             , Html.label
                 [ Attr.for "email" ]
                 [ text "Email"
