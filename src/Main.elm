@@ -317,51 +317,11 @@ view model =
                             [ Html.img [ Attr.src "logo.png" ] []
                             ]
                         , Html.h1 [ Attr.class "text-5xl mb-10" ] [ text "User Group Settings Form" ]
-
-                        -- , Html.p [] [ text "Here are 3 forms presented" ]
                         ]
                     , Html.div [ Attr.class "" ]
                         [ Html.div [ Attr.class "flex flex-col" ]
                             [ Html.div []
-                                [ Html.ul [ Attr.class "flex text-3xl cursor-pointer" ]
-                                    [ Html.li
-                                        [ Attr.class "p-4"
-                                        , Attr.class
-                                            (if model.tabActive == SettingsTab then
-                                                "bg-blue-100"
-
-                                             else
-                                                "bg-white"
-                                            )
-                                        , onClick (ActiveTab SettingsTab)
-                                        ]
-                                        [ text "Settings" ]
-                                    , Html.li
-                                        [ Attr.class "p-4"
-                                        , Attr.class
-                                            (if model.tabActive == DetailsTab then
-                                                "bg-blue-100"
-
-                                             else
-                                                "bg-white"
-                                            )
-                                        , onClick (ActiveTab DetailsTab)
-                                        ]
-                                        [ text "Details" ]
-                                    , Html.li
-                                        [ Attr.class "p-4"
-                                        , Attr.class
-                                            (if model.tabActive == TagsTab then
-                                                "bg-blue-100"
-
-                                             else
-                                                "bg-white"
-                                            )
-                                        , onClick (ActiveTab TagsTab)
-                                        ]
-                                        [ text "Tags" ]
-                                    ]
-                                ]
+                                [ viewTabs model.tabActive ]
                             , Html.div
                                 [ Attr.class "bg-blue-100 p-4 mb-10 overflow-hidden" ]
                                 [ case model.tabActive of
@@ -375,31 +335,80 @@ view model =
                                         viewTags userGroup.tags
                                 ]
                             ]
-                        , Html.button [ Attr.class "font-semi-bold px-5 py-2 rounded-full bg-blue-400 hover:bg-blue-300 active:bg-blue-500 transition-all text-white" ] [ text "Submit" ]
+                        , Html.button [ Attr.class "flex font-semi-bold px-5 py-2 rounded-full bg-blue-400 hover:bg-blue-300 active:bg-blue-500 easy-in-out transition-all text-white" ] [ Html.span [ Attr.class "mr-2 flex w-[20px]" ] [ Icons.checkIcon ], text "Submit" ]
                         ]
                     ]
+        ]
+
+
+viewTabs : TabsActive -> Html Msg
+viewTabs tabActive =
+    Html.ul [ Attr.class "flex text-3xl cursor-pointer" ]
+        [ Html.li
+            [ Attr.class "p-4"
+            , Attr.class
+                (if tabActive == SettingsTab then
+                    "bg-blue-100"
+
+                 else
+                    "bg-white"
+                )
+            , onClick (ActiveTab SettingsTab)
+            ]
+            [ text "Settings" ]
+        , Html.li
+            [ Attr.class "p-4"
+            , Attr.class
+                (if tabActive == DetailsTab then
+                    "bg-blue-100"
+
+                 else
+                    "bg-white"
+                )
+            , onClick (ActiveTab DetailsTab)
+            ]
+            [ text "Details" ]
+        , Html.li
+            [ Attr.class "p-4"
+            , Attr.class
+                (if tabActive == TagsTab then
+                    "bg-blue-100"
+
+                 else
+                    "bg-white"
+                )
+            , onClick (ActiveTab TagsTab)
+            ]
+            [ text "Tags" ]
         ]
 
 
 viewTags : Tags -> Html Msg
 viewTags tags =
     Html.section []
-        [ Html.h3 [ Attr.class "text-2xl" ] [ text "Tags form" ]
-        , Html.p [] [ text "[placeholder for Tags description]" ]
-        , Html.form [ Attr.class "flex flex-col" ]
-            [ Html.label [ Attr.for "newTag" ]
-                [ text "+ Add new tag"
-                , Html.input [ Attr.class "ml-4", Attr.id "newTag", Attr.value "" ] []
+        [ Html.p [ Attr.class "mb-10" ] [ text "Add new tags, limit is 32 characters and they should be unique" ]
+        , Html.form [ Attr.class "flex flex-col mb-10" ]
+            [ Html.fieldset [ Attr.class "mb-4" ]
+                [ Html.label [ Attr.class "flex items-center", Attr.for "newTag" ]
+                    [ viewInputText { id = "newTag", value = "", overrideClass = Just "ml-0" }
+                    , Html.button [ Attr.class "font-semi-bold flex items-center px-2 py-1 rounded-full bg-blue-400 rounded-l-none hover:bg-blue-300 active:bg-blue-500 transition-all text-white" ]
+                        [ Html.span [ Attr.class "w-[20px] flex" ] [ Icons.plusIcon ]
+                        , text "Add tag"
+                        ]
+                    ]
                 ]
             ]
-        , Html.ul []
+        , Html.ul [ Attr.class "flex gap-4 flex-wrap" ]
             (tags
+                |> List.filter (\{ value } -> String.length value < 32 && String.length value > 0)
                 |> List.map
                     (\{ value } ->
-                        Html.div []
-                            [ Html.span [] [ text value ]
-                            , Html.span [] [ text "delete" ]
-                            , Html.span [] [ text "edit" ]
+                        Html.li [ Attr.class "flex bg-blue-200 text-blue-400 easy-in-out border border-blue-400 rounded" ]
+                            [ Html.span [ Attr.class "px-2 py-1" ] [ text value ]
+                            , Html.span [ Attr.class "bg-red-400 cursor-pointer text-red-700 px-1 py-2 text-xs" ]
+                                [ Html.span [ Attr.class "flex w-[14px]" ] [ Icons.deleteIcon ] ]
+                            , Html.span [ Attr.class "bg-gray-300 cursor-pointer text-gray-600 px-1 py-2 text-xs rounded-r" ]
+                                [ Html.span [ Attr.class "flex w-[14px]" ] [ Icons.editIcon ] ]
                             ]
                     )
             )
@@ -480,7 +489,7 @@ viewInfoIcon txt showTooltip =
     Html.div [ Attr.class "ml-1 w-[17px] h-[17px] text-center text-sm text-white rounded-full bg-blue-400 cursor-pointer relative", onMouseEnter ShowTooltip, onMouseLeave ShowTooltip ]
         [ text "?"
         , if showTooltip then
-            Html.p [ Attr.class "absolute w-[420px] rounded text-xs bg-black p-1 flex " ] [ text txt ]
+            Html.p [ Attr.class "absolute -top-1 left-[20px] w-[420px] rounded text-xs bg-black p-1 flex " ] [ text txt ]
 
           else
             text ""
@@ -516,7 +525,7 @@ viewContactDetails contactDetails shouldShowDropdown =
             text ""
         , Html.p [ Attr.class "mb-10" ] [ text "User's contact details" ]
         , Html.form [ Attr.class "flex flex-col" ]
-            [ Html.div [ Attr.class "flex mb-20 items-center" ]
+            [ Html.div [ Attr.class "flex mb-10 items-center" ]
                 [ Html.div [] [ text "Choose preferred contact method" ]
                 , viewPreferredMethodDropdown { prefMethod = contactDetails.preferredContactMethod, shouldShowDropdown = shouldShowDropdown }
                 ]
