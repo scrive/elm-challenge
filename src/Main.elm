@@ -3,12 +3,12 @@ module Main exposing (main, viewInfoIcon)
 -- import Data
 
 import Browser
-import Css
 import Data exposing (userGroup)
 import Html exposing (Html, text)
 import Html.Attributes as Attr
 import Html.Events exposing (onCheck, onClick, onMouseEnter, onMouseLeave)
 import Http
+import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (optional, optionalAt, required, requiredAt)
 import Util
@@ -37,7 +37,11 @@ type TabsActive
 
 
 type alias Model =
-    { userGroup : Data, tabActive : TabsActive, showTooltip : Bool }
+    { userGroup : Data
+    , tabActive : TabsActive
+    , showTooltip : Bool
+    , toggleDropdown : Bool
+    }
 
 
 type alias UserGroup =
@@ -97,6 +101,7 @@ init =
     ( { userGroup = Loading
       , tabActive = SettingsTab
       , showTooltip = False
+      , toggleDropdown = False
       }
     , fetchUserGroup
     )
@@ -111,6 +116,8 @@ type Msg
     | GetUserGroup (Result Http.Error UserGroup)
     | ActiveTab TabsActive
     | ShowTooltip
+    | AddPrefferedMethod PreferredContactMethod
+    | ToggleDropdown
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -134,6 +141,31 @@ update msg model =
 
         ShowTooltip ->
             ( { model | showTooltip = not <| model.showTooltip }, Cmd.none )
+
+        AddPrefferedMethod method ->
+            let
+                updatedUserGroup =
+                    case model.userGroup of
+                        Success data ->
+                            let
+                                contactDetails =
+                                    data.contactDetails
+
+                                updatedContacts =
+                                    { contactDetails | preferredContactMethod = method }
+
+                                updatedGroup =
+                                    { data | contactDetails = updatedContacts }
+                            in
+                            Success updatedGroup
+
+                        _ ->
+                            Loading
+            in
+            ( { model | toggleDropdown = False, userGroup = updatedUserGroup }, Cmd.none )
+
+        ToggleDropdown ->
+            ( { model | toggleDropdown = not <| model.toggleDropdown }, Cmd.none )
 
 
 fetchUserGroup : Cmd Msg
@@ -205,7 +237,7 @@ stringToPrefMethod str =
         "email" ->
             Decode.succeed Email
 
-        "post" ->
+        "address" ->
             Decode.succeed Post
 
         "phone" ->
@@ -337,7 +369,7 @@ view model =
                                         viewSettings userGroup.settings model.showTooltip
 
                                     DetailsTab ->
-                                        viewContactDetails userGroup.contactDetails
+                                        viewContactDetails userGroup.contactDetails model.toggleDropdown
 
                                     TagsTab ->
                                         viewTags userGroup.tags
@@ -392,45 +424,45 @@ viewSettings settings showTooltip =
             , Html.fieldset [ Attr.class "mb-4" ]
                 [ Html.label [ Attr.class "flex items-center", Attr.for "preparation" ]
                     [ Html.span [ Attr.class "w-[94px]" ] [ text "Preparation" ]
-                    , viewInputText { id = "preparation", value = settings.preparation, overrideClass = "mr-4 w-[45px]" }
+                    , viewInputText { id = "preparation", value = settings.preparation, overrideClass = Just "mr-4 w-[45px]" }
                     , text <| pluralize settings.preparation "day"
                     ]
                 ]
             , Html.fieldset [ Attr.class "mb-4" ]
                 [ Html.label [ Attr.class "flex items-center", Attr.for "closed" ]
                     [ Html.span [ Attr.class "w-[94px]" ] [ text "Closed" ]
-                    , viewInputText { id = "closed", value = settings.closed, overrideClass = "mr-4 w-[45px]" }
+                    , viewInputText { id = "closed", value = settings.closed, overrideClass = Just "mr-4 w-[45px]" }
                     , text <| pluralize settings.closed "day"
                     ]
                 ]
             , Html.fieldset [ Attr.class "mb-4" ]
                 [ Html.label [ Attr.class "flex items-center", Attr.for "canceled" ]
                     [ Html.span [ Attr.class "w-[94px]" ] [ text "Canceled" ]
-                    , viewInputText { id = "canceled", value = settings.canceled, overrideClass = "mr-4 w-[45px]" }
+                    , viewInputText { id = "canceled", value = settings.canceled, overrideClass = Just "mr-4 w-[45px]" }
                     , text <| pluralize settings.canceled "day"
                     ]
                 ]
             , Html.fieldset [ Attr.class "mb-4" ]
                 [ Html.label [ Attr.class "flex items-center", Attr.for "timedOut" ]
                     [ Html.span [ Attr.class "w-[94px]" ] [ text "Timed out" ]
-                    , viewInputText { id = "timedOut", value = settings.timedOut, overrideClass = "mr-4 w-[45px]" }
+                    , viewInputText { id = "timedOut", value = settings.timedOut, overrideClass = Just "mr-4 w-[45px]" }
                     , text <| pluralize settings.timedOut "day"
                     ]
                 ]
             , Html.fieldset [ Attr.class "mb-4" ]
                 [ Html.label [ Attr.class "flex items-center", Attr.for "error" ]
                     [ Html.span [ Attr.class "w-[94px]" ] [ text "Error" ]
-                    , viewInputText { id = "error", value = settings.error, overrideClass = "mr-4 w-[45px]" }
+                    , viewInputText { id = "error", value = settings.error, overrideClass = Just "mr-4 w-[45px]" }
                     , text <| pluralize settings.error "day"
                     ]
                 ]
-            , Html.fieldset [ Attr.class "mb-4" ]
+            , Html.fieldset []
                 [ Html.label [ Attr.class "flex items-center", Attr.for "shouldTrash" ]
                     [ Html.span [ Attr.class "flex items-center w-[94px]" ]
                         [ text "Destroy"
                         , viewInfoIcon "You confirm that item can be deleted after defined amount od days" showTooltip
                         ]
-                    , Html.input [ Attr.class "ml-4 w-[20px] h-[20px] text-blue-300 focus:ring-0 focus:ring-offset-0 cursor-pointer border-solid, border-blue-300,", Attr.type_ "checkbox", Attr.id "shouldTrash", Attr.checked settings.shouldTrash ] []
+                    , Html.input [ Attr.class "ml-4 w-[20px] h-[20px] border-0 text-blue-400 shadow-sm ring-transparent focus:ring-0 focus:ring-offset-0 cursor-pointer border-blue-400,", Attr.type_ "checkbox", Attr.id "shouldTrash", Attr.checked settings.shouldTrash ] []
                     ]
                 ]
             ]
@@ -458,34 +490,18 @@ viewInfoIcon txt showTooltip =
         ]
 
 
-
--- [ Tw.block
---     , Tw.w_full
---     , Tw.form_input
---     , Tw.rounded_md
---     , Tw.border_0
---     , Tw.py_1_dot_5
---     , Tw.h_10
---     , Tw.text_color Tw.gray_900
---     , Tw.shadow_sm
---     , Tw.ring_1
---     , Tw.ring_inset
---     , Tw.placeholder_color Tw.gray_300
---     , Tw.text_lg
---     , Tw.ring_color Tw.gray_300
---     , Css.focus
---         [ Tw.ring_2
---         , Tw.ring_inset
---         , Tw.ring_color Tw.teal_400
---         ]
---     ]
-
-
-viewInputText : { id : String, value : String, overrideClass : String } -> Html Msg
+viewInputText : { id : String, value : String, overrideClass : Maybe String } -> Html Msg
 viewInputText { id, value, overrideClass } =
     Html.input
-        [ Attr.class "ml-4 rounded-sm  border-0 py-1 px-2 h-10 text-gray-900 shadow-sm h-[30px] text-sm ring-transparent focus:ring-transparent"
-        , Attr.class overrideClass
+        [ Attr.class "ml-4 rounded-sm border-0 py-1 px-2 h-10 text-gray-900 shadow-sm h-[30px] text-sm ring-transparent focus:ring-transparent"
+        , Attr.class
+            (case overrideClass of
+                Just override ->
+                    override
+
+                Nothing ->
+                    ""
+            )
         , Attr.type_ "text"
         , Attr.id id
         , Attr.value value
@@ -493,11 +509,11 @@ viewInputText { id, value, overrideClass } =
         []
 
 
-viewContactDetails : ContactDetails -> Html Msg
-viewContactDetails contactDetails =
+viewContactDetails : ContactDetails -> Bool -> Html Msg
+viewContactDetails contactDetails shouldShowDropdown =
     Html.section []
-        [ Html.h3 [ Attr.class "text-2xl" ] [ text "Details form" ]
-        , Html.p [] [ text "[placeholder for details description]" ]
+        [ -- [ Html.h3 [ Attr.class "text-2xl" ] [ text "Details form" ]
+          Html.p [ Attr.class "mb-10" ] [ text "User's contact details" ]
         , Html.form [ Attr.class "flex flex-col" ]
             [ if contactDetails.isInherited then
                 Html.div
@@ -508,68 +524,163 @@ viewContactDetails contactDetails =
 
               else
                 text ""
-            , Html.div []
+            , Html.div [ Attr.class "flex mb-20 items-center" ]
                 [ Html.div [] [ text "Choose preferred contact method" ]
-                , Html.div []
-                    [ Html.div [] [ text <| preferredToString contactDetails.preferredContactMethod ]
-                    , Html.div []
-                        [ Html.div [] [ text "Email" ]
-                        , Html.div [] [ text "Phone" ]
-                        , Html.div [] [ text "Post" ]
+                , viewPreferredMethodDropdown { prefMethod = contactDetails.preferredContactMethod, shouldShowDropdown = shouldShowDropdown }
+                ]
+            , Html.fieldset [ Attr.class "mb-4" ]
+                [ Html.label
+                    [ Attr.class "flex items-center", Attr.for "email" ]
+                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Email" ]
+                    , Html.span [ Attr.class "flex flex-col" ]
+                        [ if contactDetails.preferredContactMethod == Email then
+                            Html.span [ Attr.class "ml-4 text-xs border-blue-400 border rounded-t text-blue-400 pl-2" ] [ text "required" ]
+
+                          else
+                            text ""
+                        , viewInputText
+                            { id = "email"
+                            , value = contactDetails.email
+                            , overrideClass =
+                                if contactDetails.preferredContactMethod == Email then
+                                    Just "rounded-t-none ring-blue-400 ring-1"
+
+                                else
+                                    Nothing
+                            }
                         ]
                     ]
                 ]
-            , Html.label
-                [ Attr.class "mb-4", Attr.for "email" ]
-                [ text "Email"
-                , Html.input [ Attr.class "ml-4", Attr.type_ "text", Attr.id "email", Attr.value contactDetails.email ] []
-                , if contactDetails.preferredContactMethod == Email then
-                    Html.span [ Attr.id "tooltip" ] [ text "Email is mandatory field" ]
+            , Html.fieldset [ Attr.class "mb-4" ]
+                [ Html.label
+                    [ Attr.class "flex items-center", Attr.for "phone" ]
+                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Phone" ]
+                    , Html.span [ Attr.class "flex flex-col" ]
+                        [ if contactDetails.preferredContactMethod == Phone then
+                            Html.span [ Attr.class "ml-4 text-xs border-blue-400 border rounded-t text-blue-400 pl-2" ] [ text "required" ]
 
-                  else
-                    text ""
-                ]
-            , Html.label
-                [ Attr.class "mb-4", Attr.for "phone" ]
-                [ text "Phone"
-                , Html.input [ Attr.type_ "text", Attr.id "phone", Attr.value contactDetails.phone ] []
-                , if contactDetails.preferredContactMethod == Phone then
-                    Html.span [ Attr.class "ml-4", Attr.id "tooltip" ] [ text "Phone is mandatory field !" ]
+                          else
+                            text ""
+                        , viewInputText
+                            { id = "phone"
+                            , value = contactDetails.phone
+                            , overrideClass =
+                                if contactDetails.preferredContactMethod == Phone then
+                                    Just "rounded-t-none ring-blue-400 ring-1"
 
-                  else
-                    text ""
+                                else
+                                    Nothing
+                            }
+                        ]
+                    ]
                 ]
-            , Html.label
-                [ Attr.class "mb-4", Attr.for "companyName" ]
-                [ text "Company Name"
-                , Html.input [ Attr.class "ml-4", Attr.type_ "text", Attr.id "companyName", Attr.value contactDetails.companyName ] []
+            , Html.fieldset [ Attr.class "mb-4" ]
+                [ Html.label
+                    [ Attr.class "flex items-center", Attr.for "companyName" ]
+                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Company Name" ]
+                    , viewInputText { id = "companyName", value = contactDetails.companyName, overrideClass = Nothing }
+                    ]
                 ]
-            , Html.label
-                [ Attr.class "mb-4", Attr.for "address" ]
-                [ text "Address"
-                , Html.input [ Attr.class "ml-4", Attr.class "ml-4", Attr.type_ "text", Attr.id "address", Attr.value contactDetails.address ] []
-                , if contactDetails.preferredContactMethod == Post then
-                    Html.span [ Attr.id "tooltip" ] [ text "Post is mandatory field" ]
+            , Html.fieldset [ Attr.class "mb-4" ]
+                [ Html.label
+                    [ Attr.class "flex items-center", Attr.for "address" ]
+                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Address" ]
+                    , Html.span [ Attr.class "flex flex-col" ]
+                        [ if contactDetails.preferredContactMethod == Post then
+                            Html.span [ Attr.class "ml-4 text-xs border-blue-400 border rounded-t text-blue-400 pl-2" ] [ text "required" ]
 
-                  else
-                    text ""
+                          else
+                            text ""
+                        , viewInputText
+                            { id = "address"
+                            , value = contactDetails.address
+                            , overrideClass =
+                                if contactDetails.preferredContactMethod == Post then
+                                    Just "rounded-t-none ring-blue-400 ring-1"
+
+                                else
+                                    Nothing
+                            }
+                        ]
+                    ]
                 ]
-            , Html.label
-                [ Attr.class "mb-4", Attr.for "zip" ]
-                [ text "Zip"
-                , Html.input [ Attr.class "ml-4", Attr.type_ "text", Attr.id "zip", Attr.value contactDetails.zip ] []
+            , Html.fieldset [ Attr.class "mb-4" ]
+                [ Html.label
+                    [ Attr.class "flex items-center", Attr.for "zip" ]
+                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Zip" ]
+                    , viewInputText { id = "zip", value = contactDetails.zip, overrideClass = Nothing }
+                    ]
                 ]
-            , Html.label
-                [ Attr.class "mb-4", Attr.for "city" ]
-                [ text "City"
-                , Html.input [ Attr.class "ml-4", Attr.type_ "text", Attr.id "city", Attr.value contactDetails.city ] []
+            , Html.fieldset [ Attr.class "mb-4" ]
+                [ Html.label
+                    [ Attr.class "flex items-center", Attr.for "city" ]
+                    [ Html.span [ Attr.class "w-[132px]" ] [ text "City" ]
+                    , viewInputText { id = "city", value = contactDetails.city, overrideClass = Nothing }
+                    ]
                 ]
-            , Html.label
-                [ Attr.class "mb-4", Attr.for "country" ]
-                [ text "Country"
-                , Html.input [ Attr.class "ml-4", Attr.type_ "text", Attr.id "country", Attr.value contactDetails.country ] []
+            , Html.fieldset []
+                [ Html.label
+                    [ Attr.class "flex items-center", Attr.for "country" ]
+                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Country" ]
+                    , viewInputText { id = "country", value = contactDetails.country, overrideClass = Nothing }
+                    ]
                 ]
             ]
+        ]
+
+
+viewPreferredMethodDropdown : { prefMethod : PreferredContactMethod, shouldShowDropdown : Bool } -> Html Msg
+viewPreferredMethodDropdown { prefMethod, shouldShowDropdown } =
+    Html.div [ Attr.class "ml-4 relative cursor-pointer" ]
+        [ -- Html.div [] [ text <| preferredToString contactDetails.preferredContactMethod ]
+          Html.div
+            [ Attr.class "py-1 px-2 flex rounded items-center text-white bg-blue-400"
+            , onClick ToggleDropdown
+            ]
+            [ text <| preferredToString prefMethod
+            , Html.span
+                [ Attr.class "w-[20px] ml-1"
+                , if shouldShowDropdown then
+                    Attr.class "rotate-180"
+
+                  else
+                    Attr.class ""
+                ]
+                [ Icons.arrowDown ]
+            ]
+        , Html.div
+            [ Attr.class "absolute top-[30px] rounded-b bg-blue-400 overflow-hidden w-full text-white"
+            , if shouldShowDropdown then
+                Attr.class "block"
+
+              else
+                Attr.class "hidden"
+            ]
+            (case prefMethod of
+                Email ->
+                    [ Html.div [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Phone) ]
+                        [ text "Phone" ]
+                    , Html.div
+                        [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Post) ]
+                        [ text "Post" ]
+                    ]
+
+                Phone ->
+                    [ Html.div [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Email) ]
+                        [ text "Email" ]
+                    , Html.div
+                        [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Post) ]
+                        [ text "Post" ]
+                    ]
+
+                Post ->
+                    [ Html.div [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Email) ]
+                        [ text "Email" ]
+                    , Html.div
+                        [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Phone) ]
+                        [ text "Phone" ]
+                    ]
+            )
         ]
 
 
