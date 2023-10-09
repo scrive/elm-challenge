@@ -4,7 +4,8 @@
   "description": "Challenge for new Scrive elm developers",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "start": "vite dev"
+    "start": "vite dev",
+    "test": "elm-test"
   },
   "author": "Scrive",
   "license": "MIT",
