@@ -4,7 +4,7 @@ module Main exposing (main, viewInfoIcon)
 
 import Browser
 import Data exposing (userGroup)
-import Html exposing (Html, text)
+import Html exposing (Html, text, th)
 import Html.Attributes as Attr
 import Html.Events exposing (onCheck, onClick, onMouseEnter, onMouseLeave)
 import Http
@@ -423,45 +423,53 @@ viewSettings settings showTooltip =
 
           else
             text ""
-
-        -- Html.h3 [ Attr.class "text-2xl" ] [ text "Document Retention" ]
         , Html.p [ Attr.class "mb-10" ] [ text "How many days do you want document to stay in a certain state ?" ]
-        , Html.form [ Attr.class "flex flex-col" ]
-            [ Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label [ Attr.class "flex items-center", Attr.for "preparation" ]
-                    [ Html.span [ Attr.class "w-[94px]" ] [ text "Preparation" ]
-                    , viewInputText { id = "preparation", value = settings.preparation, overrideClass = Just "mr-4 w-[45px]" }
-                    , text <| pluralize settings.preparation "day"
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label [ Attr.class "flex items-center", Attr.for "closed" ]
-                    [ Html.span [ Attr.class "w-[94px]" ] [ text "Closed" ]
-                    , viewInputText { id = "closed", value = settings.closed, overrideClass = Just "mr-4 w-[45px]" }
-                    , text <| pluralize settings.closed "day"
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label [ Attr.class "flex items-center", Attr.for "canceled" ]
-                    [ Html.span [ Attr.class "w-[94px]" ] [ text "Canceled" ]
-                    , viewInputText { id = "canceled", value = settings.canceled, overrideClass = Just "mr-4 w-[45px]" }
-                    , text <| pluralize settings.canceled "day"
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label [ Attr.class "flex items-center", Attr.for "timedOut" ]
-                    [ Html.span [ Attr.class "w-[94px]" ] [ text "Timed out" ]
-                    , viewInputText { id = "timedOut", value = settings.timedOut, overrideClass = Just "mr-4 w-[45px]" }
-                    , text <| pluralize settings.timedOut "day"
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label [ Attr.class "flex items-center", Attr.for "error" ]
-                    [ Html.span [ Attr.class "w-[94px]" ] [ text "Error" ]
-                    , viewInputText { id = "error", value = settings.error, overrideClass = Just "mr-4 w-[45px]" }
-                    , text <| pluralize settings.error "day"
-                    ]
-                ]
+        , formWrapper
+            [ viewFieldset
+                { id = "preparation"
+                , daysString = Just settings.preparation
+                , requiredField = False
+                , textValue = "Preparation"
+                , inputValue = settings.preparation
+                , maxWidthFieldClass = "w-[94px]"
+                , overrideClass = Just "mr-4 w-[45px]"
+                }
+            , viewFieldset
+                { id = "closed"
+                , daysString = Just settings.closed
+                , requiredField = False
+                , textValue = "Closed"
+                , inputValue = settings.closed
+                , maxWidthFieldClass = "w-[94px]"
+                , overrideClass = Just "mr-4 w-[45px]"
+                }
+            , viewFieldset
+                { id = "canceled"
+                , daysString = Just settings.canceled
+                , requiredField = False
+                , textValue = "Canceled"
+                , inputValue = settings.canceled
+                , maxWidthFieldClass = "w-[94px]"
+                , overrideClass = Just "mr-4 w-[45px]"
+                }
+            , viewFieldset
+                { id = "timedOut"
+                , daysString = Just settings.timedOut
+                , requiredField = False
+                , textValue = "Timed out"
+                , inputValue = settings.timedOut
+                , maxWidthFieldClass = "w-[94px]"
+                , overrideClass = Just "mr-4 w-[45px]"
+                }
+            , viewFieldset
+                { id = "error"
+                , daysString = Just settings.error
+                , requiredField = False
+                , textValue = "Error"
+                , inputValue = settings.error
+                , maxWidthFieldClass = "w-[94px]"
+                , overrideClass = Just "mr-4 w-[45px]"
+                }
             , Html.fieldset []
                 [ Html.label [ Attr.class "flex items-center", Attr.for "shouldTrash" ]
                     [ Html.span [ Attr.class "flex items-center w-[94px]" ]
@@ -473,6 +481,44 @@ viewSettings settings showTooltip =
                 ]
             ]
         ]
+
+
+viewFieldset :
+    { id : String
+    , daysString : Maybe String
+    , requiredField : Bool
+    , textValue : String
+    , inputValue : String
+    , maxWidthFieldClass : String
+    , overrideClass : Maybe String
+    }
+    -> Html Msg
+viewFieldset { id, daysString, requiredField, textValue, inputValue, maxWidthFieldClass, overrideClass } =
+    Html.fieldset [ Attr.class "mb-4" ]
+        [ Html.label [ Attr.class "flex items-center", Attr.for id ]
+            [ Html.span [ Attr.class maxWidthFieldClass ] [ text textValue ]
+            , if requiredField then
+                Html.span [ Attr.class "flex flex-col" ]
+                    [ Html.span [ Attr.class "ml-4 text-xs border-blue-400 border rounded-t text-blue-400 pl-2" ] [ text "required" ]
+                    , viewInputText { id = id, value = inputValue, overrideClass = overrideClass }
+                    ]
+
+              else
+                viewInputText { id = id, value = inputValue, overrideClass = overrideClass }
+            , case daysString of
+                Just day ->
+                    text <| pluralize day "day"
+
+                Nothing ->
+                    text ""
+            ]
+        ]
+
+
+formWrapper : List (Html Msg) -> Html Msg
+formWrapper children =
+    Html.form [ Attr.class "flex flex-col" ]
+        children
 
 
 pluralize : String -> String -> String
@@ -524,108 +570,89 @@ viewContactDetails contactDetails shouldShowDropdown =
           else
             text ""
         , Html.p [ Attr.class "mb-10" ] [ text "User's contact details" ]
-        , Html.form [ Attr.class "flex flex-col" ]
+        , formWrapper
             [ Html.div [ Attr.class "flex mb-10 items-center" ]
                 [ Html.div [] [ text "Choose preferred contact method" ]
                 , viewPreferredMethodDropdown { prefMethod = contactDetails.preferredContactMethod, shouldShowDropdown = shouldShowDropdown }
                 ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label
-                    [ Attr.class "flex items-center", Attr.for "email" ]
-                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Email" ]
-                    , Html.span [ Attr.class "flex flex-col" ]
-                        [ if contactDetails.preferredContactMethod == Email then
-                            Html.span [ Attr.class "ml-4 text-xs border-blue-400 border rounded-t text-blue-400 pl-2" ] [ text "required" ]
+            , viewFieldset
+                { id = "email"
+                , daysString = Nothing
+                , requiredField = contactDetails.preferredContactMethod == Email
+                , textValue = "Email"
+                , inputValue = contactDetails.email
+                , maxWidthFieldClass = "w-[132px]"
+                , overrideClass =
+                    if contactDetails.preferredContactMethod == Email then
+                        Just "rounded-t-none ring-blue-400 ring-1"
 
-                          else
-                            text ""
-                        , viewInputText
-                            { id = "email"
-                            , value = contactDetails.email
-                            , overrideClass =
-                                if contactDetails.preferredContactMethod == Email then
-                                    Just "rounded-t-none ring-blue-400 ring-1"
+                    else
+                        Nothing
+                }
+            , viewFieldset
+                { id = "phone"
+                , daysString = Nothing
+                , requiredField = contactDetails.preferredContactMethod == Phone
+                , textValue = "Phone"
+                , inputValue = contactDetails.phone
+                , maxWidthFieldClass = "w-[132px]"
+                , overrideClass =
+                    if contactDetails.preferredContactMethod == Phone then
+                        Just "rounded-t-none ring-blue-400 ring-1"
 
-                                else
-                                    Nothing
-                            }
-                        ]
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label
-                    [ Attr.class "flex items-center", Attr.for "phone" ]
-                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Phone" ]
-                    , Html.span [ Attr.class "flex flex-col" ]
-                        [ if contactDetails.preferredContactMethod == Phone then
-                            Html.span [ Attr.class "ml-4 text-xs border-blue-400 border rounded-t text-blue-400 pl-2" ] [ text "required" ]
+                    else
+                        Nothing
+                }
+            , viewFieldset
+                { id = "companyName"
+                , daysString = Nothing
+                , requiredField = False
+                , textValue = "Company Name"
+                , inputValue = contactDetails.companyName
+                , maxWidthFieldClass = "w-[132px]"
+                , overrideClass = Nothing
+                }
+            , viewFieldset
+                { id = "address"
+                , daysString = Nothing
+                , requiredField = contactDetails.preferredContactMethod == Post
+                , textValue = "Address"
+                , inputValue = contactDetails.address
+                , maxWidthFieldClass = "w-[132px]"
+                , overrideClass =
+                    if contactDetails.preferredContactMethod == Post then
+                        Just "rounded-t-none ring-blue-400 ring-1"
 
-                          else
-                            text ""
-                        , viewInputText
-                            { id = "phone"
-                            , value = contactDetails.phone
-                            , overrideClass =
-                                if contactDetails.preferredContactMethod == Phone then
-                                    Just "rounded-t-none ring-blue-400 ring-1"
-
-                                else
-                                    Nothing
-                            }
-                        ]
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label
-                    [ Attr.class "flex items-center", Attr.for "companyName" ]
-                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Company Name" ]
-                    , viewInputText { id = "companyName", value = contactDetails.companyName, overrideClass = Nothing }
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label
-                    [ Attr.class "flex items-center", Attr.for "address" ]
-                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Address" ]
-                    , Html.span [ Attr.class "flex flex-col" ]
-                        [ if contactDetails.preferredContactMethod == Post then
-                            Html.span [ Attr.class "ml-4 text-xs border-blue-400 border rounded-t text-blue-400 pl-2" ] [ text "required" ]
-
-                          else
-                            text ""
-                        , viewInputText
-                            { id = "address"
-                            , value = contactDetails.address
-                            , overrideClass =
-                                if contactDetails.preferredContactMethod == Post then
-                                    Just "rounded-t-none ring-blue-400 ring-1"
-
-                                else
-                                    Nothing
-                            }
-                        ]
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label
-                    [ Attr.class "flex items-center", Attr.for "zip" ]
-                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Zip" ]
-                    , viewInputText { id = "zip", value = contactDetails.zip, overrideClass = Nothing }
-                    ]
-                ]
-            , Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label
-                    [ Attr.class "flex items-center", Attr.for "city" ]
-                    [ Html.span [ Attr.class "w-[132px]" ] [ text "City" ]
-                    , viewInputText { id = "city", value = contactDetails.city, overrideClass = Nothing }
-                    ]
-                ]
-            , Html.fieldset []
-                [ Html.label
-                    [ Attr.class "flex items-center", Attr.for "country" ]
-                    [ Html.span [ Attr.class "w-[132px]" ] [ text "Country" ]
-                    , viewInputText { id = "country", value = contactDetails.country, overrideClass = Nothing }
-                    ]
-                ]
+                    else
+                        Nothing
+                }
+            , viewFieldset
+                { id = "zip"
+                , daysString = Nothing
+                , requiredField = False
+                , textValue = "Zip"
+                , inputValue = contactDetails.zip
+                , maxWidthFieldClass = "w-[132px]"
+                , overrideClass = Nothing
+                }
+            , viewFieldset
+                { id = "city"
+                , daysString = Nothing
+                , requiredField = False
+                , textValue = "City"
+                , inputValue = contactDetails.city
+                , maxWidthFieldClass = "w-[132px]"
+                , overrideClass = Nothing
+                }
+            , viewFieldset
+                { id = "country"
+                , daysString = Nothing
+                , requiredField = False
+                , textValue = "Country"
+                , inputValue = contactDetails.country
+                , maxWidthFieldClass = "w-[132px]"
+                , overrideClass = Nothing
+                }
             ]
         ]
 
@@ -676,30 +703,27 @@ viewPreferredMethodDropdown { prefMethod, shouldShowDropdown } =
             ]
             (case prefMethod of
                 Email ->
-                    [ Html.div [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Phone) ]
-                        [ text "Phone" ]
-                    , Html.div
-                        [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Post) ]
-                        [ text "Post" ]
+                    [ viewDropdownItem { textValue = "Phone", toMsg = AddPrefferedMethod Phone }
+                    , viewDropdownItem { textValue = "Post", toMsg = AddPrefferedMethod Post }
                     ]
 
                 Phone ->
-                    [ Html.div [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Email) ]
-                        [ text "Email" ]
-                    , Html.div
-                        [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Post) ]
-                        [ text "Post" ]
+                    [ viewDropdownItem { textValue = "Email", toMsg = AddPrefferedMethod Email }
+                    , viewDropdownItem
+                        { textValue = "Post", toMsg = AddPrefferedMethod Post }
                     ]
 
                 Post ->
-                    [ Html.div [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Email) ]
-                        [ text "Email" ]
-                    , Html.div
-                        [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick (AddPrefferedMethod Phone) ]
-                        [ text "Phone" ]
+                    [ viewDropdownItem { textValue = "Email", toMsg = AddPrefferedMethod Email }
+                    , viewDropdownItem { textValue = "Phone", toMsg = AddPrefferedMethod Phone }
                     ]
             )
         ]
+
+
+viewDropdownItem : { textValue : String, toMsg : Msg } -> Html Msg
+viewDropdownItem { textValue, toMsg } =
+    Html.div [ Attr.class "py-1 px-2 hover:bg-blue-300 active:bg-blue-500", onClick toMsg ] [ text textValue ]
 
 
 
