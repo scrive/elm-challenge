@@ -4,13 +4,15 @@ module Main exposing (main, viewInfoIcon)
 
 import Browser
 import Data exposing (userGroup)
-import Html exposing (Html, text, th)
+import Dict exposing (Dict)
+import Html exposing (Html, text)
 import Html.Attributes as Attr
-import Html.Events exposing (onCheck, onClick, onMouseEnter, onMouseLeave)
+import Html.Events exposing (onClick, onInput, onMouseEnter, onMouseLeave)
 import Http
 import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (optional, optionalAt, required, requiredAt)
+import Set exposing (Set)
 import Util
 
 
@@ -30,7 +32,7 @@ type Data
     | Success UserGroup
 
 
-type TabsActive
+type Tabs
     = SettingsTab
     | DetailsTab
     | TagsTab
@@ -38,10 +40,16 @@ type TabsActive
 
 type alias Model =
     { userGroup : Data
-    , tabActive : TabsActive
+    , tabActive : Tabs
     , showTooltip : Bool
     , toggleDropdown : Bool
+    , currentTag : CurrentTag
+    , errors : Set String
     }
+
+
+type alias CurrentTag =
+    { name : String, value : String }
 
 
 type alias UserGroup =
@@ -49,6 +57,24 @@ type alias UserGroup =
     , contactDetails : ContactDetails
     , tags : Tags
     }
+
+
+type Ids
+    = PrepId
+    | CloseId
+    | CancelId
+    | TimeOutId
+    | RejectId
+    | ErrId
+    | EmailId
+    | PhoneId
+    | CompanyId
+    | PostId
+    | ZipId
+    | CityId
+    | NewTagNameId
+    | NewTagValId
+    | CountryId
 
 
 
@@ -88,12 +114,12 @@ type alias ContactDetails =
     }
 
 
+type alias TagName =
+    String
+
+
 type alias Tags =
-    List Tag
-
-
-type alias Tag =
-    { name : String, value : String }
+    Dict TagName String
 
 
 init : ( Model, Cmd Msg )
@@ -102,22 +128,47 @@ init =
       , tabActive = SettingsTab
       , showTooltip = False
       , toggleDropdown = False
+      , currentTag = { name = "", value = "" }
+      , errors = Set.empty
       }
     , fetchUserGroup
     )
 
 
+type InputVariation
+    = PrepField String
+    | CloseField String
+    | CancField String
+    | TimeOutField String
+    | RejectField String
+    | ErrField String
+    | EmailField String
+    | PhoneField String
+    | CompanyNameField String
+    | PostField String
+    | ZipField String
+    | CityField String
+    | CountryField String
 
+
+
+-- | TagField String
 ---- UPDATE ----
 
 
 type Msg
     = NoOp
     | GetUserGroup (Result Http.Error UserGroup)
-    | ActiveTab TabsActive
+    | ActiveTab Tabs
     | ShowTooltip
     | AddPrefferedMethod PreferredContactMethod
     | ToggleDropdown
+    | OnInputChange InputVariation
+    | StoreTagName String
+    | StoreTagValue String
+    | AddNewTag
+    | DeleteTag TagName
+    | EditTag TagName
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -137,7 +188,11 @@ update msg model =
             ( { model | userGroup = Success userGroup }, Cmd.none )
 
         ActiveTab tab ->
-            ( { model | tabActive = tab }, Cmd.none )
+            if Set.isEmpty model.errors then
+                ( { model | tabActive = tab }, Cmd.none )
+
+            else
+                ( model, Cmd.none )
 
         ShowTooltip ->
             ( { model | showTooltip = not <| model.showTooltip }, Cmd.none )
@@ -164,8 +219,279 @@ update msg model =
             in
             ( { model | toggleDropdown = False, userGroup = updatedUserGroup }, Cmd.none )
 
+        OnInputChange inputVariation ->
+            let
+                updatedUserGroup =
+                    case model.userGroup of
+                        Success data ->
+                            case inputVariation of
+                                PrepField inputValue ->
+                                    let
+                                        { settings } =
+                                            data
+
+                                        updatedSettings =
+                                            { settings | preparation = inputValue }
+
+                                        updatedGroup =
+                                            { data | settings = updatedSettings }
+                                    in
+                                    Success updatedGroup
+
+                                CloseField inputValue ->
+                                    let
+                                        { settings } =
+                                            data
+
+                                        updatedSettings =
+                                            { settings | closed = inputValue }
+
+                                        updatedGroup =
+                                            { data | settings = updatedSettings }
+                                    in
+                                    Success updatedGroup
+
+                                CancField inputValue ->
+                                    let
+                                        { settings } =
+                                            data
+
+                                        updatedSettings =
+                                            { settings | canceled = inputValue }
+
+                                        updatedGroup =
+                                            { data | settings = updatedSettings }
+                                    in
+                                    Success updatedGroup
+
+                                TimeOutField inputValue ->
+                                    let
+                                        { settings } =
+                                            data
+
+                                        updatedSettings =
+                                            { settings | timedOut = inputValue }
+
+                                        updatedGroup =
+                                            { data | settings = updatedSettings }
+                                    in
+                                    Success updatedGroup
+
+                                RejectField inputValue ->
+                                    let
+                                        { settings } =
+                                            data
+
+                                        updatedSettings =
+                                            { settings | rejected = inputValue }
+
+                                        updatedGroup =
+                                            { data | settings = updatedSettings }
+                                    in
+                                    Success updatedGroup
+
+                                ErrField inputValue ->
+                                    let
+                                        { settings } =
+                                            data
+
+                                        updatedSettings =
+                                            { settings | error = inputValue }
+
+                                        updatedGroup =
+                                            { data | settings = updatedSettings }
+                                    in
+                                    Success updatedGroup
+
+                                EmailField inputValue ->
+                                    let
+                                        { contactDetails } =
+                                            data
+
+                                        updatedContacts =
+                                            { contactDetails | email = inputValue }
+
+                                        updatedGroup =
+                                            { data | contactDetails = updatedContacts }
+                                    in
+                                    Success updatedGroup
+
+                                PhoneField inputValue ->
+                                    let
+                                        { contactDetails } =
+                                            data
+
+                                        updatedContacts =
+                                            { contactDetails | phone = inputValue }
+
+                                        updatedGroup =
+                                            { data | contactDetails = updatedContacts }
+                                    in
+                                    Success updatedGroup
+
+                                CompanyNameField inputValue ->
+                                    let
+                                        { contactDetails } =
+                                            data
+
+                                        updatedContacts =
+                                            { contactDetails | companyName = inputValue }
+
+                                        updatedGroup =
+                                            { data | contactDetails = updatedContacts }
+                                    in
+                                    Success updatedGroup
+
+                                PostField inputValue ->
+                                    let
+                                        { contactDetails } =
+                                            data
+
+                                        updatedContacts =
+                                            { contactDetails | address = inputValue }
+
+                                        updatedGroup =
+                                            { data | contactDetails = updatedContacts }
+                                    in
+                                    Success updatedGroup
+
+                                ZipField inputValue ->
+                                    let
+                                        { contactDetails } =
+                                            data
+
+                                        updatedContacts =
+                                            { contactDetails | zip = inputValue }
+
+                                        updatedGroup =
+                                            { data | contactDetails = updatedContacts }
+                                    in
+                                    Success updatedGroup
+
+                                CityField inputValue ->
+                                    let
+                                        { contactDetails } =
+                                            data
+
+                                        updatedContacts =
+                                            { contactDetails | city = inputValue }
+
+                                        updatedGroup =
+                                            { data | contactDetails = updatedContacts }
+                                    in
+                                    Success updatedGroup
+
+                                CountryField inputValue ->
+                                    let
+                                        { contactDetails } =
+                                            data
+
+                                        updatedContacts =
+                                            { contactDetails | country = inputValue }
+
+                                        updatedGroup =
+                                            { data | contactDetails = updatedContacts }
+                                    in
+                                    Success updatedGroup
+
+                        _ ->
+                            Loading
+            in
+            ( { model | userGroup = updatedUserGroup }, Cmd.none )
+
         ToggleDropdown ->
             ( { model | toggleDropdown = not <| model.toggleDropdown }, Cmd.none )
+
+        StoreTagName tagName ->
+            let
+                currentTag =
+                    model.currentTag
+
+                updateCurrentTag =
+                    { currentTag | name = tagName }
+            in
+            ( { model | currentTag = updateCurrentTag }, Cmd.none )
+
+        StoreTagValue tagValue ->
+            let
+                currentTag =
+                    model.currentTag
+
+                updateCurrentTag =
+                    { currentTag | value = tagValue }
+            in
+            ( { model | currentTag = updateCurrentTag }, Cmd.none )
+
+        AddNewTag ->
+            if String.length model.currentTag.name > 32 then
+                ( { model | errors = Set.insert "Tag name should be less then 32 characters" model.errors }, Cmd.none )
+
+            else if String.isEmpty model.currentTag.name then
+                ( { model | errors = Set.insert "Tag name is empty" model.errors }, Cmd.none )
+
+            else if String.isEmpty model.currentTag.value then
+                ( { model | errors = Set.insert "Tag value is empty" model.errors }, Cmd.none )
+
+            else
+                let
+                    updatedUserGroup =
+                        case model.userGroup of
+                            Success data ->
+                                let
+                                    tags =
+                                        data.tags
+
+                                    updatedTags =
+                                        tags |> Dict.insert model.currentTag.name model.currentTag.value
+
+                                    updatedGroup =
+                                        { data | tags = updatedTags }
+                                in
+                                Success updatedGroup
+
+                            _ ->
+                                Loading
+                in
+                ( { model | errors = Set.empty, toggleDropdown = False, userGroup = updatedUserGroup }, Cmd.none )
+
+        EditTag tagName ->
+            let
+                tags =
+                    case model.userGroup of
+                        Success data ->
+                            data.tags
+
+                        _ ->
+                            Dict.empty
+            in
+            case Dict.get tagName tags of
+                Just tagValue ->
+                    ( { model | currentTag = { name = tagName, value = tagValue } }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        DeleteTag tagName ->
+            let
+                updatedUserGroup =
+                    case model.userGroup of
+                        Success data ->
+                            let
+                                tags =
+                                    data.tags
+
+                                updatedTags =
+                                    tags |> Dict.remove tagName
+
+                                updatedGroup =
+                                    { data | tags = updatedTags }
+                            in
+                            Success updatedGroup
+
+                        _ ->
+                            Loading
+            in
+            ( { model | userGroup = updatedUserGroup }, Cmd.none )
 
 
 fetchUserGroup : Cmd Msg
@@ -247,16 +573,17 @@ stringToPrefMethod str =
             Decode.fail <| "Invalid preferred method: " ++ str
 
 
-decodeTags : Decoder (List Tag)
-decodeTags =
-    Decode.list decodeTag
-
-
-decodeTag : Decoder Tag
-decodeTag =
-    Decode.succeed Tag
+decodeTagTuple : Decoder ( TagName, String )
+decodeTagTuple =
+    Decode.succeed (\n v -> ( n, v ))
         |> required "name" Decode.string
         |> optional "value" Decode.string ""
+
+
+decodeTags : Decoder (Dict TagName String)
+decodeTags =
+    Decode.list decodeTagTuple
+        |> Decode.map Dict.fromList
 
 
 preferredToString : PreferredContactMethod -> String
@@ -272,20 +599,114 @@ preferredToString prf =
             "Post"
 
 
+fromIdToString : Ids -> String
+fromIdToString ids =
+    case ids of
+        PrepId ->
+            "preparation"
+
+        CloseId ->
+            "closed"
+
+        CancelId ->
+            "canceled"
+
+        TimeOutId ->
+            "timedOut"
+
+        RejectId ->
+            "rejected"
+
+        ErrId ->
+            "error"
+
+        EmailId ->
+            "email"
+
+        PhoneId ->
+            "phone"
+
+        CompanyId ->
+            "companyName"
+
+        PostId ->
+            "address"
+
+        ZipId ->
+            "zip"
+
+        CityId ->
+            "city"
+
+        NewTagNameId ->
+            "newTagName"
+
+        NewTagValId ->
+            "newTagValue"
+
+        CountryId ->
+            "countryName"
+
+
+toStrMsg : Ids -> String -> Msg
+toStrMsg idField inputValue =
+    case idField of
+        PrepId ->
+            OnInputChange (PrepField inputValue)
+
+        CloseId ->
+            OnInputChange (CloseField inputValue)
+
+        CancelId ->
+            OnInputChange (CancField inputValue)
+
+        TimeOutId ->
+            OnInputChange (TimeOutField inputValue)
+
+        RejectId ->
+            OnInputChange (RejectField inputValue)
+
+        ErrId ->
+            OnInputChange (ErrField inputValue)
+
+        EmailId ->
+            OnInputChange (EmailField inputValue)
+
+        PhoneId ->
+            OnInputChange (PhoneField inputValue)
+
+        CompanyId ->
+            OnInputChange (CompanyNameField inputValue)
+
+        PostId ->
+            OnInputChange (PostField inputValue)
+
+        ZipId ->
+            OnInputChange (ZipField inputValue)
+
+        CityId ->
+            OnInputChange (CityField inputValue)
+
+        NewTagNameId ->
+            StoreTagName inputValue
+
+        NewTagValId ->
+            StoreTagValue inputValue
+
+        _ ->
+            OnInputChange (CountryField inputValue)
+
+
 
 ---- VIEW ----
-
-
-header : String -> Html msg
-header text =
-    Html.span [ Attr.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
-        [ Html.text text ]
-
-
-subheader : String -> Html msg
-subheader text =
-    Html.span [ Attr.class "p-2 text-2xl font-extrabold text-slate-800" ]
-        [ Html.text text ]
+-- header : String -> Html msg
+-- header text =
+--     Html.span [ Attr.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
+--         [ Html.text text ]
+-- subheader : String -> Html msg
+-- subheader text =
+--     Html.span [ Attr.class "p-2 text-2xl font-extrabold text-slate-800" ]
+--         [ Html.text text ]
 
 
 view : Model -> Html Msg
@@ -324,7 +745,8 @@ view model =
                                 [ viewTabs model.tabActive ]
                             , Html.div
                                 [ Attr.class "bg-blue-100 p-4 mb-10 overflow-hidden" ]
-                                [ case model.tabActive of
+                                [ Html.div [ Attr.class "mb-4" ] (model.errors |> Set.toList |> List.map (\error -> viewErrorMessage error))
+                                , case model.tabActive of
                                     SettingsTab ->
                                         viewSettings userGroup.settings model.showTooltip
 
@@ -332,7 +754,7 @@ view model =
                                         viewContactDetails userGroup.contactDetails model.toggleDropdown
 
                                     TagsTab ->
-                                        viewTags userGroup.tags
+                                        viewTags userGroup.tags model.currentTag
                                 ]
                             ]
                         , Html.button [ Attr.class "flex font-semi-bold px-5 py-2 rounded-full bg-blue-400 hover:bg-blue-300 active:bg-blue-500 easy-in-out transition-all text-white" ] [ Html.span [ Attr.class "mr-2 flex w-[20px]" ] [ Icons.checkIcon ], text "Submit" ]
@@ -341,7 +763,7 @@ view model =
         ]
 
 
-viewTabs : TabsActive -> Html Msg
+viewTabs : Tabs -> Html Msg
 viewTabs tabActive =
     Html.ul [ Attr.class "flex text-3xl cursor-pointer" ]
         [ Html.li
@@ -383,31 +805,45 @@ viewTabs tabActive =
         ]
 
 
-viewTags : Tags -> Html Msg
-viewTags tags =
+viewTags : Tags -> CurrentTag -> Html Msg
+viewTags tags currentTag =
     Html.section []
-        [ Html.p [ Attr.class "mb-10" ] [ text "Add new tags, limit is 32 characters and they should be unique" ]
-        , Html.form [ Attr.class "flex flex-col mb-10" ]
-            [ Html.fieldset [ Attr.class "mb-4" ]
-                [ Html.label [ Attr.class "flex items-center", Attr.for "newTag" ]
-                    [ viewInputText { id = "newTag", value = "", overrideClass = Just "ml-0" }
-                    , Html.button [ Attr.class "font-semi-bold flex items-center px-2 py-1 rounded-full bg-blue-400 rounded-l-none hover:bg-blue-300 active:bg-blue-500 transition-all text-white" ]
-                        [ Html.span [ Attr.class "w-[20px] flex" ] [ Icons.plusIcon ]
-                        , text "Add tag"
-                        ]
-                    ]
+        [ Html.p [ Attr.class "mb-10" ] [ text "Add new tags, name limit is 32 characters and it should be unique" ]
+        , Html.div [ Attr.class "mb-10" ]
+            [ viewFieldset
+                { id = NewTagNameId
+                , daysString = Nothing
+                , requiredField = False
+                , textValue = "Tag Name"
+                , inputValue = currentTag.name
+                , maxWidthFieldClass = "w-[85px]"
+                , overrideClass = Nothing
+                }
+            , viewFieldset
+                { id = NewTagValId
+                , daysString = Nothing
+                , requiredField = False
+                , textValue = "Tag Value"
+                , inputValue = currentTag.value
+                , maxWidthFieldClass = "w-[85px]"
+                , overrideClass = Nothing
+                }
+            , Html.button
+                [ onClick AddNewTag, Attr.class "font-semi-bold flex items-center px-2 py-1 rounded-full bg-blue-400  hover:bg-blue-300 active:bg-blue-500 transition-all text-white" ]
+                [ Html.span [ Attr.class "w-[20px] flex" ] [ Icons.plusIcon ]
+                , text "Add tag"
                 ]
             ]
         , Html.ul [ Attr.class "flex gap-4 flex-wrap" ]
             (tags
-                |> List.filter (\{ value } -> String.length value < 32 && String.length value > 0)
+                |> Dict.toList
                 |> List.map
-                    (\{ value } ->
-                        Html.li [ Attr.class "flex bg-blue-200 text-blue-400 easy-in-out border border-blue-400 rounded" ]
-                            [ Html.span [ Attr.class "px-2 py-1" ] [ text value ]
-                            , Html.span [ Attr.class "bg-red-400 cursor-pointer text-red-700 px-1 py-2 text-xs" ]
+                    (\( tagName, value ) ->
+                        Html.li [ Attr.class "flex bg-blue-200 text-xs text-blue-400 easy-in-out border border-blue-400 rounded" ]
+                            [ Html.span [ Attr.class "px-2 py-1" ] [ text <| tagName ++ ": " ++ value ]
+                            , Html.span [ onClick <| DeleteTag tagName, Attr.class "bg-red-400 cursor-pointer text-red-700 px-2 py-1 text-xs" ]
                                 [ Html.span [ Attr.class "flex w-[14px]" ] [ Icons.deleteIcon ] ]
-                            , Html.span [ Attr.class "bg-gray-300 cursor-pointer text-gray-600 px-1 py-2 text-xs rounded-r" ]
+                            , Html.span [ onClick <| EditTag tagName, Attr.class "bg-gray-300 cursor-pointer text-gray-600 px-2 py-1 text-xs rounded-r" ]
                                 [ Html.span [ Attr.class "flex w-[14px]" ] [ Icons.editIcon ] ]
                             ]
                     )
@@ -426,7 +862,7 @@ viewSettings settings showTooltip =
         , Html.p [ Attr.class "mb-10" ] [ text "How many days do you want document to stay in a certain state ?" ]
         , formWrapper
             [ viewFieldset
-                { id = "preparation"
+                { id = PrepId
                 , daysString = Just settings.preparation
                 , requiredField = False
                 , textValue = "Preparation"
@@ -435,7 +871,7 @@ viewSettings settings showTooltip =
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
-                { id = "closed"
+                { id = CloseId
                 , daysString = Just settings.closed
                 , requiredField = False
                 , textValue = "Closed"
@@ -444,7 +880,7 @@ viewSettings settings showTooltip =
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
-                { id = "canceled"
+                { id = CancelId
                 , daysString = Just settings.canceled
                 , requiredField = False
                 , textValue = "Canceled"
@@ -453,7 +889,7 @@ viewSettings settings showTooltip =
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
-                { id = "timedOut"
+                { id = TimeOutId
                 , daysString = Just settings.timedOut
                 , requiredField = False
                 , textValue = "Timed out"
@@ -462,7 +898,7 @@ viewSettings settings showTooltip =
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
-                { id = "error"
+                { id = ErrId
                 , daysString = Just settings.error
                 , requiredField = False
                 , textValue = "Error"
@@ -484,7 +920,7 @@ viewSettings settings showTooltip =
 
 
 viewFieldset :
-    { id : String
+    { id : Ids
     , daysString : Maybe String
     , requiredField : Bool
     , textValue : String
@@ -495,7 +931,7 @@ viewFieldset :
     -> Html Msg
 viewFieldset { id, daysString, requiredField, textValue, inputValue, maxWidthFieldClass, overrideClass } =
     Html.fieldset [ Attr.class "mb-4" ]
-        [ Html.label [ Attr.class "flex items-center", Attr.for id ]
+        [ Html.label [ Attr.class "flex items-center", Attr.for (fromIdToString id) ]
             [ Html.span [ Attr.class maxWidthFieldClass ] [ text textValue ]
             , if requiredField then
                 Html.span [ Attr.class "flex flex-col" ]
@@ -542,8 +978,12 @@ viewInfoIcon txt showTooltip =
         ]
 
 
-viewInputText : { id : String, value : String, overrideClass : Maybe String } -> Html Msg
+viewInputText : { id : Ids, value : String, overrideClass : Maybe String } -> Html Msg
 viewInputText { id, value, overrideClass } =
+    let
+        toMsg =
+            toStrMsg id
+    in
     Html.input
         [ Attr.class "ml-4 rounded-sm border-0 py-1 px-2 h-10 text-gray-900 shadow-sm h-[30px] text-sm ring-transparent focus:ring-transparent"
         , Attr.class
@@ -555,7 +995,8 @@ viewInputText { id, value, overrideClass } =
                     ""
             )
         , Attr.type_ "text"
-        , Attr.id id
+        , Attr.id (fromIdToString id)
+        , onInput toMsg
         , Attr.value value
         ]
         []
@@ -576,7 +1017,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , viewPreferredMethodDropdown { prefMethod = contactDetails.preferredContactMethod, shouldShowDropdown = shouldShowDropdown }
                 ]
             , viewFieldset
-                { id = "email"
+                { id = EmailId
                 , daysString = Nothing
                 , requiredField = contactDetails.preferredContactMethod == Email
                 , textValue = "Email"
@@ -590,7 +1031,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                         Nothing
                 }
             , viewFieldset
-                { id = "phone"
+                { id = PhoneId
                 , daysString = Nothing
                 , requiredField = contactDetails.preferredContactMethod == Phone
                 , textValue = "Phone"
@@ -604,7 +1045,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                         Nothing
                 }
             , viewFieldset
-                { id = "companyName"
+                { id = CompanyId
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Company Name"
@@ -613,7 +1054,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , overrideClass = Nothing
                 }
             , viewFieldset
-                { id = "address"
+                { id = PostId
                 , daysString = Nothing
                 , requiredField = contactDetails.preferredContactMethod == Post
                 , textValue = "Address"
@@ -627,7 +1068,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                         Nothing
                 }
             , viewFieldset
-                { id = "zip"
+                { id = ZipId
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Zip"
@@ -636,7 +1077,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , overrideClass = Nothing
                 }
             , viewFieldset
-                { id = "city"
+                { id = CityId
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "City"
@@ -645,7 +1086,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , overrideClass = Nothing
                 }
             , viewFieldset
-                { id = "country"
+                { id = CountryId
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Country"
@@ -657,20 +1098,24 @@ viewContactDetails contactDetails shouldShowDropdown =
         ]
 
 
-viewDisablePageOverlay : Html msg
+viewDisablePageOverlay : Html Msg
 viewDisablePageOverlay =
     Html.div []
-        [ Html.div [ Attr.class "z-12 text-red-400 mb-4" ]
-            [ Html.div [ Attr.class "flex" ]
-                [ Html.span [ Attr.class "w-[20px] flex mr-2" ] [ Icons.cautionIcon ]
-                , Html.p [] [ text "It's not possible to change data on this page" ]
-                ]
-            ]
+        [ Html.div [ Attr.class "mb-4" ]
+            [ viewErrorMessage "It's not possible to modify data on this page" ]
         , Html.div
             [ Attr.id "overlay"
             , Attr.class "bg-blue-100 opacity-60 w-[100%] h-[100%] absolute z-10"
             ]
             []
+        ]
+
+
+viewErrorMessage : String -> Html Msg
+viewErrorMessage txt =
+    Html.div [ Attr.class "flex items-center z-12 text-xs text-red-400 " ]
+        [ Html.span [ Attr.class "w-[20px] flex mr-2" ] [ Icons.cautionIcon ]
+        , Html.p [] [ text txt ]
         ]
 
 
