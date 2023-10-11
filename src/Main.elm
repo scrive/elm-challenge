@@ -7,7 +7,7 @@ import Data exposing (userGroup)
 import Dict exposing (Dict)
 import Html exposing (Html, text)
 import Html.Attributes as Attr
-import Html.Events exposing (onClick, onInput, onMouseEnter, onMouseLeave)
+import Html.Events exposing (onCheck, onClick, onInput, onMouseEnter, onMouseLeave)
 import Http
 import Icons
 import Json.Decode as Decode exposing (Decoder)
@@ -43,13 +43,17 @@ type alias Model =
     , tabActive : Tabs
     , showTooltip : Bool
     , toggleDropdown : Bool
-    , currentTag : CurrentTag
     , errors : Set String
+    , formData : FormData
     }
 
 
-type alias CurrentTag =
-    { name : String, value : String }
+type alias FormData =
+    { inputFields : Dict String String
+    , shouldTrash : Bool
+    , tags : Tags
+    , prefMethod : PreferredContactMethod
+    }
 
 
 type alias UserGroup =
@@ -75,12 +79,6 @@ type Ids
     | NewTagNameId
     | NewTagValId
     | CountryId
-
-
-
--- type User a
---     = RootUser
---     | ChildUser (User UserGroup)
 
 
 type PreferredContactMethod
@@ -128,31 +126,14 @@ init =
       , tabActive = SettingsTab
       , showTooltip = False
       , toggleDropdown = False
-      , currentTag = { name = "", value = "" }
       , errors = Set.empty
+      , formData = { inputFields = Dict.empty, shouldTrash = False, tags = Dict.empty, prefMethod = Email }
       }
     , fetchUserGroup
     )
 
 
-type InputVariation
-    = PrepField String
-    | CloseField String
-    | CancField String
-    | TimeOutField String
-    | RejectField String
-    | ErrField String
-    | EmailField String
-    | PhoneField String
-    | CompanyNameField String
-    | PostField String
-    | ZipField String
-    | CityField String
-    | CountryField String
 
-
-
--- | TagField String
 ---- UPDATE ----
 
 
@@ -163,12 +144,12 @@ type Msg
     | ShowTooltip
     | AddPrefferedMethod PreferredContactMethod
     | ToggleDropdown
-    | OnInputChange InputVariation
-    | StoreTagName String
-    | StoreTagValue String
+    | OnInputChange Ids String
     | AddNewTag
     | DeleteTag TagName
     | EditTag TagName
+    | ToggleCheckbox Bool
+    | SubmitForm
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -185,7 +166,31 @@ update msg model =
             ( { model | userGroup = Error error }, Cmd.none )
 
         GetUserGroup (Ok userGroup) ->
-            ( { model | userGroup = Success userGroup }, Cmd.none )
+            let
+                { settings, contactDetails, tags } =
+                    userGroup
+
+                { shouldTrash, preparation, closed, canceled, timedOut, rejected, error } =
+                    settings
+
+                { email, phone, companyName, address, zip, city, country, preferredContactMethod } =
+                    contactDetails
+
+                { formData } =
+                    model
+
+                fillInputFields =
+                    Dict.fromList [ ( "preparation", preparation ), ( "closed", closed ), ( "canceled", canceled ), ( "timedOut", timedOut ), ( "rejected", rejected ), ( "error", error ), ( "email", email ), ( "phone", phone ), ( "companyName", companyName ), ( "address", address ), ( "zip", zip ), ( "city", city ), ( "country", country ) ]
+
+                updateFormData =
+                    { formData
+                        | inputFields = fillInputFields
+                        , shouldTrash = shouldTrash
+                        , tags = tags
+                        , prefMethod = preferredContactMethod
+                    }
+            in
+            ( { model | userGroup = Success userGroup, formData = updateFormData }, Cmd.none )
 
         ActiveTab tab ->
             if Set.isEmpty model.errors then
@@ -199,299 +204,237 @@ update msg model =
 
         AddPrefferedMethod method ->
             let
-                updatedUserGroup =
-                    case model.userGroup of
-                        Success data ->
-                            let
-                                contactDetails =
-                                    data.contactDetails
+                { formData } =
+                    model
 
-                                updatedContacts =
-                                    { contactDetails | preferredContactMethod = method }
-
-                                updatedGroup =
-                                    { data | contactDetails = updatedContacts }
-                            in
-                            Success updatedGroup
-
-                        _ ->
-                            Loading
+                updateFormData =
+                    { formData | prefMethod = method }
             in
-            ( { model | toggleDropdown = False, userGroup = updatedUserGroup }, Cmd.none )
+            ( { model | errors = Set.empty, toggleDropdown = False, formData = updateFormData }, Cmd.none )
 
-        OnInputChange inputVariation ->
+        ToggleCheckbox isChecked ->
             let
-                updatedUserGroup =
-                    case model.userGroup of
-                        Success data ->
-                            case inputVariation of
-                                PrepField inputValue ->
-                                    let
-                                        { settings } =
-                                            data
+                { formData } =
+                    model
 
-                                        updatedSettings =
-                                            { settings | preparation = inputValue }
-
-                                        updatedGroup =
-                                            { data | settings = updatedSettings }
-                                    in
-                                    Success updatedGroup
-
-                                CloseField inputValue ->
-                                    let
-                                        { settings } =
-                                            data
-
-                                        updatedSettings =
-                                            { settings | closed = inputValue }
-
-                                        updatedGroup =
-                                            { data | settings = updatedSettings }
-                                    in
-                                    Success updatedGroup
-
-                                CancField inputValue ->
-                                    let
-                                        { settings } =
-                                            data
-
-                                        updatedSettings =
-                                            { settings | canceled = inputValue }
-
-                                        updatedGroup =
-                                            { data | settings = updatedSettings }
-                                    in
-                                    Success updatedGroup
-
-                                TimeOutField inputValue ->
-                                    let
-                                        { settings } =
-                                            data
-
-                                        updatedSettings =
-                                            { settings | timedOut = inputValue }
-
-                                        updatedGroup =
-                                            { data | settings = updatedSettings }
-                                    in
-                                    Success updatedGroup
-
-                                RejectField inputValue ->
-                                    let
-                                        { settings } =
-                                            data
-
-                                        updatedSettings =
-                                            { settings | rejected = inputValue }
-
-                                        updatedGroup =
-                                            { data | settings = updatedSettings }
-                                    in
-                                    Success updatedGroup
-
-                                ErrField inputValue ->
-                                    let
-                                        { settings } =
-                                            data
-
-                                        updatedSettings =
-                                            { settings | error = inputValue }
-
-                                        updatedGroup =
-                                            { data | settings = updatedSettings }
-                                    in
-                                    Success updatedGroup
-
-                                EmailField inputValue ->
-                                    let
-                                        { contactDetails } =
-                                            data
-
-                                        updatedContacts =
-                                            { contactDetails | email = inputValue }
-
-                                        updatedGroup =
-                                            { data | contactDetails = updatedContacts }
-                                    in
-                                    Success updatedGroup
-
-                                PhoneField inputValue ->
-                                    let
-                                        { contactDetails } =
-                                            data
-
-                                        updatedContacts =
-                                            { contactDetails | phone = inputValue }
-
-                                        updatedGroup =
-                                            { data | contactDetails = updatedContacts }
-                                    in
-                                    Success updatedGroup
-
-                                CompanyNameField inputValue ->
-                                    let
-                                        { contactDetails } =
-                                            data
-
-                                        updatedContacts =
-                                            { contactDetails | companyName = inputValue }
-
-                                        updatedGroup =
-                                            { data | contactDetails = updatedContacts }
-                                    in
-                                    Success updatedGroup
-
-                                PostField inputValue ->
-                                    let
-                                        { contactDetails } =
-                                            data
-
-                                        updatedContacts =
-                                            { contactDetails | address = inputValue }
-
-                                        updatedGroup =
-                                            { data | contactDetails = updatedContacts }
-                                    in
-                                    Success updatedGroup
-
-                                ZipField inputValue ->
-                                    let
-                                        { contactDetails } =
-                                            data
-
-                                        updatedContacts =
-                                            { contactDetails | zip = inputValue }
-
-                                        updatedGroup =
-                                            { data | contactDetails = updatedContacts }
-                                    in
-                                    Success updatedGroup
-
-                                CityField inputValue ->
-                                    let
-                                        { contactDetails } =
-                                            data
-
-                                        updatedContacts =
-                                            { contactDetails | city = inputValue }
-
-                                        updatedGroup =
-                                            { data | contactDetails = updatedContacts }
-                                    in
-                                    Success updatedGroup
-
-                                CountryField inputValue ->
-                                    let
-                                        { contactDetails } =
-                                            data
-
-                                        updatedContacts =
-                                            { contactDetails | country = inputValue }
-
-                                        updatedGroup =
-                                            { data | contactDetails = updatedContacts }
-                                    in
-                                    Success updatedGroup
-
-                        _ ->
-                            Loading
+                updateFormData =
+                    { formData
+                        | shouldTrash = isChecked
+                    }
             in
-            ( { model | userGroup = updatedUserGroup }, Cmd.none )
+            ( { model | formData = updateFormData }, Cmd.none )
+
+        SubmitForm ->
+            let
+                { formData } =
+                    model
+
+                { tags, inputFields, shouldTrash, prefMethod } =
+                    formData
+
+                emailValue =
+                    inputFields |> Dict.get "email" |> Maybe.withDefault ""
+
+                phoneValue =
+                    inputFields |> Dict.get "phone" |> Maybe.withDefault ""
+
+                settingsList =
+                    [ "preparation", "closed", "canceled", "timedOut", "rejected", "error" ]
+
+                contactDetailsList =
+                    [ "email", "phone", "companyName", "address", "zip", "city", "country" ]
+
+                updateErrors =
+                    let
+                        emailError =
+                            case Util.parseEmail (inputFields |> Dict.get "email" |> Maybe.withDefault "") of
+                                Ok _ ->
+                                    Set.remove "Invalid email" Set.empty
+
+                                Err _ ->
+                                    Set.insert "Invalid email" Set.empty
+
+                        phoneErrorMsg =
+                            "Valid phone should contain '+' sign followed by 11 min digits"
+
+                        phoneError =
+                            case Util.parsePhoneNumber (inputFields |> Dict.get "phone" |> Maybe.withDefault "") of
+                                Ok _ ->
+                                    Set.remove phoneErrorMsg Set.empty
+
+                                Err _ ->
+                                    Set.insert phoneErrorMsg Set.empty
+
+                        madatoryFieldsErrors =
+                            case prefMethod of
+                                Email ->
+                                    let
+                                        emailErrorMsg =
+                                            "Email is mandatory field"
+                                    in
+                                    if String.isEmpty emailValue then
+                                        Set.insert emailErrorMsg Set.empty
+
+                                    else
+                                        Set.remove emailErrorMsg Set.empty
+
+                                Post ->
+                                    let
+                                        addressValue =
+                                            inputFields |> Dict.get "address" |> Maybe.withDefault ""
+
+                                        addressErrorMsg =
+                                            "Address is mandatory field"
+                                    in
+                                    if String.isEmpty addressValue then
+                                        Set.insert addressErrorMsg Set.empty
+
+                                    else
+                                        Set.remove addressErrorMsg Set.empty
+
+                                Phone ->
+                                    if String.isEmpty phoneValue then
+                                        Set.insert "Phone is mandatory field" Set.empty
+
+                                    else
+                                        Set.remove "Phone is mandatory field" Set.empty
+
+                        settingsErrors =
+                            inputFields
+                                |> Dict.foldl
+                                    (\key value acc ->
+                                        if List.member key settingsList then
+                                            if String.toInt value == Nothing && String.length value /= 0 then
+                                                Set.insert "Field should be number" acc
+
+                                            else
+                                                acc
+
+                                        else
+                                            acc
+                                    )
+                                    Set.empty
+                    in
+                    case model.tabActive of
+                        SettingsTab ->
+                            settingsErrors |> Set.union Set.empty
+
+                        DetailsTab ->
+                            [ emailError, phoneError, madatoryFieldsErrors ] |> List.foldl (\set acc -> Set.union set acc) Set.empty
+
+                        TagsTab ->
+                            model.errors
+            in
+            ( { model | errors = updateErrors }, Cmd.none )
+
+        OnInputChange ids inputValue ->
+            let
+                { formData } =
+                    model
+
+                updateInputFields id input =
+                    Dict.insert (fromIdToString id) input model.formData.inputFields
+
+                updateFormData =
+                    { formData | inputFields = updateInputFields ids inputValue }
+            in
+            ( { model | formData = updateFormData }, Cmd.none )
 
         ToggleDropdown ->
             ( { model | toggleDropdown = not <| model.toggleDropdown }, Cmd.none )
 
-        StoreTagName tagName ->
-            let
-                currentTag =
-                    model.currentTag
-
-                updateCurrentTag =
-                    { currentTag | name = tagName }
-            in
-            ( { model | currentTag = updateCurrentTag }, Cmd.none )
-
-        StoreTagValue tagValue ->
-            let
-                currentTag =
-                    model.currentTag
-
-                updateCurrentTag =
-                    { currentTag | value = tagValue }
-            in
-            ( { model | currentTag = updateCurrentTag }, Cmd.none )
-
         AddNewTag ->
-            if String.length model.currentTag.name > 32 then
-                ( { model | errors = Set.insert "Tag name should be less then 32 characters" model.errors }, Cmd.none )
+            let
+                { formData } =
+                    model
 
-            else if String.isEmpty model.currentTag.name then
+                { inputFields, tags } =
+                    formData
+
+                currentTagName =
+                    inputFields |> Dict.get "newTagName" |> Maybe.withDefault ""
+
+                currentTagValue =
+                    inputFields |> Dict.get "newTagValue" |> Maybe.withDefault ""
+            in
+            if String.length currentTagName > 32 then
+                ( { model | errors = Set.insert "Tag name should be less then 33 characters" model.errors }, Cmd.none )
+
+            else if String.isEmpty currentTagName then
                 ( { model | errors = Set.insert "Tag name is empty" model.errors }, Cmd.none )
 
-            else if String.isEmpty model.currentTag.value then
-                ( { model | errors = Set.insert "Tag value is empty" model.errors }, Cmd.none )
+            else if String.isEmpty currentTagValue then
+                let
+                    updatedTags =
+                        tags |> Dict.insert currentTagName ""
+
+                    updateInputFields =
+                        inputFields |> Dict.insert "newTagName" "" |> Dict.insert "newTagValue" ""
+
+                    updatedFormData =
+                        { formData
+                            | tags = updatedTags
+                            , inputFields = updateInputFields
+                        }
+                in
+                ( { model | errors = Set.empty, formData = updatedFormData }, Cmd.none )
 
             else
                 let
-                    updatedUserGroup =
-                        case model.userGroup of
-                            Success data ->
-                                let
-                                    tags =
-                                        data.tags
+                    updatedTags =
+                        tags |> Dict.insert currentTagName currentTagValue
 
-                                    updatedTags =
-                                        tags |> Dict.insert model.currentTag.name model.currentTag.value
+                    updateInputFields =
+                        inputFields |> Dict.insert "newTagName" "" |> Dict.insert "newTagValue" ""
 
-                                    updatedGroup =
-                                        { data | tags = updatedTags }
-                                in
-                                Success updatedGroup
-
-                            _ ->
-                                Loading
+                    updatedFormData =
+                        { formData
+                            | tags = updatedTags
+                            , inputFields = updateInputFields
+                        }
                 in
-                ( { model | errors = Set.empty, toggleDropdown = False, userGroup = updatedUserGroup }, Cmd.none )
+                ( { model | errors = Set.empty, toggleDropdown = False, formData = updatedFormData }, Cmd.none )
 
         EditTag tagName ->
             let
-                tags =
-                    case model.userGroup of
-                        Success data ->
-                            data.tags
+                { formData } =
+                    model
 
-                        _ ->
-                            Dict.empty
+                { tags, inputFields } =
+                    formData
             in
             case Dict.get tagName tags of
                 Just tagValue ->
-                    ( { model | currentTag = { name = tagName, value = tagValue } }, Cmd.none )
+                    let
+                        updateInputFields =
+                            inputFields |> Dict.insert "newTagName" tagName |> Dict.insert "newTagValue" tagValue
+
+                        updatedFormData =
+                            { formData | inputFields = updateInputFields }
+                    in
+                    ( { model | formData = updatedFormData }, Cmd.none )
 
                 Nothing ->
                     ( model, Cmd.none )
 
         DeleteTag tagName ->
             let
-                updatedUserGroup =
-                    case model.userGroup of
-                        Success data ->
-                            let
-                                tags =
-                                    data.tags
+                { formData } =
+                    model
 
-                                updatedTags =
-                                    tags |> Dict.remove tagName
+                { tags } =
+                    formData
 
-                                updatedGroup =
-                                    { data | tags = updatedTags }
-                            in
-                            Success updatedGroup
+                updatedTags =
+                    tags |> Dict.remove tagName
 
-                        _ ->
-                            Loading
+                updatedFormData =
+                    { formData | tags = updatedTags }
             in
-            ( { model | userGroup = updatedUserGroup }, Cmd.none )
+            ( { model | formData = updatedFormData }, Cmd.none )
+
+
+sendUserGroup : Cmd Msg
 
 
 fetchUserGroup : Cmd Msg
@@ -648,55 +591,6 @@ fromIdToString ids =
             "countryName"
 
 
-toStrMsg : Ids -> String -> Msg
-toStrMsg idField inputValue =
-    case idField of
-        PrepId ->
-            OnInputChange (PrepField inputValue)
-
-        CloseId ->
-            OnInputChange (CloseField inputValue)
-
-        CancelId ->
-            OnInputChange (CancField inputValue)
-
-        TimeOutId ->
-            OnInputChange (TimeOutField inputValue)
-
-        RejectId ->
-            OnInputChange (RejectField inputValue)
-
-        ErrId ->
-            OnInputChange (ErrField inputValue)
-
-        EmailId ->
-            OnInputChange (EmailField inputValue)
-
-        PhoneId ->
-            OnInputChange (PhoneField inputValue)
-
-        CompanyId ->
-            OnInputChange (CompanyNameField inputValue)
-
-        PostId ->
-            OnInputChange (PostField inputValue)
-
-        ZipId ->
-            OnInputChange (ZipField inputValue)
-
-        CityId ->
-            OnInputChange (CityField inputValue)
-
-        NewTagNameId ->
-            StoreTagName inputValue
-
-        NewTagValId ->
-            StoreTagValue inputValue
-
-        _ ->
-            OnInputChange (CountryField inputValue)
-
-
 
 ---- VIEW ----
 -- header : String -> Html msg
@@ -718,7 +612,7 @@ view model =
     --     , header "Now turn them into form."
     --     , subheader "See README for details of the task. Good luck 🍀 "
     --     ]
-    Html.div [ Attr.class "flex flex-col w-[1024px] items-center mx-auto" ]
+    Html.div [ Attr.class "flex flex-col w-[626px] items-center mx-auto" ]
         [ case model.userGroup of
             Initial ->
                 text ""
@@ -748,16 +642,16 @@ view model =
                                 [ Html.div [ Attr.class "mb-4" ] (model.errors |> Set.toList |> List.map (\error -> viewErrorMessage error))
                                 , case model.tabActive of
                                     SettingsTab ->
-                                        viewSettings userGroup.settings model.showTooltip
+                                        viewSettings model.formData userGroup.settings.isInherited model.showTooltip
 
                                     DetailsTab ->
-                                        viewContactDetails userGroup.contactDetails model.toggleDropdown
+                                        viewContactDetails model.formData { isInherited = userGroup.contactDetails.isInherited, prefMethod = model.formData.prefMethod } model.toggleDropdown
 
                                     TagsTab ->
-                                        viewTags userGroup.tags model.currentTag
+                                        viewTags model.formData.tags model.formData.inputFields
                                 ]
                             ]
-                        , Html.button [ Attr.class "flex font-semi-bold px-5 py-2 rounded-full bg-blue-400 hover:bg-blue-300 active:bg-blue-500 easy-in-out transition-all text-white" ] [ Html.span [ Attr.class "mr-2 flex w-[20px]" ] [ Icons.checkIcon ], text "Submit" ]
+                        , Html.button [ onClick <| SubmitForm, Attr.class "flex font-semi-bold px-5 py-2 rounded-full bg-blue-400 hover:bg-blue-300 active:bg-blue-500 easy-in-out transition-all text-white" ] [ Html.span [ Attr.class "mr-2 flex w-[20px]" ] [ Icons.checkIcon ], text "Submit" ]
                         ]
                     ]
         ]
@@ -805,17 +699,17 @@ viewTabs tabActive =
         ]
 
 
-viewTags : Tags -> CurrentTag -> Html Msg
-viewTags tags currentTag =
+viewTags : Tags -> Dict String String -> Html Msg
+viewTags tags inputFields =
     Html.section []
-        [ Html.p [ Attr.class "mb-10" ] [ text "Add new tags, name limit is 32 characters and it should be unique" ]
+        [ Html.p [ Attr.class "mb-10" ] [ text "Add new tags, name limit is 33 characters and it should be unique" ]
         , Html.div [ Attr.class "mb-10" ]
             [ viewFieldset
                 { id = NewTagNameId
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Tag Name"
-                , inputValue = currentTag.name
+                , inputValue = inputFields |> Dict.get "newTagName" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[85px]"
                 , overrideClass = Nothing
                 }
@@ -824,7 +718,7 @@ viewTags tags currentTag =
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Tag Value"
-                , inputValue = currentTag.value
+                , inputValue = inputFields |> Dict.get "newTagValue" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[85px]"
                 , overrideClass = Nothing
                 }
@@ -851,10 +745,10 @@ viewTags tags currentTag =
         ]
 
 
-viewSettings : Settings -> Bool -> Html Msg
-viewSettings settings showTooltip =
+viewSettings : FormData -> Bool -> Bool -> Html Msg
+viewSettings { inputFields, shouldTrash } isInherited showTooltip =
     Html.section [ Attr.class "relative" ]
-        [ if settings.isInherited then
+        [ if isInherited then
             viewDisablePageOverlay
 
           else
@@ -863,46 +757,46 @@ viewSettings settings showTooltip =
         , formWrapper
             [ viewFieldset
                 { id = PrepId
-                , daysString = Just settings.preparation
+                , daysString = inputFields |> Dict.get "preparation"
                 , requiredField = False
                 , textValue = "Preparation"
-                , inputValue = settings.preparation
+                , inputValue = inputFields |> Dict.get "preparation" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[94px]"
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
                 { id = CloseId
-                , daysString = Just settings.closed
+                , daysString = inputFields |> Dict.get "closed"
                 , requiredField = False
                 , textValue = "Closed"
-                , inputValue = settings.closed
+                , inputValue = inputFields |> Dict.get "closed" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[94px]"
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
                 { id = CancelId
-                , daysString = Just settings.canceled
+                , daysString = inputFields |> Dict.get "canceled"
                 , requiredField = False
                 , textValue = "Canceled"
-                , inputValue = settings.canceled
+                , inputValue = inputFields |> Dict.get "canceled" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[94px]"
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
                 { id = TimeOutId
-                , daysString = Just settings.timedOut
+                , daysString = inputFields |> Dict.get "timedOut"
                 , requiredField = False
                 , textValue = "Timed out"
-                , inputValue = settings.timedOut
+                , inputValue = inputFields |> Dict.get "timedOut" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[94px]"
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
             , viewFieldset
                 { id = ErrId
-                , daysString = Just settings.error
+                , daysString = inputFields |> Dict.get "error"
                 , requiredField = False
                 , textValue = "Error"
-                , inputValue = settings.error
+                , inputValue = inputFields |> Dict.get "error" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[94px]"
                 , overrideClass = Just "mr-4 w-[45px]"
                 }
@@ -912,7 +806,7 @@ viewSettings settings showTooltip =
                         [ text "Destroy"
                         , viewInfoIcon "You confirm that item can be deleted after defined amount od days" showTooltip
                         ]
-                    , Html.input [ Attr.class "ml-4 w-[20px] h-[20px] border-0 text-blue-400 shadow-sm ring-transparent focus:ring-0 focus:ring-offset-0 cursor-pointer border-blue-400,", Attr.type_ "checkbox", Attr.id "shouldTrash", Attr.checked settings.shouldTrash ] []
+                    , Html.input [ onCheck ToggleCheckbox, Attr.class "ml-4 w-[20px] h-[20px] border-0 text-blue-400 shadow-sm ring-transparent focus:ring-0 focus:ring-offset-0 cursor-pointer border-blue-400,", Attr.type_ "checkbox", Attr.id "shouldTrash", Attr.checked shouldTrash ] []
                     ]
                 ]
             ]
@@ -980,10 +874,6 @@ viewInfoIcon txt showTooltip =
 
 viewInputText : { id : Ids, value : String, overrideClass : Maybe String } -> Html Msg
 viewInputText { id, value, overrideClass } =
-    let
-        toMsg =
-            toStrMsg id
-    in
     Html.input
         [ Attr.class "ml-4 rounded-sm border-0 py-1 px-2 h-10 text-gray-900 shadow-sm h-[30px] text-sm ring-transparent focus:ring-transparent"
         , Attr.class
@@ -996,16 +886,16 @@ viewInputText { id, value, overrideClass } =
             )
         , Attr.type_ "text"
         , Attr.id (fromIdToString id)
-        , onInput toMsg
+        , onInput (id |> OnInputChange)
         , Attr.value value
         ]
         []
 
 
-viewContactDetails : ContactDetails -> Bool -> Html Msg
-viewContactDetails contactDetails shouldShowDropdown =
+viewContactDetails : FormData -> { isInherited : Bool, prefMethod : PreferredContactMethod } -> Bool -> Html Msg
+viewContactDetails { inputFields } { isInherited, prefMethod } shouldShowDropdown =
     Html.section [ Attr.class "relative" ]
-        [ if contactDetails.isInherited then
+        [ if isInherited then
             viewDisablePageOverlay
 
           else
@@ -1014,17 +904,17 @@ viewContactDetails contactDetails shouldShowDropdown =
         , formWrapper
             [ Html.div [ Attr.class "flex mb-10 items-center" ]
                 [ Html.div [] [ text "Choose preferred contact method" ]
-                , viewPreferredMethodDropdown { prefMethod = contactDetails.preferredContactMethod, shouldShowDropdown = shouldShowDropdown }
+                , viewPreferredMethodDropdown { prefMethod = prefMethod, shouldShowDropdown = shouldShowDropdown }
                 ]
             , viewFieldset
                 { id = EmailId
                 , daysString = Nothing
-                , requiredField = contactDetails.preferredContactMethod == Email
+                , requiredField = prefMethod == Email
                 , textValue = "Email"
-                , inputValue = contactDetails.email
+                , inputValue = inputFields |> Dict.get "email" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[132px]"
                 , overrideClass =
-                    if contactDetails.preferredContactMethod == Email then
+                    if prefMethod == Email then
                         Just "rounded-t-none ring-blue-400 ring-1"
 
                     else
@@ -1033,12 +923,12 @@ viewContactDetails contactDetails shouldShowDropdown =
             , viewFieldset
                 { id = PhoneId
                 , daysString = Nothing
-                , requiredField = contactDetails.preferredContactMethod == Phone
+                , requiredField = prefMethod == Phone
                 , textValue = "Phone"
-                , inputValue = contactDetails.phone
+                , inputValue = inputFields |> Dict.get "phone" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[132px]"
                 , overrideClass =
-                    if contactDetails.preferredContactMethod == Phone then
+                    if prefMethod == Phone then
                         Just "rounded-t-none ring-blue-400 ring-1"
 
                     else
@@ -1049,19 +939,19 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Company Name"
-                , inputValue = contactDetails.companyName
+                , inputValue = inputFields |> Dict.get "companyName" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[132px]"
                 , overrideClass = Nothing
                 }
             , viewFieldset
                 { id = PostId
                 , daysString = Nothing
-                , requiredField = contactDetails.preferredContactMethod == Post
+                , requiredField = prefMethod == Post
                 , textValue = "Address"
-                , inputValue = contactDetails.address
+                , inputValue = inputFields |> Dict.get "address" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[132px]"
                 , overrideClass =
-                    if contactDetails.preferredContactMethod == Post then
+                    if prefMethod == Post then
                         Just "rounded-t-none ring-blue-400 ring-1"
 
                     else
@@ -1072,7 +962,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Zip"
-                , inputValue = contactDetails.zip
+                , inputValue = inputFields |> Dict.get "zip" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[132px]"
                 , overrideClass = Nothing
                 }
@@ -1081,7 +971,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "City"
-                , inputValue = contactDetails.city
+                , inputValue = inputFields |> Dict.get "city" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[132px]"
                 , overrideClass = Nothing
                 }
@@ -1090,7 +980,7 @@ viewContactDetails contactDetails shouldShowDropdown =
                 , daysString = Nothing
                 , requiredField = False
                 , textValue = "Country"
-                , inputValue = contactDetails.country
+                , inputValue = inputFields |> Dict.get "countryName" |> Maybe.withDefault ""
                 , maxWidthFieldClass = "w-[132px]"
                 , overrideClass = Nothing
                 }
@@ -1122,8 +1012,7 @@ viewErrorMessage txt =
 viewPreferredMethodDropdown : { prefMethod : PreferredContactMethod, shouldShowDropdown : Bool } -> Html Msg
 viewPreferredMethodDropdown { prefMethod, shouldShowDropdown } =
     Html.div [ Attr.class "ml-4 relative cursor-pointer" ]
-        [ -- Html.div [] [ text <| preferredToString contactDetails.preferredContactMethod ]
-          Html.div
+        [ Html.div
             [ Attr.class "py-1 px-2 flex rounded items-center text-white bg-blue-400"
             , onClick ToggleDropdown
             ]

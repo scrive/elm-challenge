@@ -1,4 +1,4 @@
-module Util exposing (Email, buildErrorMessage, parseEmail, parsePhoneNumber)
+module Util exposing (buildErrorMessage, emailToString, parseEmail, parsePhoneNumber, phoneToString)
 
 import Http
 import Parser as P exposing ((|.), (|=), Parser, Step)
@@ -111,11 +111,6 @@ afterDotParser =
            )
 
 
-isLowerCase : String -> Bool
-isLowerCase str =
-    String.all Char.isLower str
-
-
 emailParser : Parser (Maybe ConstructEmail)
 emailParser =
     P.succeed
@@ -160,11 +155,14 @@ parseEmail email =
 
 
 type Phone
+    = Phone String
+
+
+type SplitPhone
     = Plus
-    | PhoneNumber String
 
 
-plusParser : Parser Phone
+plusParser : Parser SplitPhone
 plusParser =
     P.succeed Plus
         |. P.symbol "+"
@@ -175,20 +173,11 @@ phoneNumberStr =
     P.loop [] phoneHelp |> P.map String.concat
 
 
-phoneNumberParser : Parser Phone
-phoneNumberParser =
-    phoneNumberStr
-        |> P.map
-            (\s ->
-                PhoneNumber s
-            )
-
-
 phoneHelp : List String -> Parser (Step (List String) (List String))
 phoneHelp nums =
     let
         checkNum numSoFar num =
-            if String.length num < 12 then
+            if String.length num < 11 then
                 P.Loop (num :: numSoFar)
 
             else
@@ -200,7 +189,9 @@ phoneHelp nums =
 
 parsePlusAndNumber : Parser Phone
 parsePlusAndNumber =
-    P.oneOf [ plusParser, phoneNumberParser ]
+    P.succeed Phone
+        |. plusParser
+        |= phoneNumberStr
 
 
 parsePhoneNumber : String -> Result String Phone
@@ -209,5 +200,20 @@ parsePhoneNumber str =
         Err _ ->
             Err "Wrong phone number"
 
-        Ok phoneNumber ->
-            Ok phoneNumber
+        Ok _ ->
+            Ok (Phone str)
+
+
+isLowerCase : String -> Bool
+isLowerCase str =
+    String.all Char.isLower str
+
+
+emailToString : Email -> String
+emailToString (Email validEmail) =
+    validEmail
+
+
+phoneToString : Phone -> String
+phoneToString (Phone validPhone) =
+    validPhone
