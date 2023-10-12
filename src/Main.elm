@@ -12,7 +12,9 @@ import Http
 import Icons
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (optional, optionalAt, required, requiredAt)
+import Process
 import Set exposing (Set)
+import Task
 import Util
 
 
@@ -45,6 +47,7 @@ type alias Model =
     , toggleDropdown : Bool
     , errors : Set String
     , formData : FormData
+    , isFormSent : Bool
     }
 
 
@@ -128,6 +131,7 @@ init =
       , toggleDropdown = False
       , errors = Set.empty
       , formData = { inputFields = Dict.empty, shouldTrash = False, tags = Dict.empty, prefMethod = Email }
+      , isFormSent = False
       }
     , fetchUserGroup
     )
@@ -150,6 +154,7 @@ type Msg
     | EditTag TagName
     | ToggleCheckbox Bool
     | SubmitForm
+    | FormSent
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -193,11 +198,7 @@ update msg model =
             ( { model | userGroup = Success userGroup, formData = updateFormData }, Cmd.none )
 
         ActiveTab tab ->
-            if Set.isEmpty model.errors then
-                ( { model | tabActive = tab }, Cmd.none )
-
-            else
-                ( model, Cmd.none )
+            ( { model | tabActive = tab }, Cmd.none )
 
         ShowTooltip ->
             ( { model | showTooltip = not <| model.showTooltip }, Cmd.none )
@@ -218,114 +219,27 @@ update msg model =
                     model
 
                 updateFormData =
-                    { formData
-                        | shouldTrash = isChecked
-                    }
+                    { formData | shouldTrash = isChecked }
             in
             ( { model | formData = updateFormData }, Cmd.none )
 
         SubmitForm ->
             let
-                { formData } =
-                    model
-
-                { tags, inputFields, shouldTrash, prefMethod } =
-                    formData
-
-                emailValue =
-                    inputFields |> Dict.get "email" |> Maybe.withDefault ""
-
-                phoneValue =
-                    inputFields |> Dict.get "phone" |> Maybe.withDefault ""
-
-                settingsList =
-                    [ "preparation", "closed", "canceled", "timedOut", "rejected", "error" ]
-
-                contactDetailsList =
-                    [ "email", "phone", "companyName", "address", "zip", "city", "country" ]
-
                 updateErrors =
-                    let
-                        emailError =
-                            case Util.parseEmail (inputFields |> Dict.get "email" |> Maybe.withDefault "") of
-                                Ok _ ->
-                                    Set.remove "Invalid email" Set.empty
-
-                                Err _ ->
-                                    Set.insert "Invalid email" Set.empty
-
-                        phoneErrorMsg =
-                            "Valid phone should contain '+' sign followed by 11 min digits"
-
-                        phoneError =
-                            case Util.parsePhoneNumber (inputFields |> Dict.get "phone" |> Maybe.withDefault "") of
-                                Ok _ ->
-                                    Set.remove phoneErrorMsg Set.empty
-
-                                Err _ ->
-                                    Set.insert phoneErrorMsg Set.empty
-
-                        madatoryFieldsErrors =
-                            case prefMethod of
-                                Email ->
-                                    let
-                                        emailErrorMsg =
-                                            "Email is mandatory field"
-                                    in
-                                    if String.isEmpty emailValue then
-                                        Set.insert emailErrorMsg Set.empty
-
-                                    else
-                                        Set.remove emailErrorMsg Set.empty
-
-                                Post ->
-                                    let
-                                        addressValue =
-                                            inputFields |> Dict.get "address" |> Maybe.withDefault ""
-
-                                        addressErrorMsg =
-                                            "Address is mandatory field"
-                                    in
-                                    if String.isEmpty addressValue then
-                                        Set.insert addressErrorMsg Set.empty
-
-                                    else
-                                        Set.remove addressErrorMsg Set.empty
-
-                                Phone ->
-                                    if String.isEmpty phoneValue then
-                                        Set.insert "Phone is mandatory field" Set.empty
-
-                                    else
-                                        Set.remove "Phone is mandatory field" Set.empty
-
-                        settingsErrors =
-                            inputFields
-                                |> Dict.foldl
-                                    (\key value acc ->
-                                        if List.member key settingsList then
-                                            if String.toInt value == Nothing && String.length value /= 0 then
-                                                Set.insert "Field should be number" acc
-
-                                            else
-                                                acc
-
-                                        else
-                                            acc
-                                    )
-                                    Set.empty
-                    in
-                    case model.tabActive of
-                        SettingsTab ->
-                            settingsErrors |> Set.union Set.empty
-
-                        DetailsTab ->
-                            [ emailError, phoneError, madatoryFieldsErrors ] |> List.foldl (\set acc -> Set.union set acc) Set.empty
-
-                        TagsTab ->
-                            model.errors
+                    formValidate model
             in
-            ( { model | errors = updateErrors }, Cmd.none )
+            ( { model | errors = updateErrors }
+              -- We simulate that form is sent to a server
+            , if Set.isEmpty updateErrors then
+                Process.sleep 1000
+                    |> Task.perform (\_ -> FormSent)
+
+              else
+                Cmd.none
+            )
+
+        FormSent ->
+            ( { model | isFormSent = True }, Cmd.none )
 
         OnInputChange ids inputValue ->
             let
@@ -338,7 +252,7 @@ update msg model =
                 updateFormData =
                     { formData | inputFields = updateInputFields ids inputValue }
             in
-            ( { model | formData = updateFormData }, Cmd.none )
+            ( { model | formData = updateFormData, isFormSent = False }, Cmd.none )
 
         ToggleDropdown ->
             ( { model | toggleDropdown = not <| model.toggleDropdown }, Cmd.none )
@@ -358,10 +272,10 @@ update msg model =
                     inputFields |> Dict.get "newTagValue" |> Maybe.withDefault ""
             in
             if String.length currentTagName > 32 then
-                ( { model | errors = Set.insert "Tag name should be less then 33 characters" model.errors }, Cmd.none )
+                ( { model | errors = Set.insert "Tags Tab: Tag name should be less then 33 characters" model.errors }, Cmd.none )
 
             else if String.isEmpty currentTagName then
-                ( { model | errors = Set.insert "Tag name is empty" model.errors }, Cmd.none )
+                ( { model | errors = Set.insert "Tags Tab: Tag name is empty" model.errors }, Cmd.none )
 
             else if String.isEmpty currentTagValue then
                 let
@@ -393,7 +307,7 @@ update msg model =
                             , inputFields = updateInputFields
                         }
                 in
-                ( { model | errors = Set.empty, toggleDropdown = False, formData = updatedFormData }, Cmd.none )
+                ( { model | errors = Set.empty, formData = updatedFormData }, Cmd.none )
 
         EditTag tagName ->
             let
@@ -434,7 +348,106 @@ update msg model =
             ( { model | formData = updatedFormData }, Cmd.none )
 
 
-sendUserGroup : Cmd Msg
+formValidate : Model -> Set String
+formValidate model =
+    let
+        { formData } =
+            model
+
+        { inputFields, prefMethod } =
+            formData
+
+        emailValue =
+            inputFields |> Dict.get "email" |> Maybe.withDefault ""
+
+        phoneValue =
+            inputFields |> Dict.get "phone" |> Maybe.withDefault ""
+
+        settingsList =
+            [ "preparation", "closed", "canceled", "timedOut", "rejected", "error" ]
+
+        updateErrors =
+            let
+                emailError =
+                    let
+                        errorMsg =
+                            "Details Tab: Invalid email"
+                    in
+                    case Util.parseEmail (inputFields |> Dict.get "email" |> Maybe.withDefault "") of
+                        Ok _ ->
+                            Set.remove errorMsg Set.empty
+
+                        Err _ ->
+                            Set.insert errorMsg Set.empty
+
+                phoneErrorMsg =
+                    "Details Tab: Valid phone should contain '+' sign followed by 11 min digits"
+
+                phoneError =
+                    case Util.parsePhoneNumber (inputFields |> Dict.get "phone" |> Maybe.withDefault "") of
+                        Ok _ ->
+                            Set.remove phoneErrorMsg Set.empty
+
+                        Err _ ->
+                            Set.insert phoneErrorMsg Set.empty
+
+                madatoryFieldsErrors =
+                    case prefMethod of
+                        Email ->
+                            let
+                                errorMsg =
+                                    "Details Tab: Email is mandatory field"
+                            in
+                            if String.isEmpty emailValue then
+                                Set.insert errorMsg Set.empty
+
+                            else
+                                Set.remove errorMsg Set.empty
+
+                        Post ->
+                            let
+                                addressValue =
+                                    inputFields |> Dict.get "address" |> Maybe.withDefault ""
+
+                                addressErrorMsg =
+                                    "Details Tab: Address is mandatory field"
+                            in
+                            if String.isEmpty addressValue then
+                                Set.insert addressErrorMsg Set.empty
+
+                            else
+                                Set.remove addressErrorMsg Set.empty
+
+                        Phone ->
+                            let
+                                errorMsg =
+                                    "Details Tab: Phone is mandatory field"
+                            in
+                            if String.isEmpty phoneValue then
+                                Set.insert errorMsg Set.empty
+
+                            else
+                                Set.remove errorMsg Set.empty
+
+                settingsErrors =
+                    inputFields
+                        |> Dict.foldl
+                            (\key value acc ->
+                                if List.member key settingsList then
+                                    if String.toInt value == Nothing && String.length value /= 0 then
+                                        Set.insert "Settings Tab: Field should be number" acc
+
+                                    else
+                                        acc
+
+                                else
+                                    acc
+                            )
+                            Set.empty
+            in
+            [ emailError, phoneError, madatoryFieldsErrors, settingsErrors ] |> List.foldl (\set acc -> Set.union set acc) Set.empty
+    in
+    updateErrors
 
 
 fetchUserGroup : Cmd Msg
@@ -593,26 +606,11 @@ fromIdToString ids =
 
 
 ---- VIEW ----
--- header : String -> Html msg
--- header text =
---     Html.span [ Attr.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
---         [ Html.text text ]
--- subheader : String -> Html msg
--- subheader text =
---     Html.span [ Attr.class "p-2 text-2xl font-extrabold text-slate-800" ]
---         [ Html.text text ]
 
 
 view : Model -> Html Msg
 view model =
-    -- Html.div [ Attr.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-    --     [ header "Let's start your task"
-    --     , subheader "Here are your data:"
-    --     , Html.pre [ Attr.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
-    --     , header "Now turn them into form."
-    --     , subheader "See README for details of the task. Good luck 🍀 "
-    --     ]
-    Html.div [ Attr.class "flex flex-col w-[626px] items-center mx-auto" ]
+    Html.div [ Attr.class "flex flex-col sm:w-full md:w-[626px] items-center mx-auto" ]
         [ case model.userGroup of
             Initial ->
                 text ""
@@ -623,19 +621,30 @@ view model =
                     ]
 
             Error error ->
-                Html.div [ Attr.class "bg-red-500" ] [ text error ]
+                Html.div [ Attr.class "flex items-center z-12 bg-red-200 mt-10 border px-3 py-2 mx-4 rounded border-red-400 text-2xl text-red-400 " ]
+                    [ Html.span [ Attr.class "w-[30px] flex mr-2" ] [ Icons.cautionIcon ]
+                    , Html.p [] [ text error ]
+                    ]
 
             Success userGroup ->
-                Html.div [ Attr.class "flex flex-col mt-16 mb-48" ]
-                    [ Html.div []
-                        [ Html.div [ Attr.class "flex w-[100px] h-[21px] md:w-[140px] md:h-[30px]" ]
+                Html.div [ Attr.class "flex flex-col mx-4 md:mx-0 mt-16 mb-48" ]
+                    [ Html.div [ Attr.class "mx-4 md:mx-0" ]
+                        [ Html.div [ Attr.class "flex w-[140px] h-[30px]" ]
                             [ Html.img [ Attr.src "logo.png" ] []
                             ]
-                        , Html.h1 [ Attr.class "text-5xl mb-10" ] [ text "User Group Settings Form" ]
+                        , Html.h1 [ Attr.class "text-3xl  md:text-5xl mb-10" ] [ text "User Group Settings Form" ]
                         ]
+                    , if model.isFormSent then
+                        Html.div [ Attr.class "flex mb-4 text-green-400 rounded border border-green-400 bg-green-200 px-3 py-2" ]
+                            [ Html.span [ Attr.class "mr-2 flex w-[20px]" ] [ Icons.checkIcon ]
+                            , Html.p [] [ text "Success ! Form has been sent !" ]
+                            ]
+
+                      else
+                        text ""
                     , Html.div [ Attr.class "" ]
                         [ Html.div [ Attr.class "flex flex-col" ]
-                            [ Html.div []
+                            [ Html.div [ Attr.class "" ]
                                 [ viewTabs model.tabActive ]
                             , Html.div
                                 [ Attr.class "bg-blue-100 p-4 mb-10 overflow-hidden" ]
@@ -659,44 +668,27 @@ view model =
 
 viewTabs : Tabs -> Html Msg
 viewTabs tabActive =
-    Html.ul [ Attr.class "flex text-3xl cursor-pointer" ]
-        [ Html.li
-            [ Attr.class "p-4"
-            , Attr.class
-                (if tabActive == SettingsTab then
-                    "bg-blue-100"
-
-                 else
-                    "bg-white"
-                )
-            , onClick (ActiveTab SettingsTab)
-            ]
-            [ text "Settings" ]
-        , Html.li
-            [ Attr.class "p-4"
-            , Attr.class
-                (if tabActive == DetailsTab then
-                    "bg-blue-100"
-
-                 else
-                    "bg-white"
-                )
-            , onClick (ActiveTab DetailsTab)
-            ]
-            [ text "Details" ]
-        , Html.li
-            [ Attr.class "p-4"
-            , Attr.class
-                (if tabActive == TagsTab then
-                    "bg-blue-100"
-
-                 else
-                    "bg-white"
-                )
-            , onClick (ActiveTab TagsTab)
-            ]
-            [ text "Tags" ]
+    Html.ul [ Attr.class "flex text-xl md:text-3xl cursor-pointer" ]
+        [ viewTab { isActive = tabActive == SettingsTab, toMsg = ActiveTab SettingsTab, txtValue = "Settings" }
+        , viewTab { isActive = tabActive == DetailsTab, toMsg = ActiveTab DetailsTab, txtValue = "Details" }
+        , viewTab { isActive = tabActive == TagsTab, toMsg = ActiveTab TagsTab, txtValue = "Tags" }
         ]
+
+
+viewTab : { isActive : Bool, toMsg : Msg, txtValue : String } -> Html Msg
+viewTab { isActive, toMsg, txtValue } =
+    Html.li
+        [ Attr.class "p-4"
+        , Attr.class
+            (if isActive then
+                "bg-blue-100"
+
+             else
+                "bg-white"
+            )
+        , onClick toMsg
+        ]
+        [ text txtValue ]
 
 
 viewTags : Tags -> Dict String String -> Html Msg

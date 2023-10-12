@@ -1,4 +1,4 @@
-module Util exposing (buildErrorMessage, emailToString, parseEmail, parsePhoneNumber, phoneToString)
+module Util exposing (Email, buildErrorMessage, emailToString, parseEmail, parsePhoneNumber, phoneToString)
 
 import Http
 import Parser as P exposing ((|.), (|=), Parser, Step)
@@ -27,7 +27,7 @@ buildErrorMessage httpError =
 {-
    - Email parser
    -- valid email should contain valid parts, separated by "@", "."
-   -- SplitEmail = BeforeEt "dooshanstevanovic" | AfterEr "gmail" | AfterDot "com"
+   -- ConstructEmail "dooshanstevanovic" "gmail" "com"
 -}
 
 
@@ -35,30 +35,18 @@ type Email
     = Email String
 
 
-type SplitEmail
-    = BeforeEt String
-    | AfterEt String
-    | AfterDot String
-
-
 type alias ConstructEmail =
     { beforeEt : String, afterEt : String, afterDot : String }
 
 
-beforeEtParser : Parser SplitEmail
+beforeEtParser : Parser String
 beforeEtParser =
-    P.succeed BeforeEt
-        --|= (P.chompUntilEndOr "@"
+    P.succeed (\s -> s)
         |= (P.chompWhile Char.isAlphaNum
                 |> P.getChompedString
                 |> P.andThen
                     (\beforeEt ->
-                        let
-                            _ =
-                                Debug.log "beforeEt" beforeEt
-                        in
                         if String.isEmpty beforeEt || not (isLowerCase beforeEt) then
-                            --P.problem "Email does not contain username"
                             P.problem "Invalid email"
 
                         else
@@ -67,20 +55,14 @@ beforeEtParser =
            )
 
 
-afterEtParser : Parser SplitEmail
+afterEtParser : Parser String
 afterEtParser =
-    P.succeed AfterEt
-        --|= (P.chompUntilEndOr "."
+    P.succeed (\s -> s)
         |= (P.chompWhile Char.isAlphaNum
                 |> P.getChompedString
                 |> P.andThen
                     (\afterEt ->
-                        let
-                            _ =
-                                Debug.log "afterEt" afterEt
-                        in
                         if String.isEmpty afterEt || not (isLowerCase afterEt) then
-                            --P.problem "Email does not contain mail server"
                             P.problem "Invalid email"
 
                         else
@@ -89,20 +71,14 @@ afterEtParser =
            )
 
 
-afterDotParser : Parser SplitEmail
+afterDotParser : Parser String
 afterDotParser =
-    P.succeed AfterDot
-        --|= (P.chompWhile (\c -> c /= ' ')
+    P.succeed (\s -> s)
         |= (P.chompWhile Char.isAlphaNum
                 |> P.getChompedString
                 |> P.andThen
                     (\afterDot ->
-                        let
-                            _ =
-                                Debug.log "afterDot" afterDot
-                        in
                         if String.isEmpty afterDot || not (isLowerCase afterDot) then
-                            -- P.problem "Email does not contain domain"
                             P.problem "Invalid email"
 
                         else
@@ -111,20 +87,10 @@ afterDotParser =
            )
 
 
-emailParser : Parser (Maybe ConstructEmail)
+emailParser : Parser ConstructEmail
 emailParser =
     P.succeed
-        -- (\(BeforeEt beforeEt) (AfterEt afterEt) (AfterDot afterDot) ->
-        --     ConstructEmail beforeEt afterEt afterDot
-        -- )
-        (\a b c ->
-            case ( a, b, c ) of
-                ( BeforeEt be, AfterEt ae, AfterDot ad ) ->
-                    Just <| ConstructEmail be ae ad
-
-                _ ->
-                    Nothing
-        )
+        (\beforeEt afterEt afterDot -> ConstructEmail beforeEt afterEt afterDot)
         |= beforeEtParser
         |. P.symbol "@"
         |= afterEtParser
@@ -135,11 +101,7 @@ emailParser =
 parseEmail : String -> Result String Email
 parseEmail email =
     case P.run emailParser email of
-        Err err ->
-            let
-                _ =
-                    Debug.log "Dusan" err
-            in
+        Err _ ->
             Err "Invalid email"
 
         Ok _ ->
@@ -150,7 +112,7 @@ parseEmail email =
 {-
    - Phone parser
    -- "+" sign on beggining
-   -- "123456789101" 12 digits string after
+   -- "12345678910" 11 digits string after
 -}
 
 
@@ -198,7 +160,7 @@ parsePhoneNumber : String -> Result String Phone
 parsePhoneNumber str =
     case P.run parsePlusAndNumber str of
         Err _ ->
-            Err "Wrong phone number"
+            Err "Invalid phone number"
 
         Ok _ ->
             Ok (Phone str)
