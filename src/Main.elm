@@ -153,7 +153,7 @@ type Msg
     | DeleteTag TagName
     | EditTag TagName
     | ToggleCheckbox Bool
-    | SubmitForm
+    | SubmitForm { isSettingsInherited : Bool, isDetailsInherited : Bool }
     | FormSent
 
 
@@ -223,10 +223,21 @@ update msg model =
             in
             ( { model | formData = updateFormData }, Cmd.none )
 
-        SubmitForm ->
+        SubmitForm { isSettingsInherited, isDetailsInherited } ->
             let
+                { formData } =
+                    model
+
+                { inputFields, prefMethod } =
+                    formData
+
                 updateErrors =
-                    formValidate model
+                    formValidate
+                        { isSettingsInherited = isSettingsInherited
+                        , isDetailsInherited = isDetailsInherited
+                        , inputFields = inputFields
+                        , prefMethod = prefMethod
+                        }
             in
             ( { model | errors = updateErrors }
               -- We simulate that form is sent to a server
@@ -265,6 +276,9 @@ update msg model =
                 { inputFields, tags } =
                     formData
 
+                resetTagsInputs =
+                    inputFields |> Dict.insert "newTagName" "" |> Dict.insert "newTagValue" ""
+
                 currentTagName =
                     inputFields |> Dict.get "newTagName" |> Maybe.withDefault ""
 
@@ -282,13 +296,10 @@ update msg model =
                     updatedTags =
                         tags |> Dict.insert currentTagName ""
 
-                    updateInputFields =
-                        inputFields |> Dict.insert "newTagName" "" |> Dict.insert "newTagValue" ""
-
                     updatedFormData =
                         { formData
                             | tags = updatedTags
-                            , inputFields = updateInputFields
+                            , inputFields = resetTagsInputs
                         }
                 in
                 ( { model | errors = Set.empty, formData = updatedFormData }, Cmd.none )
@@ -298,13 +309,10 @@ update msg model =
                     updatedTags =
                         tags |> Dict.insert currentTagName currentTagValue
 
-                    updateInputFields =
-                        inputFields |> Dict.insert "newTagName" "" |> Dict.insert "newTagValue" ""
-
                     updatedFormData =
                         { formData
                             | tags = updatedTags
-                            , inputFields = updateInputFields
+                            , inputFields = resetTagsInputs
                         }
                 in
                 ( { model | errors = Set.empty, formData = updatedFormData }, Cmd.none )
@@ -321,7 +329,9 @@ update msg model =
                 Just tagValue ->
                     let
                         updateInputFields =
-                            inputFields |> Dict.insert "newTagName" tagName |> Dict.insert "newTagValue" tagValue
+                            inputFields
+                                |> Dict.insert "newTagName" tagName
+                                |> Dict.insert "newTagValue" tagValue
 
                         updatedFormData =
                             { formData | inputFields = updateInputFields }
@@ -348,15 +358,15 @@ update msg model =
             ( { model | formData = updatedFormData }, Cmd.none )
 
 
-formValidate : Model -> Set String
-formValidate model =
+formValidate :
+    { inputFields : Dict String String
+    , prefMethod : PreferredContactMethod
+    , isDetailsInherited : Bool
+    , isSettingsInherited : Bool
+    }
+    -> Set String
+formValidate { inputFields, prefMethod, isDetailsInherited, isSettingsInherited } =
     let
-        { formData } =
-            model
-
-        { inputFields, prefMethod } =
-            formData
-
         emailValue =
             inputFields |> Dict.get "email" |> Maybe.withDefault ""
 
@@ -368,84 +378,98 @@ formValidate model =
 
         updateErrors =
             let
-                emailError =
-                    let
-                        errorMsg =
-                            "Details Tab: Invalid email"
-                    in
-                    case Util.parseEmail (inputFields |> Dict.get "email" |> Maybe.withDefault "") of
-                        Ok _ ->
-                            Set.remove errorMsg Set.empty
+                detailsErrors =
+                    -- We'll validate details only if not inherited
+                    if isDetailsInherited then
+                        Set.empty
 
-                        Err _ ->
-                            Set.insert errorMsg Set.empty
+                    else
+                        let
+                            emailError =
+                                let
+                                    errorMsg =
+                                        "Details Tab: Invalid email"
+                                in
+                                case Util.parseEmail (inputFields |> Dict.get "email" |> Maybe.withDefault "") of
+                                    Ok _ ->
+                                        Set.remove errorMsg Set.empty
 
-                phoneErrorMsg =
-                    "Details Tab: Valid phone should contain '+' sign followed by 11 min digits"
+                                    Err _ ->
+                                        Set.insert errorMsg Set.empty
 
-                phoneError =
-                    case Util.parsePhoneNumber (inputFields |> Dict.get "phone" |> Maybe.withDefault "") of
-                        Ok _ ->
-                            Set.remove phoneErrorMsg Set.empty
+                            phoneErrorMsg =
+                                "Details Tab: Valid phone should contain '+' sign followed by 11 min digits"
 
-                        Err _ ->
-                            Set.insert phoneErrorMsg Set.empty
+                            phoneError =
+                                case Util.parsePhoneNumber (inputFields |> Dict.get "phone" |> Maybe.withDefault "") of
+                                    Ok _ ->
+                                        Set.remove phoneErrorMsg Set.empty
 
-                madatoryFieldsErrors =
-                    case prefMethod of
-                        Email ->
-                            let
-                                errorMsg =
-                                    "Details Tab: Email is mandatory field"
-                            in
-                            if String.isEmpty emailValue then
-                                Set.insert errorMsg Set.empty
+                                    Err _ ->
+                                        Set.insert phoneErrorMsg Set.empty
 
-                            else
-                                Set.remove errorMsg Set.empty
+                            madatoryFieldsErrors =
+                                case prefMethod of
+                                    Email ->
+                                        let
+                                            errorMsg =
+                                                "Details Tab: Email is mandatory field"
+                                        in
+                                        if String.isEmpty emailValue then
+                                            Set.insert errorMsg Set.empty
 
-                        Post ->
-                            let
-                                addressValue =
-                                    inputFields |> Dict.get "address" |> Maybe.withDefault ""
+                                        else
+                                            Set.remove errorMsg Set.empty
 
-                                addressErrorMsg =
-                                    "Details Tab: Address is mandatory field"
-                            in
-                            if String.isEmpty addressValue then
-                                Set.insert addressErrorMsg Set.empty
+                                    Post ->
+                                        let
+                                            addressValue =
+                                                inputFields |> Dict.get "address" |> Maybe.withDefault ""
 
-                            else
-                                Set.remove addressErrorMsg Set.empty
+                                            addressErrorMsg =
+                                                "Details Tab: Address is mandatory field"
+                                        in
+                                        if String.isEmpty addressValue then
+                                            Set.insert addressErrorMsg Set.empty
 
-                        Phone ->
-                            let
-                                errorMsg =
-                                    "Details Tab: Phone is mandatory field"
-                            in
-                            if String.isEmpty phoneValue then
-                                Set.insert errorMsg Set.empty
+                                        else
+                                            Set.remove addressErrorMsg Set.empty
 
-                            else
-                                Set.remove errorMsg Set.empty
+                                    Phone ->
+                                        let
+                                            errorMsg =
+                                                "Details Tab: Phone is mandatory field"
+                                        in
+                                        if String.isEmpty phoneValue then
+                                            Set.insert errorMsg Set.empty
+
+                                        else
+                                            Set.remove errorMsg Set.empty
+                        in
+                        [ emailError, phoneError, madatoryFieldsErrors ] |> List.foldl (\set acc -> Set.union set acc) Set.empty
 
                 settingsErrors =
-                    inputFields
-                        |> Dict.foldl
-                            (\key value acc ->
-                                if List.member key settingsList then
-                                    if String.toInt value == Nothing && String.length value /= 0 then
-                                        Set.insert "Settings Tab: Field should be number" acc
+                    -- We'll validate settings only if not inherited
+                    if isSettingsInherited then
+                        Set.empty
+
+                    else
+                        inputFields
+                            |> Dict.foldl
+                                (\key value acc ->
+                                    if List.member key settingsList then
+                                        if String.toInt value == Nothing && String.length value /= 0 then
+                                            Set.insert "Settings Tab: Field should be number" acc
+
+                                        else
+                                            acc
 
                                     else
                                         acc
-
-                                else
-                                    acc
-                            )
-                            Set.empty
+                                )
+                                Set.empty
             in
-            [ emailError, phoneError, madatoryFieldsErrors, settingsErrors ] |> List.foldl (\set acc -> Set.union set acc) Set.empty
+            Set.union detailsErrors settingsErrors
     in
     updateErrors
 
@@ -660,7 +684,7 @@ view model =
                                         viewTags model.formData.tags model.formData.inputFields
                                 ]
                             ]
-                        , Html.button [ onClick <| SubmitForm, Attr.class "flex font-semi-bold px-5 py-2 rounded-full bg-blue-400 hover:bg-blue-300 active:bg-blue-500 easy-in-out transition-all text-white" ] [ Html.span [ Attr.class "mr-2 flex w-[20px]" ] [ Icons.checkIcon ], text "Submit" ]
+                        , Html.button [ onClick <| SubmitForm { isSettingsInherited = userGroup.settings.isInherited, isDetailsInherited = userGroup.contactDetails.isInherited }, Attr.class "flex font-semi-bold px-5 py-2 rounded-full bg-blue-400 hover:bg-blue-300 active:bg-blue-500 easy-in-out transition-all text-white" ] [ Html.span [ Attr.class "mr-2 flex w-[20px]" ] [ Icons.checkIcon ], text "Submit" ]
                         ]
                     ]
         ]
