@@ -1,5 +1,6 @@
-module UserGroup exposing (UserGroup, Settings, DataRetentionPolicy, ContactDetails, Address, Tag, decoder)
+module UserGroup exposing (UserGroup, Settings, DataRetentionPolicy, ContactDetails, Address, Tags, decoder)
 
+import Dict exposing (Dict)
 import Json.Decode exposing (..)
 
 
@@ -10,7 +11,7 @@ type alias UserGroup =
     , children : List Child
     , settings : Settings
     , contactDetails : ContactDetails
-    , tags : List Tag
+    , tags : Tags
     }
 
 
@@ -55,10 +56,8 @@ type alias Address =
     }
 
 
-type alias Tag =
-    { name : String
-    , value : Maybe String
-    }
+type alias Tags =
+    Dict String (Maybe String)
 
 
 decoder : Decoder UserGroup
@@ -70,7 +69,7 @@ decoder =
         (field "children" (list child))
         (field "settings" settings)
         (field "contact_details" contactDetails)
-        (field "tags" (list tag))
+        (field "tags" tags)
 
 
 child : Decoder Child
@@ -119,8 +118,13 @@ address =
         (field "country" (nullable string))
 
 
-tag : Decoder Tag
-tag =
-    map2 Tag
-        (field "name" string)
-        (maybe (field "value" string))
+tags : Decoder Tags
+tags =
+    let
+        tag =
+            map2 Tuple.pair
+                (field "name" string)
+                (maybe (field "value" string))
+    in
+        list tag |> andThen (\t -> succeed (Dict.fromList t))
+        

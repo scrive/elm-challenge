@@ -5,6 +5,7 @@ import Data
 import UserGroup exposing (UserGroup)
 import ContactDetails
 import Settings
+import Tags
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Json.Decode exposing (decodeString, errorToString)
@@ -16,8 +17,10 @@ import Json.Decode exposing (decodeString, errorToString)
 
 type alias Model =
     Result Json.Decode.Error
-        { contactDetails : ContactDetails.State
+        { name : String
+        , contactDetails : ContactDetails.State
         , settings : Settings.State
+        , tags : Tags.State
         }
 
 
@@ -25,8 +28,10 @@ init : ( Model, Cmd Msg )
 init =
     ( decodeString UserGroup.decoder Data.userGroup
           |> Result.map (\userGroup ->
-                             { contactDetails = ContactDetails.init userGroup.contactDetails
+                             { name = userGroup.name
+                             , contactDetails = ContactDetails.init userGroup.contactDetails
                              , settings = Settings.init userGroup.settings
+                             , tags = Tags.init userGroup.tags
                              }
                         )
     , Cmd.none
@@ -41,6 +46,7 @@ type Msg
     = NoOp
     | ContactDetailsMsg ContactDetails.Msg
     | SettingsMsg Settings.Msg
+    | TagsMsg Tags.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -69,6 +75,15 @@ update msg model =
                         , Cmd.map SettingsMsg cmd
                         )
 
+                TagsMsg tagsMsg ->
+                    let
+                        ( newState, cmd ) =
+                            Tags.update tagsMsg state.tags
+                    in
+                        ( Ok { state | tags = newState }
+                        , Cmd.map TagsMsg cmd
+                        )
+
         Err _ ->
             ( model, Cmd.none )
 
@@ -80,16 +95,16 @@ update msg model =
 view : Model -> Html Msg
 view model =
     Html.div [ Attrs.class "mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8" ]
-        [ Html.h1
-              [ Attrs.class "max-w-2xl mx-auto mt-3 text-3xl font-extrabold tracking-tight text-slate-900" ]
-              [ Html.text "User group" ]
-        , case model of
-              Ok { contactDetails, settings } ->
+        [ case model of
+              Ok { name, contactDetails, settings, tags } ->
                   Html.div []
-                      [ ContactDetails.view contactDetails
+                      [ headerView name
+                      , ContactDetails.view contactDetails
                       |> Html.map ContactDetailsMsg
                       , Settings.view settings
                       |> Html.map SettingsMsg
+                      , Tags.view tags
+                      |> Html.map TagsMsg
                       ]
 
               Err error ->
@@ -97,7 +112,19 @@ view model =
         ]
 
 
-
+headerView : String -> Html Msg
+headerView name =
+    Html.div [ Attrs.class "max-w-2xl mx-auto" ]
+        [ Html.h1
+              [ Attrs.class "mt-3 text-3xl font-extrabold tracking-tight text-slate-900" ]
+              [ Html.text "User group" ]
+        , Html.p
+              [ Attrs.class "text-gray-500" ]
+              [ Html.text name ]
+        ]
+        
+        
+        
 ---- PROGRAM ----
 
 
@@ -105,7 +132,7 @@ main : Program () Model Msg
 main =
     Browser.application
         { view =
-            \model ->
+              \model ->
                 { title = "Scrive elm challenge task"
                 , body = [ view model ]
                 }
