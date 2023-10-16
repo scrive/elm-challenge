@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser
 import Data
 import UserGroup exposing (UserGroup)
+import ContactDetails
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Json.Decode exposing (decodeString, errorToString)
@@ -13,58 +14,67 @@ import Json.Decode exposing (decodeString, errorToString)
 
 
 type alias Model =
-    { userGroup : Result Json.Decode.Error UserGroup }
+    Result Json.Decode.Error
+        { contactDetails : ContactDetails.State
+        }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { userGroup = decodeString UserGroup.decoder Data.userGroup }
+    ( decodeString UserGroup.decoder Data.userGroup
+          |> Result.map (\userGroup ->
+                             { contactDetails = ContactDetails.init userGroup.contactDetails }
+                        )
     , Cmd.none
     )
-
-
-
+    
+    
+    
 ---- UPDATE ----
 
 
 type Msg
     = NoOp
+    | ContactDetailsMsg ContactDetails.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update msg model =
+    case model of
+        Ok state ->
+            case msg of
+                NoOp ->
+                    ( model, Cmd.none )
+                
+                ContactDetailsMsg contactDetailsMsg ->
+                    let
+                        ( newState, cmd ) =
+                            ContactDetails.update
+                                contactDetailsMsg
+                                state.contactDetails
+                    in
+                        ( Ok { state | contactDetails = newState }
+                        , Cmd.map ContactDetailsMsg cmd
+                        )
+
+        Err _ ->
+            ( model, Cmd.none )
 
 
 
 ---- VIEW ----
 
 
-header : String -> Html msg
-header text =
-    Html.span [ Attrs.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
-        [ Html.text text ]
-
-
-subheader : String -> Html msg
-subheader text =
-    Html.span [ Attrs.class "p-2 text-2xl font-extrabold text-slate-800" ]
-        [ Html.text text ]
-
-
 view : Model -> Html Msg
 view model =
-    Html.div [ Attrs.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-        [ header "Let's start your task"
-        , subheader "Here are your data:"
-        , case model.userGroup of
-              Ok _ ->
-                  Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
+    Html.div [ Attrs.class "mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8" ]
+        [ case model of
+              Ok { contactDetails } ->
+                  ContactDetails.view contactDetails
+                      |> Html.map ContactDetailsMsg
 
               Err error ->
                   Html.p [] [ Html.text <| errorToString error ]
-        , header "Now turn them into form."
-        , subheader "See README for details of the task. Good luck 🍀 "
         ]
 
 
