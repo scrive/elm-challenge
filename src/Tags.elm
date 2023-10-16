@@ -96,9 +96,10 @@ formView form =
             List.map (tagView "tags" form)
                 (Form.getListIndexes "tags" form)
         , Html.div [ Html.Attributes.class "col-span-full" ]
-            [ Html.button
+            [ Html.a
                   [ Html.Events.onClick (Form.Append "tags")
                   , Html.Attributes.class "text-sm font-semibold text-indigo-600"
+                  , Html.Attributes.href "#"
                   ]
                   [ Html.text "+ Add new tag" ]
             ]
@@ -126,9 +127,10 @@ tagView path form idx =
                   [ textField (prefix ++ ".name") "Name" form
                   , textField (prefix ++ ".value") "Value" form
                   , Html.div [ Html.Attributes.class "py-3" ]
-                      [ Html.button
+                      [ Html.a
                             [ Html.Events.onClick (Form.RemoveItem path idx)
                             , Html.Attributes.class "text-sm font-semibold text-indigo-600"
+                            , Html.Attributes.href "#"
                             ]
                             [ Html.text "Remove" ]
                       ]
