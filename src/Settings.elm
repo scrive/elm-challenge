@@ -216,6 +216,7 @@ timeoutField path label disabled form =
                         ]
                   , Html.label
                         [ Html.Attributes.for enabled.path
+                        , Html.Attributes.id (field.path ++ "Label")
                         , case field.liveError of
                               Just _ ->
                                   Html.Attributes.class "block text-sm font-medium leading-6 text-red-700"
@@ -237,6 +238,8 @@ timeoutField path label disabled form =
                                   Nothing ->
                                       Html.Attributes.class ""
                             , Html.Attributes.disabled disabled
+                            , Html.Attributes.type_ "number"
+                            , Html.Attributes.attribute "aria-labelledby" (field.path ++ "Label")
                             ]
                       ]
               else
