@@ -1,6 +1,8 @@
+# Fluffy elephant task 
+
 # Scrive elm challenge
 
-Hello! Welcome to the Scrive Elm Challenge. This should be anonymised and with two commit changes.
+Hello! Welcome to the Scrive Elm Challenge.
 
 This repository contains the requirements definition of a project used for job applications
 for a **position of an [Elm](https://elm-lang.org/) developer at Scrive**.
