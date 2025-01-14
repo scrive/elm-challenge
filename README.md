@@ -31,6 +31,10 @@ We also want to see your ability to come up with a robust solution and will look
 If you are interested in applying for an Elm developer position or just want to challenge yourself (which is also 100% OK with us),
 please follow the steps below:
 
+If you are already in the process of application, you should have access to Scrive CAT - follow instructions there
+
+Otherwise:
+
 - Pick at least one [task](#task-parts) and read through the requirements.
 - Fork this repository under your GitHub account.
 - Complete an implementation within your fork.
