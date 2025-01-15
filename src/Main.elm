@@ -4,6 +4,7 @@ import Browser
 import Data
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 
@@ -13,7 +14,7 @@ import Json.Decode.Pipeline as Decode
 
 
 type alias Model =
-    { userGroup : Maybe UserGroup }
+    { userGroup : UserGroup }
 
 
 init : ( Model, Cmd Msg )
@@ -22,6 +23,7 @@ init =
         userGroup =
             Decode.decodeString userGroupDecoder Data.userGroup
                 |> Result.toMaybe
+                |> Maybe.withDefault emptyUserGroup
     in
     ( { userGroup = userGroup }
     , Cmd.none
@@ -40,6 +42,18 @@ type alias UserGroup =
     , settings : Settings
     , contactDetails : ContactDetails
     , tags : List Tag
+    }
+
+
+emptyUserGroup : UserGroup
+emptyUserGroup =
+    { id = ""
+    , parentId = ""
+    , name = ""
+    , children = []
+    , settings = emptySettings
+    , contactDetails = emptyContactDetails
+    , tags = []
     }
 
 
@@ -91,6 +105,13 @@ type alias Settings =
     }
 
 
+emptySettings : Settings
+emptySettings =
+    { inheritedFrom = ""
+    , dataRetentionPolicy = emptyDataRetentionPolicy
+    }
+
+
 settingsDecoder : Decode.Decoder Settings
 settingsDecoder =
     Decode.succeed Settings
@@ -109,6 +130,18 @@ type alias DataRetentionPolicy =
     }
 
 
+emptyDataRetentionPolicy : DataRetentionPolicy
+emptyDataRetentionPolicy =
+    { idleDocTimeOutPreparation = Nothing
+    , idleDocTimeOutClosed = Nothing
+    , idleDocTimeOutCancelled = Nothing
+    , idleDocTimeOutTimedOut = Nothing
+    , idleDocTimeOutRejected = Nothing
+    , idleDocTimeOutError = Nothing
+    , immediateTrash = False
+    }
+
+
 dataRetentionPolicyDecoder : Decode.Decoder DataRetentionPolicy
 dataRetentionPolicyDecoder =
     Decode.succeed DataRetentionPolicy
@@ -124,6 +157,13 @@ dataRetentionPolicyDecoder =
 type alias ContactDetails =
     { inheritedFrom : String
     , address : Address
+    }
+
+
+emptyContactDetails : ContactDetails
+emptyContactDetails =
+    { inheritedFrom = ""
+    , address = emptyAddress
     }
 
 
@@ -146,6 +186,19 @@ type alias Address =
     }
 
 
+emptyAddress : Address
+emptyAddress =
+    { preferredContactMethod = Email
+    , email = ""
+    , phone = ""
+    , companyName = ""
+    , address = ""
+    , zip = ""
+    , city = ""
+    , country = ""
+    }
+
+
 addressDecoder : Decode.Decoder Address
 addressDecoder =
     Decode.succeed Address
@@ -162,7 +215,38 @@ addressDecoder =
 type PreferredContactMethod
     = Email
     | Phone
-    | Letter
+    | Post
+
+
+contactMethodToString : PreferredContactMethod -> String
+contactMethodToString method =
+    case method of
+        Email ->
+            "email"
+
+        Phone ->
+            "phone"
+
+        Post ->
+            "post"
+
+
+allContactMethods : List PreferredContactMethod
+allContactMethods =
+    toAllContactMethods Email []
+
+
+toAllContactMethods : PreferredContactMethod -> List PreferredContactMethod -> List PreferredContactMethod
+toAllContactMethods method methods =
+    case method of
+        Email ->
+            toAllContactMethods Phone (Email :: methods)
+
+        Phone ->
+            toAllContactMethods Post (Phone :: methods)
+
+        Post ->
+            Post :: methods
 
 
 preferredContactMethodDecoder : Decode.Decoder PreferredContactMethod
@@ -178,7 +262,7 @@ preferredContactMethodDecoder =
                         Decode.succeed Phone
 
                     "letter" ->
-                        Decode.succeed Letter
+                        Decode.succeed Post
 
                     _ ->
                         Decode.fail "Not valid contact method"
@@ -191,38 +275,69 @@ preferredContactMethodDecoder =
 
 type Msg
     = NoOp
+    | PreferredContactMethodChanged PreferredContactMethod
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update msg ({ userGroup } as model) =
+    case msg of
+        NoOp ->
+            ( model, Cmd.none )
+
+        PreferredContactMethodChanged method ->
+            let
+                toUpdatedContactMethod ({ address } as contactDetails) =
+                    { contactDetails | address = { address | preferredContactMethod = method } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedContactMethod userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
 
 
 
 ---- VIEW ----
 
 
-header : String -> Html msg
-header text =
-    Html.span [ Attrs.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
-        [ Html.text text ]
-
-
-subheader : String -> Html msg
-subheader text =
-    Html.span [ Attrs.class "p-2 text-2xl font-extrabold text-slate-800" ]
-        [ Html.text text ]
-
-
 view : Model -> Html Msg
-view _ =
-    Html.div [ Attrs.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-        [ header "Let's start your task"
-        , subheader "Here are your data:"
-        , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
-        , header "Now turn them into form."
-        , subheader "See README for details of the task. Good luck 🍀 "
+view { userGroup } =
+    Html.div [ Attrs.class "flex flex-col items-center font-montserrat" ]
+        [ viewContact userGroup.contactDetails
         ]
+
+
+viewContact : ContactDetails -> Html Msg
+viewContact { inheritedFrom, address } =
+    let
+        isInherited : Bool
+        isInherited =
+            not (String.isEmpty inheritedFrom)
+    in
+    Html.div [ Attrs.class "flex flex-col gap-4 my-2" ]
+        [ viewPreferredContactMethods isInherited address.preferredContactMethod ]
+
+
+viewPreferredContactMethods : Bool -> PreferredContactMethod -> Html Msg
+viewPreferredContactMethods isInherited preferredContactMethod =
+    Html.ul [ Attrs.class "flex gap-2 p-2 rounded", Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ] ]
+        (allContactMethods
+            |> List.map
+                (\method ->
+                    Html.button
+                        [ Attrs.class "border rounded px-2 py-1"
+                        , Attrs.classList
+                            [ ( "bg-[#4ba0e8] border-transparent", method == preferredContactMethod )
+                            , ( "hover:bg-[#d2e7f9]", method /= preferredContactMethod && not isInherited )
+                            , ( "border-transparent", isInherited )
+                            ]
+                        , Attrs.disabled isInherited
+                        , Events.onClick (PreferredContactMethodChanged method)
+                        ]
+                        [ Html.text (contactMethodToString method) ]
+                )
+        )
 
 
 
