@@ -299,6 +299,10 @@ type Msg
     | EmailChanged String
     | PhoneChanged String
     | CompanyNameChanged String
+    | AddressChanged String
+    | ZipChanged String
+    | CityChanged String
+    | CountryChanged String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -359,6 +363,58 @@ update msg ({ userGroup } as model) =
             , Cmd.none
             )
 
+        AddressChanged address_ ->
+            let
+                toUpdatedAddress : ContactDetails -> ContactDetails
+                toUpdatedAddress ({ address } as contactDetails) =
+                    { contactDetails | address = { address | address = address_ } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedAddress userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
+
+        ZipChanged zip ->
+            let
+                toUpdatedZip : ContactDetails -> ContactDetails
+                toUpdatedZip ({ address } as contactDetails) =
+                    { contactDetails | address = { address | zip = zip } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedZip userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
+
+        CityChanged city ->
+            let
+                toUpdatedCity : ContactDetails -> ContactDetails
+                toUpdatedCity ({ address } as contactDetails) =
+                    { contactDetails | address = { address | address = city } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedCity userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
+
+        CountryChanged country ->
+            let
+                toUpdatedCountry : ContactDetails -> ContactDetails
+                toUpdatedCountry ({ address } as contactDetails) =
+                    { contactDetails | address = { address | address = country } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedCountry userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
+
 
 
 ---- VIEW ----
@@ -378,17 +434,21 @@ viewContact { inheritedFrom, address } =
         isInherited =
             not (String.isEmpty inheritedFrom)
     in
-    Html.div [ Attrs.class "flex flex-col gap-4 my-2" ]
+    Html.form [ Attrs.class "flex flex-col gap-4 my-2 w-auto", Events.onSubmit NoOp ]
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
         , viewEmail isInherited address.email
         , viewPhone isInherited address.phone
         , viewCompanyName isInherited address.companyName
+        , viewAddress isInherited address
         ]
 
 
 viewPreferredContactMethods : Bool -> PreferredContactMethod -> Html Msg
 viewPreferredContactMethods isInherited preferredContactMethod =
-    Html.ul [ Attrs.class "flex gap-2 p-2 rounded", Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ] ]
+    Html.ul
+        [ Attrs.class "flex gap-2 p-2 rounded"
+        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+        ]
         (allContactMethods
             |> List.map
                 (\method ->
@@ -438,7 +498,10 @@ viewInput :
     }
     -> Html Msg
 viewInput { label, disabled, type_, onChange, value } =
-    Html.span [ Attrs.class "flex flex-col rounded px-2 py-1", Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ] ]
+    Html.span
+        [ Attrs.class "flex flex-col rounded px-2 py-1"
+        , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ]
+        ]
         [ Html.label [ Attrs.class "text-sm pl-1" ] [ Html.text label ]
         , Html.input
             [ Attrs.type_ type_
@@ -461,3 +524,52 @@ viewCompanyName isInherited companyName =
         , onChange = CompanyNameChanged
         , value = companyName
         }
+
+
+viewAddress : Bool -> Address -> Html Msg
+viewAddress isInherited { address, zip, city, country } =
+    Html.div
+        [ Attrs.class "flex flex-col rounded py-1"
+        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+        ]
+        [ Html.span [ Attrs.class "flex flex-row w-full" ]
+            [ Html.span [ Attrs.class "w-full" ]
+                [ viewInput
+                    { label = "address"
+                    , disabled = isInherited
+                    , type_ = "text"
+                    , onChange = AddressChanged
+                    , value = address
+                    }
+                ]
+            , Html.span [ Attrs.class "w-2/6" ]
+                [ viewInput
+                    { label = "zip"
+                    , disabled = isInherited
+                    , type_ = "text"
+                    , onChange = ZipChanged
+                    , value = zip
+                    }
+                ]
+            ]
+        , Html.span [ Attrs.class "flex flex-row w-full" ]
+            [ Html.span [ Attrs.class "w-full" ]
+                [ viewInput
+                    { label = "city"
+                    , disabled = isInherited
+                    , type_ = "text"
+                    , onChange = CityChanged
+                    , value = city
+                    }
+                ]
+            , Html.span [ Attrs.class "w-full" ]
+                [ viewInput
+                    { label = "country"
+                    , disabled = isInherited
+                    , type_ = "text"
+                    , onChange = CountryChanged
+                    , value = country
+                    }
+                ]
+            ]
+        ]
