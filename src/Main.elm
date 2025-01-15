@@ -297,6 +297,7 @@ type Msg
     = NoOp
     | PreferredContactMethodChanged PreferredContactMethod
     | EmailChanged String
+    | PhoneChanged String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -331,6 +332,19 @@ update msg ({ userGroup } as model) =
             , Cmd.none
             )
 
+        PhoneChanged phone ->
+            let
+                toUpdatedPhone : ContactDetails -> ContactDetails
+                toUpdatedPhone ({ address } as contactDetails) =
+                    { contactDetails | address = { address | phone = phone } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedPhone userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
+
 
 
 ---- VIEW ----
@@ -353,6 +367,7 @@ viewContact { inheritedFrom, address } =
     Html.div [ Attrs.class "flex flex-col gap-4 my-2" ]
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
         , viewEmail isInherited address.email
+        , viewPhone isInherited address.phone
         ]
 
 
@@ -379,15 +394,36 @@ viewPreferredContactMethods isInherited preferredContactMethod =
 
 viewEmail : Bool -> String -> Html Msg
 viewEmail isInherited email =
-    Html.span [ Attrs.class "flex flex-col rounded px-2 py-1", Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ] ]
-        [ Html.label [ Attrs.class "text-sm pl-1" ] [ Html.text "e-mail" ]
+    viewInput
+        { label = "e-mail"
+        , disabled = isInherited
+        , type_ = "email"
+        , onChange = EmailChanged
+        , value = email
+        }
+
+
+viewPhone : Bool -> String -> Html Msg
+viewPhone isInherited phone =
+    viewInput
+        { label = "phone"
+        , disabled = isInherited
+        , type_ = "tel"
+        , onChange = PhoneChanged
+        , value = phone
+        }
+
+
+viewInput { label, disabled, type_, onChange, value } =
+    Html.span [ Attrs.class "flex flex-col rounded px-2 py-1", Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ] ]
+        [ Html.label [ Attrs.class "text-sm pl-1" ] [ Html.text label ]
         , Html.input
-            [ Attrs.type_ "email"
+            [ Attrs.type_ type_
             , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400"
-            , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-            , Attrs.disabled isInherited
-            , Attrs.value email
-            , Events.onInput EmailChanged
+            , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ]
+            , Attrs.disabled disabled
+            , Attrs.value value
+            , Events.onInput onChange
             ]
             []
         ]
