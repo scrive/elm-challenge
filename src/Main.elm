@@ -445,7 +445,7 @@ update msg ({ userGroup } as model) =
 
         Submitted ->
             let
-                { preferredContactMethod, email } =
+                { preferredContactMethod, email, phone } =
                     userGroup.contactDetails.address
 
                 error =
@@ -454,7 +454,7 @@ update msg ({ userGroup } as model) =
                             emailError email
 
                         Phone ->
-                            Nothing
+                            phoneError phone
 
                         Post ->
                             Nothing
@@ -485,6 +485,25 @@ emailError email =
         Nothing
 
 
+phoneError : String -> Maybe ( ContactFormField, String )
+phoneError phone =
+    let
+        phoneRegex : Regex.Regex
+        phoneRegex =
+            Maybe.withDefault
+                Regex.never
+                (Regex.fromString "^\\+?[0-9][0-9\\s]*$")
+    in
+    if String.isEmpty phone then
+        Just ( PhoneField, "Phone cannot be empty." )
+
+    else if not (Regex.contains phoneRegex phone) then
+        Just ( PhoneField, "Invalid phone" )
+
+    else
+        Nothing
+
+
 
 ---- VIEW ----
 
@@ -509,7 +528,7 @@ viewContact { inheritedFrom, address } error =
         ]
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
         , viewEmail isInherited address.email error
-        , viewPhone isInherited address.phone
+        , viewPhone isInherited address.phone error
         , viewCompanyName isInherited address.companyName
         , viewAddress isInherited address
         , Html.span
@@ -521,7 +540,7 @@ viewContact { inheritedFrom, address } error =
             ]
             (if isInherited then
                 [ Html.button
-                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6"
+                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
                     , Events.onClick NoOp
                     ]
                     [ Html.text "close" ]
@@ -529,12 +548,12 @@ viewContact { inheritedFrom, address } error =
 
              else
                 [ Html.button
-                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black"
+                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                     , Events.onClick NoOp
                     ]
                     [ Html.text "cancel" ]
                 , Html.button
-                    [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white"
+                    [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white hover:text-[#d2e7f9]"
                     , Events.onClick Submitted
                     ]
                     [ Html.text "apply" ]
@@ -579,15 +598,15 @@ viewEmail isInherited email error =
         }
 
 
-viewPhone : Bool -> String -> Html Msg
-viewPhone isInherited phone =
+viewPhone : Bool -> String -> ContactFormError -> Html Msg
+viewPhone isInherited phone error =
     viewInput
         { label = "phone"
         , disabled = isInherited
         , type_ = "tel"
         , onChange = PhoneChanged
         , value = phone
-        , errorMessage = Nothing
+        , errorMessage = error |> Maybe.andThen (errorToMessage PhoneField)
         }
 
 
