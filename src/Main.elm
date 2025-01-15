@@ -298,6 +298,7 @@ type Msg
     | PreferredContactMethodChanged PreferredContactMethod
     | EmailChanged String
     | PhoneChanged String
+    | CompanyNameChanged String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -345,6 +346,19 @@ update msg ({ userGroup } as model) =
             , Cmd.none
             )
 
+        CompanyNameChanged companyName ->
+            let
+                toUpdatedCompanyName : ContactDetails -> ContactDetails
+                toUpdatedCompanyName ({ address } as contactDetails) =
+                    { contactDetails | address = { address | companyName = companyName } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedCompanyName userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
+
 
 
 ---- VIEW ----
@@ -368,6 +382,7 @@ viewContact { inheritedFrom, address } =
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
         , viewEmail isInherited address.email
         , viewPhone isInherited address.phone
+        , viewCompanyName isInherited address.companyName
         ]
 
 
@@ -414,6 +429,14 @@ viewPhone isInherited phone =
         }
 
 
+viewInput :
+    { label : String
+    , disabled : Bool
+    , type_ : String
+    , onChange : String -> Msg
+    , value : String
+    }
+    -> Html Msg
 viewInput { label, disabled, type_, onChange, value } =
     Html.span [ Attrs.class "flex flex-col rounded px-2 py-1", Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ] ]
         [ Html.label [ Attrs.class "text-sm pl-1" ] [ Html.text label ]
@@ -427,3 +450,14 @@ viewInput { label, disabled, type_, onChange, value } =
             ]
             []
         ]
+
+
+viewCompanyName : Bool -> String -> Html Msg
+viewCompanyName isInherited companyName =
+    viewInput
+        { label = "company name"
+        , disabled = isInherited
+        , type_ = "text"
+        , onChange = CompanyNameChanged
+        , value = companyName
+        }
