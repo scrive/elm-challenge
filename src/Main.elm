@@ -7,6 +7,7 @@ import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
+import Regex
 
 
 
@@ -34,20 +35,33 @@ main =
 
 
 type alias Model =
-    { userGroup : UserGroup }
+    { userGroup : UserGroup
+    , contactFormError : ContactFormError
+    }
 
 
-init : ( Model, Cmd Msg )
-init =
-    let
-        userGroup =
-            Decode.decodeString userGroupDecoder Data.userGroup
-                |> Result.toMaybe
-                |> Maybe.withDefault emptyUserGroup
-    in
-    ( { userGroup = userGroup }
-    , Cmd.none
-    )
+type alias ContactFormError =
+    Maybe ( ContactFormField, String )
+
+
+{-| Contact form field.
+-}
+type ContactFormField
+    = EmailField
+    | PhoneField
+    | AddressField
+    | ZipField
+    | CityField
+    | CountryField
+
+
+errorToMessage : ContactFormField -> ( ContactFormField, String ) -> Maybe String
+errorToMessage field error =
+    if Tuple.first error == field then
+        Just (Tuple.second error)
+
+    else
+        Nothing
 
 
 
@@ -289,6 +303,19 @@ preferredContactMethodDecoder =
             )
 
 
+init : ( Model, Cmd Msg )
+init =
+    let
+        userGroup =
+            Decode.decodeString userGroupDecoder Data.userGroup
+                |> Result.toMaybe
+                |> Maybe.withDefault emptyUserGroup
+    in
+    ( { userGroup = userGroup, contactFormError = Nothing }
+    , Cmd.none
+    )
+
+
 
 ---- UPDATE ----
 
@@ -303,6 +330,7 @@ type Msg
     | ZipChanged String
     | CityChanged String
     | CountryChanged String
+    | Submitted
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -415,20 +443,61 @@ update msg ({ userGroup } as model) =
             , Cmd.none
             )
 
+        Submitted ->
+            let
+                { preferredContactMethod, email } =
+                    userGroup.contactDetails.address
+
+                error =
+                    case preferredContactMethod of
+                        Email ->
+                            emailError email
+
+                        Phone ->
+                            Nothing
+
+                        Post ->
+                            Nothing
+            in
+            ( { model
+                | contactFormError = error
+              }
+            , Cmd.none
+            )
+
+
+emailError : String -> Maybe ( ContactFormField, String )
+emailError email =
+    let
+        emailRegex : Regex.Regex
+        emailRegex =
+            Maybe.withDefault
+                Regex.never
+                (Regex.fromString "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
+    in
+    if String.isEmpty email then
+        Just ( EmailField, "Email cannot be empty." )
+
+    else if not (Regex.contains emailRegex email) then
+        Just ( EmailField, "Invalid e-mail" )
+
+    else
+        Nothing
+
 
 
 ---- VIEW ----
 
 
 view : Model -> Html Msg
-view { userGroup } =
+view { userGroup, contactFormError } =
     Html.div [ Attrs.class "flex flex-col items-center font-montserrat" ]
-        [ viewContact userGroup.contactDetails
+        [ viewContact userGroup.contactDetails contactFormError
         ]
 
 
-viewContact : ContactDetails -> Html Msg
-viewContact { inheritedFrom, address } =
+viewContact : ContactDetails -> ContactFormError -> Html Msg
+viewContact { inheritedFrom, address } error =
     let
         isInherited : Bool
         isInherited =
@@ -436,10 +505,10 @@ viewContact { inheritedFrom, address } =
     in
     Html.form
         [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-auto border rounded"
-        , Events.onSubmit NoOp
+        , Events.onSubmit Submitted
         ]
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
-        , viewEmail isInherited address.email
+        , viewEmail isInherited address.email error
         , viewPhone isInherited address.phone
         , viewCompanyName isInherited address.companyName
         , viewAddress isInherited address
@@ -466,7 +535,7 @@ viewContact { inheritedFrom, address } =
                     [ Html.text "cancel" ]
                 , Html.button
                     [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white"
-                    , Events.onClick NoOp
+                    , Events.onClick Submitted
                     ]
                     [ Html.text "apply" ]
                 ]
@@ -498,14 +567,15 @@ viewPreferredContactMethods isInherited preferredContactMethod =
         )
 
 
-viewEmail : Bool -> String -> Html Msg
-viewEmail isInherited email =
+viewEmail : Bool -> String -> ContactFormError -> Html Msg
+viewEmail isInherited email error =
     viewInput
         { label = "e-mail"
         , disabled = isInherited
         , type_ = "email"
         , onChange = EmailChanged
         , value = email
+        , errorMessage = error |> Maybe.andThen (errorToMessage EmailField)
         }
 
 
@@ -517,6 +587,7 @@ viewPhone isInherited phone =
         , type_ = "tel"
         , onChange = PhoneChanged
         , value = phone
+        , errorMessage = Nothing
         }
 
 
@@ -526,18 +597,25 @@ viewInput :
     , type_ : String
     , onChange : String -> Msg
     , value : String
+    , errorMessage : Maybe String
     }
     -> Html Msg
-viewInput { label, disabled, type_, onChange, value } =
+viewInput { label, disabled, type_, onChange, value, errorMessage } =
+    let
+        hasError : Bool
+        hasError =
+            errorMessage /= Nothing
+    in
     Html.span
         [ Attrs.class "flex flex-col rounded px-2 py-1"
         , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ]
         ]
-        [ Html.label [ Attrs.class "text-sm pl-1" ] [ Html.text label ]
+        [ Html.label [ Attrs.class "text-sm pl-1", Attrs.classList [ ( "text-red-500", hasError ) ] ]
+            [ Html.text (errorMessage |> Maybe.withDefault label) ]
         , Html.input
             [ Attrs.type_ type_
             , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400"
-            , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ]
+            , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ), ( "border-red-500", hasError ) ]
             , Attrs.disabled disabled
             , Attrs.value value
             , Events.onInput onChange
@@ -554,6 +632,7 @@ viewCompanyName isInherited companyName =
         , type_ = "text"
         , onChange = CompanyNameChanged
         , value = companyName
+        , errorMessage = Nothing
         }
 
 
@@ -571,6 +650,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = AddressChanged
                     , value = address
+                    , errorMessage = Nothing
                     }
                 ]
             , Html.span [ Attrs.class "w-2/6" ]
@@ -580,6 +660,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = ZipChanged
                     , value = zip
+                    , errorMessage = Nothing
                     }
                 ]
             ]
@@ -591,6 +672,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = CityChanged
                     , value = city
+                    , errorMessage = Nothing
                     }
                 ]
             , Html.span [ Attrs.class "w-full" ]
@@ -600,6 +682,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = CountryChanged
                     , value = country
+                    , errorMessage = Nothing
                     }
                 ]
             ]
