@@ -1,9 +1,11 @@
-module Main exposing (main)
+module Main exposing (main, preferredContactMethodDecoder)
 
 import Browser
 import Data
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 
 
 
@@ -11,12 +13,176 @@ import Html.Attributes as Attrs
 
 
 type alias Model =
-    {}
+    { userGroup : Maybe UserGroup }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    let
+        userGroup =
+            Decode.decodeString userGroupDecoder Data.userGroup
+                |> Result.toMaybe
+    in
+    ( { userGroup = userGroup }
+    , Cmd.none
+    )
+
+
+
+-- User Group
+
+
+type alias UserGroup =
+    { id : String
+    , parentId : String
+    , name : String
+    , children : List Children
+    , settings : Settings
+    , contactDetails : ContactDetails
+    , tags : List Tag
+    }
+
+
+userGroupDecoder : Decode.Decoder UserGroup
+userGroupDecoder =
+    Decode.succeed UserGroup
+        |> Decode.required "id" Decode.string
+        |> Decode.required "parent_id" Decode.string
+        |> Decode.required "name" Decode.string
+        |> Decode.required "children" (Decode.list childrenDecoder)
+        |> Decode.required "settings" settingsDecoder
+        |> Decode.required "contact_details" contactDetailsDecoder
+        |> Decode.required "tags" (Decode.list tagDecoder)
+
+
+type alias Children =
+    { id : String
+    , name : String
+    }
+
+
+childrenDecoder : Decode.Decoder Children
+childrenDecoder =
+    Decode.succeed Children
+        |> Decode.required "id" Decode.string
+        |> Decode.required "name" Decode.string
+
+
+type alias Tag =
+    { name : String
+    , value : String
+    }
+
+
+tagDecoder : Decode.Decoder Tag
+tagDecoder =
+    Decode.succeed Tag
+        |> Decode.required "name" Decode.string
+        |> Decode.optional "value" Decode.string ""
+
+
+
+-- Settings
+
+
+type alias Settings =
+    { inheritedFrom : String
+    , dataRetentionPolicy : DataRetentionPolicy
+    }
+
+
+settingsDecoder : Decode.Decoder Settings
+settingsDecoder =
+    Decode.succeed Settings
+        |> Decode.optional "inherited_from" Decode.string ""
+        |> Decode.required "data_retention_policy" dataRetentionPolicyDecoder
+
+
+type alias DataRetentionPolicy =
+    { idleDocTimeOutPreparation : Maybe Int
+    , idleDocTimeOutClosed : Maybe Int
+    , idleDocTimeOutCancelled : Maybe Int
+    , idleDocTimeOutTimedOut : Maybe Int
+    , idleDocTimeOutRejected : Maybe Int
+    , idleDocTimeOutError : Maybe Int
+    , immediateTrash : Bool
+    }
+
+
+dataRetentionPolicyDecoder : Decode.Decoder DataRetentionPolicy
+dataRetentionPolicyDecoder =
+    Decode.succeed DataRetentionPolicy
+        |> Decode.optional "idle_doc_timeout_preparation" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_closed" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_canceled" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_timedout" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_rejected" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_error" (Decode.map Just Decode.int) Nothing
+        |> Decode.required "immediate_trash" Decode.bool
+
+
+type alias ContactDetails =
+    { inheritedFrom : String
+    , address : Address
+    }
+
+
+contactDetailsDecoder : Decode.Decoder ContactDetails
+contactDetailsDecoder =
+    Decode.succeed ContactDetails
+        |> Decode.optional "inherited_from" Decode.string ""
+        |> Decode.required "address" addressDecoder
+
+
+type alias Address =
+    { preferredContactMethod : PreferredContactMethod
+    , email : String
+    , phone : String
+    , companyName : String
+    , address : String
+    , zip : String
+    , city : String
+    , country : String
+    }
+
+
+addressDecoder : Decode.Decoder Address
+addressDecoder =
+    Decode.succeed Address
+        |> Decode.required "preferred_contact_method" preferredContactMethodDecoder
+        |> Decode.optional "email" Decode.string ""
+        |> Decode.optional "phone" Decode.string ""
+        |> Decode.optional "company_name" Decode.string ""
+        |> Decode.optional "address" Decode.string ""
+        |> Decode.optional "zip" Decode.string ""
+        |> Decode.optional "city" Decode.string ""
+        |> Decode.optional "country" Decode.string ""
+
+
+type PreferredContactMethod
+    = Email
+    | Phone
+    | Letter
+
+
+preferredContactMethodDecoder : Decode.Decoder PreferredContactMethod
+preferredContactMethodDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\method ->
+                case method of
+                    "email" ->
+                        Decode.succeed Email
+
+                    "phone" ->
+                        Decode.succeed Phone
+
+                    "letter" ->
+                        Decode.succeed Letter
+
+                    _ ->
+                        Decode.fail "Not valid contact method"
+            )
 
 
 
