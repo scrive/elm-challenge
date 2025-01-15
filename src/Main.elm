@@ -182,6 +182,62 @@ emptyDataRetentionPolicy =
     }
 
 
+existingPolicies : DataRetentionPolicy -> List ( String, Int )
+existingPolicies dataRetentionPolicies =
+    [ dataRetentionPolicies.idleDocTimeOutPreparation |> Maybe.map (\value -> ( "preparation", value ))
+    , dataRetentionPolicies.idleDocTimeOutClosed |> Maybe.map (\value -> ( "closed", value ))
+    , dataRetentionPolicies.idleDocTimeOutCancelled |> Maybe.map (\value -> ( "cancelled", value ))
+    , dataRetentionPolicies.idleDocTimeOutTimedOut |> Maybe.map (\value -> ( "timed out", value ))
+    , dataRetentionPolicies.idleDocTimeOutRejected |> Maybe.map (\value -> ( "rejected", value ))
+    , dataRetentionPolicies.idleDocTimeOutError |> Maybe.map (\value -> ( "error", value ))
+    ]
+        |> List.filterMap identity
+
+
+type Policy
+    = Preparation
+    | Closed
+    | Cancelled
+    | TimedOut
+    | Rejected
+    | Error
+
+
+policyToString : Policy -> String
+policyToString policy =
+    case policy of
+        Preparation ->
+            "preparation"
+
+        Closed ->
+            "closed"
+
+        Cancelled ->
+            "cancelled"
+
+        TimedOut ->
+            "timedOut"
+
+        Rejected ->
+            "rejected"
+
+        Error ->
+            "error"
+
+
+missingPolicies : DataRetentionPolicy -> List Policy
+missingPolicies dataRetentionPolicies =
+    [ ( dataRetentionPolicies.idleDocTimeOutPreparation, Preparation )
+    , ( dataRetentionPolicies.idleDocTimeOutClosed, Closed )
+    , ( dataRetentionPolicies.idleDocTimeOutCancelled, Cancelled )
+    , ( dataRetentionPolicies.idleDocTimeOutTimedOut, TimedOut )
+    , ( dataRetentionPolicies.idleDocTimeOutRejected, Rejected )
+    , ( dataRetentionPolicies.idleDocTimeOutError, Error )
+    ]
+        |> List.filter (Tuple.first >> (==) Nothing)
+        |> List.map Tuple.second
+
+
 dataRetentionPolicyDecoder : Decode.Decoder DataRetentionPolicy
 dataRetentionPolicyDecoder =
     Decode.succeed DataRetentionPolicy
@@ -343,6 +399,8 @@ type Msg
     | ContactEditClicked
     | CloseFormClicked
     | SettingsEditClicked
+    | AddPolicy Policy
+    | ImmediateTrashChecked Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -499,6 +557,63 @@ update msg ({ userGroup } as model) =
         SettingsEditClicked ->
             ( { model | currentForm = Just SettingsForm }, Cmd.none )
 
+        AddPolicy policy ->
+            let
+                toNewPolicySettings settings =
+                    { settings | dataRetentionPolicy = addPolicy policy settings.dataRetentionPolicy }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup
+                        | settings =
+                            toNewPolicySettings userGroup.settings
+                    }
+              }
+            , Cmd.none
+            )
+
+        ImmediateTrashChecked bool ->
+            let
+                toNewPolicySettings settings =
+                    { settings | dataRetentionPolicy = toggleImmediateTresh bool settings.dataRetentionPolicy }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup
+                        | settings =
+                            toNewPolicySettings userGroup.settings
+                    }
+              }
+            , Cmd.none
+            )
+
+
+addPolicy : Policy -> DataRetentionPolicy -> DataRetentionPolicy
+addPolicy policy dataRetentionPolicy =
+    case policy of
+        Preparation ->
+            { dataRetentionPolicy | idleDocTimeOutPreparation = Just 1 }
+
+        Closed ->
+            { dataRetentionPolicy | idleDocTimeOutClosed = Just 1 }
+
+        Cancelled ->
+            { dataRetentionPolicy | idleDocTimeOutCancelled = Just 1 }
+
+        TimedOut ->
+            { dataRetentionPolicy | idleDocTimeOutTimedOut = Just 1 }
+
+        Rejected ->
+            { dataRetentionPolicy | idleDocTimeOutRejected = Just 1 }
+
+        Error ->
+            { dataRetentionPolicy | idleDocTimeOutError = Just 1 }
+
+
+toggleImmediateTresh : Bool -> DataRetentionPolicy -> DataRetentionPolicy
+toggleImmediateTresh bool dataRetentionPolicy =
+    { dataRetentionPolicy | immediateTrash = bool }
+
 
 postError :
     { address : String
@@ -577,7 +692,7 @@ view { userGroup, contactFormError, currentForm } =
                             [ viewContactForm userGroup.parentId userGroup.contactDetails contactFormError ]
 
                         SettingsForm ->
-                            []
+                            [ viewSettingsForm userGroup.parentId userGroup.settings ]
                 )
             |> Maybe.withDefault
                 [ Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
@@ -597,6 +712,110 @@ view { userGroup, contactFormError, currentForm } =
         )
 
 
+viewSettingsForm : String -> Settings -> Html Msg
+viewSettingsForm parentId { inheritedFrom, dataRetentionPolicy } =
+    let
+        isInherited : Bool
+        isInherited =
+            not (String.isEmpty inheritedFrom) || not (String.isEmpty parentId)
+    in
+    Html.form
+        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-6/12 md:w-3/6 lg:w-2/6 border rounded whitespace-nowrap text-ellipsis overflow-hidden"
+        , Events.onSubmit Submitted
+        ]
+        ([ existingPolicies dataRetentionPolicy
+            |> List.map
+                (\( policy, value ) ->
+                    Html.span
+                        [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center"
+                        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                        ]
+                        [ Html.label [ Attrs.class "text-md pl-1 font-semibold text-stone-700" ]
+                            [ Html.text (policy ++ ":") ]
+                        , Html.input
+                            [ Attrs.type_ "number"
+                            , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400 w-24 text-md text-right text-normal text-stone-700 appearance-none"
+                            , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                            , Attrs.disabled isInherited
+                            , Attrs.value (String.fromInt value)
+                            ]
+                            []
+                        ]
+                )
+         , [ Html.span
+                [ Attrs.class "flex flex-row rounded p-2.5 justify-between"
+                , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                ]
+                [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
+                    [ Html.text "immediate trash" ]
+                , Html.input
+                    [ Attrs.type_ "checkbox"
+                    , Attrs.class "border rounded px-2 py-1 border-stone-400 w-4"
+                    , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                    , Attrs.disabled isInherited
+                    , Events.onCheck ImmediateTrashChecked
+                    , Attrs.checked dataRetentionPolicy.immediateTrash
+                    ]
+                    []
+                ]
+           ]
+         , missingPolicies dataRetentionPolicy
+            |> List.map
+                (\policy ->
+                    Html.span
+                        [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center bg-stone-100"
+                        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                        ]
+                        [ Html.label [ Attrs.class "text-md pl-1 font-semibold text-stone-700" ]
+                            [ Html.text (policyToString policy ++ ":") ]
+                        , Html.button
+                            [ Attrs.type_ "button"
+                            , Attrs.class "border rounded px-2 py-1 hover:bg-[#d2e7f9] border-stone-400 text-md text-right text-normal text-stone-700"
+                            , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                            , Attrs.disabled isInherited
+                            , Events.onClick (AddPolicy policy)
+                            ]
+                            [ Html.text "add" ]
+                        ]
+                )
+         , [ Html.span
+                [ Attrs.class "flex flex-row gap-4"
+                , Attrs.classList
+                    [ ( "justify-end", not isInherited )
+                    , ( "justify-center", isInherited )
+                    ]
+                ]
+                (if isInherited then
+                    [ Html.button
+                        [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
+                        , Attrs.type_ "button"
+                        , Events.onClick CloseFormClicked
+                        ]
+                        [ Html.text "close" ]
+                    ]
+
+                 else
+                    [ Html.button
+                        [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
+                        , Attrs.type_ "button"
+                        , Events.onClick CloseFormClicked
+                        ]
+                        [ Html.text "cancel" ]
+                    , Html.button
+                        [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
+                        , Attrs.type_ "submit"
+                        , Events.onClick Submitted
+                        ]
+                        [ Html.text "apply" ]
+                    ]
+                )
+           ]
+         ]
+            |> List.concat
+        )
+
+
 viewSettings : Settings -> Html Msg
 viewSettings { dataRetentionPolicy } =
     Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded p-2.5 gap-4" ]
@@ -610,56 +829,14 @@ viewSettings { dataRetentionPolicy } =
             ]
          , Html.h1 [ Attrs.class "text-md font-semibold text-stone-800" ] [ Html.text "Data retention policy:" ]
          ]
-            ++ ([ dataRetentionPolicy.idleDocTimeOutCancelled
-                    |> Maybe.map
-                        (\policy ->
+            ++ (existingPolicies dataRetentionPolicy
+                    |> List.map
+                        (\( policy, value ) ->
                             Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
-                                [ Html.p [] [ Html.text "cancelled:" ]
-                                , Html.p [] [ Html.text (String.fromInt policy) ]
+                                [ Html.p [] [ Html.text (policy ++ ":") ]
+                                , Html.p [] [ Html.text (String.fromInt value) ]
                                 ]
                         )
-                , dataRetentionPolicy.idleDocTimeOutClosed
-                    |> Maybe.map
-                        (\policy ->
-                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
-                                [ Html.p [] [ Html.text "closed:" ]
-                                , Html.p [] [ Html.text (String.fromInt policy) ]
-                                ]
-                        )
-                , dataRetentionPolicy.idleDocTimeOutError
-                    |> Maybe.map
-                        (\policy ->
-                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
-                                [ Html.p [] [ Html.text "error:" ]
-                                , Html.p [] [ Html.text (String.fromInt policy) ]
-                                ]
-                        )
-                , dataRetentionPolicy.idleDocTimeOutPreparation
-                    |> Maybe.map
-                        (\policy ->
-                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
-                                [ Html.p [] [ Html.text "preparation:" ]
-                                , Html.p [] [ Html.text (String.fromInt policy) ]
-                                ]
-                        )
-                , dataRetentionPolicy.idleDocTimeOutRejected
-                    |> Maybe.map
-                        (\policy ->
-                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
-                                [ Html.p [] [ Html.text "rejected:" ]
-                                , Html.p [] [ Html.text (String.fromInt policy) ]
-                                ]
-                        )
-                , dataRetentionPolicy.idleDocTimeOutTimedOut
-                    |> Maybe.map
-                        (\policy ->
-                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
-                                [ Html.p [] [ Html.text "timed out:" ]
-                                , Html.p [] [ Html.text (String.fromInt policy) ]
-                                ]
-                        )
-                ]
-                    |> List.filterMap identity
                )
             ++ [ Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
                     [ Html.p [] [ Html.text "immediate trash:" ]
@@ -723,7 +900,7 @@ viewContactForm parentId { inheritedFrom, address } error =
     let
         isInherited : Bool
         isInherited =
-            not (String.isEmpty inheritedFrom) || not (String.isEmpty parentId)
+            not (String.isEmpty inheritedFrom) && not (String.isEmpty parentId)
     in
     Html.form
         [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-auto border rounded whitespace-nowrap text-ellipsis overflow-hidden"
@@ -744,6 +921,7 @@ viewContactForm parentId { inheritedFrom, address } error =
             (if isInherited then
                 [ Html.button
                     [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
+                    , Attrs.type_ "button"
                     , Events.onClick CloseFormClicked
                     ]
                     [ Html.text "close" ]
@@ -752,11 +930,13 @@ viewContactForm parentId { inheritedFrom, address } error =
              else
                 [ Html.button
                     [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
+                    , Attrs.type_ "button"
                     , Events.onClick CloseFormClicked
                     ]
                     [ Html.text "cancel" ]
                 , Html.button
                     [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
+                    , Attrs.type_ "submit"
                     , Events.onClick Submitted
                     ]
                     [ Html.text "apply" ]
