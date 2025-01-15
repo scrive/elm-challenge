@@ -1,10 +1,1 @@
-# Scrive elm challenge
-
-not needed readme
-
-
-more changes in readme
-
-more changes even to make a point
-
-eager-carmen was there
+st 15. ledna 2025 15:24:05 CET
