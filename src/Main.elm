@@ -95,7 +95,7 @@ userGroupDecoder : Decode.Decoder UserGroup
 userGroupDecoder =
     Decode.succeed UserGroup
         |> Decode.required "id" Decode.string
-        |> Decode.required "parent_id" Decode.string
+        |> Decode.optional "parent_id" Decode.string ""
         |> Decode.required "name" Decode.string
         |> Decode.required "children" (Decode.list childrenDecoder)
         |> Decode.required "settings" settingsDecoder
@@ -421,7 +421,7 @@ update msg ({ userGroup } as model) =
             let
                 toUpdatedCity : ContactDetails -> ContactDetails
                 toUpdatedCity ({ address } as contactDetails) =
-                    { contactDetails | address = { address | address = city } }
+                    { contactDetails | address = { address | city = city } }
             in
             ( { model
                 | userGroup =
@@ -434,7 +434,7 @@ update msg ({ userGroup } as model) =
             let
                 toUpdatedCountry : ContactDetails -> ContactDetails
                 toUpdatedCountry ({ address } as contactDetails) =
-                    { contactDetails | address = { address | address = country } }
+                    { contactDetails | address = { address | country = country } }
             in
             ( { model
                 | userGroup =
@@ -445,7 +445,7 @@ update msg ({ userGroup } as model) =
 
         Submitted ->
             let
-                { preferredContactMethod, email, phone } =
+                { preferredContactMethod, email, phone, address, zip, city, country } =
                     userGroup.contactDetails.address
 
                 error =
@@ -457,13 +457,42 @@ update msg ({ userGroup } as model) =
                             phoneError phone
 
                         Post ->
-                            Nothing
+                            postError
+                                { address = address
+                                , zip = zip
+                                , city = city
+                                , country = country
+                                }
             in
             ( { model
                 | contactFormError = error
               }
             , Cmd.none
             )
+
+
+postError :
+    { address : String
+    , zip : String
+    , city : String
+    , country : String
+    }
+    -> Maybe ( ContactFormField, String )
+postError { address, zip, city, country } =
+    if String.isEmpty address then
+        Just ( AddressField, "Address is required" )
+
+    else if String.isEmpty zip then
+        Just ( ZipField, "Zip is required" )
+
+    else if String.isEmpty city then
+        Just ( CityField, "City is required" )
+
+    else if String.isEmpty country then
+        Just ( CountryField, "Country is required" )
+
+    else
+        Nothing
 
 
 emailError : String -> Maybe ( ContactFormField, String )
@@ -530,7 +559,7 @@ viewContact parentId { inheritedFrom, address } error =
         , viewEmail isInherited address.email error
         , viewPhone isInherited address.phone error
         , viewCompanyName isInherited address.companyName
-        , viewAddress isInherited address
+        , viewAddress isInherited address error
         , Html.span
             [ Attrs.class "flex flex-row gap-4"
             , Attrs.classList
@@ -663,8 +692,8 @@ viewCompanyName isInherited companyName =
         }
 
 
-viewAddress : Bool -> Address -> Html Msg
-viewAddress isInherited { address, zip, city, country } =
+viewAddress : Bool -> Address -> ContactFormError -> Html Msg
+viewAddress isInherited { address, zip, city, country } error =
     Html.div
         [ Attrs.class "flex flex-col rounded py-1"
         , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
@@ -677,7 +706,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = AddressChanged
                     , value = address
-                    , errorMessage = Nothing
+                    , errorMessage = error |> Maybe.andThen (errorToMessage AddressField)
                     }
                 ]
             , Html.span [ Attrs.class "w-2/6" ]
@@ -687,7 +716,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = ZipChanged
                     , value = zip
-                    , errorMessage = Nothing
+                    , errorMessage = error |> Maybe.andThen (errorToMessage ZipField)
                     }
                 ]
             ]
@@ -699,7 +728,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = CityChanged
                     , value = city
-                    , errorMessage = Nothing
+                    , errorMessage = error |> Maybe.andThen (errorToMessage CityField)
                     }
                 ]
             , Html.span [ Attrs.class "w-3/6" ]
@@ -709,7 +738,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , type_ = "text"
                     , onChange = CountryChanged
                     , value = country
-                    , errorMessage = Nothing
+                    , errorMessage = error |> Maybe.andThen (errorToMessage CountryField)
                     }
                 ]
             ]
