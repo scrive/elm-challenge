@@ -10,6 +10,26 @@ import Json.Decode.Pipeline as Decode
 
 
 
+---- PROGRAM ----
+
+
+main : Program () Model Msg
+main =
+    Browser.application
+        { view =
+            \model ->
+                { title = "Scrive elm challenge task"
+                , body = [ view model ]
+                }
+        , init = \_ _ _ -> init
+        , update = update
+        , subscriptions = always Sub.none
+        , onUrlRequest = always NoOp
+        , onUrlChange = always NoOp
+        }
+
+
+
 ---- MODEL ----
 
 
@@ -276,6 +296,7 @@ preferredContactMethodDecoder =
 type Msg
     = NoOp
     | PreferredContactMethodChanged PreferredContactMethod
+    | EmailChanged String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -286,12 +307,26 @@ update msg ({ userGroup } as model) =
 
         PreferredContactMethodChanged method ->
             let
+                toUpdatedContactMethod : ContactDetails -> ContactDetails
                 toUpdatedContactMethod ({ address } as contactDetails) =
                     { contactDetails | address = { address | preferredContactMethod = method } }
             in
             ( { model
                 | userGroup =
                     { userGroup | contactDetails = toUpdatedContactMethod userGroup.contactDetails }
+              }
+            , Cmd.none
+            )
+
+        EmailChanged email ->
+            let
+                toUpdatedEmail : ContactDetails -> ContactDetails
+                toUpdatedEmail ({ address } as contactDetails) =
+                    { contactDetails | address = { address | email = email } }
+            in
+            ( { model
+                | userGroup =
+                    { userGroup | contactDetails = toUpdatedEmail userGroup.contactDetails }
               }
             , Cmd.none
             )
@@ -316,7 +351,9 @@ viewContact { inheritedFrom, address } =
             not (String.isEmpty inheritedFrom)
     in
     Html.div [ Attrs.class "flex flex-col gap-4 my-2" ]
-        [ viewPreferredContactMethods isInherited address.preferredContactMethod ]
+        [ viewPreferredContactMethods isInherited address.preferredContactMethod
+        , viewEmail isInherited address.email
+        ]
 
 
 viewPreferredContactMethods : Bool -> PreferredContactMethod -> Html Msg
@@ -340,21 +377,17 @@ viewPreferredContactMethods isInherited preferredContactMethod =
         )
 
 
-
----- PROGRAM ----
-
-
-main : Program () Model Msg
-main =
-    Browser.application
-        { view =
-            \model ->
-                { title = "Scrive elm challenge task"
-                , body = [ view model ]
-                }
-        , init = \_ _ _ -> init
-        , update = update
-        , subscriptions = always Sub.none
-        , onUrlRequest = always NoOp
-        , onUrlChange = always NoOp
-        }
+viewEmail : Bool -> String -> Html Msg
+viewEmail isInherited email =
+    Html.span [ Attrs.class "flex flex-col rounded px-2 py-1", Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ] ]
+        [ Html.label [ Attrs.class "text-sm pl-1" ] [ Html.text "e-mail" ]
+        , Html.input
+            [ Attrs.type_ "email"
+            , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400"
+            , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+            , Attrs.disabled isInherited
+            , Attrs.value email
+            , Events.onInput EmailChanged
+            ]
+            []
+        ]
