@@ -342,6 +342,7 @@ type Msg
     | Submitted
     | ContactEditClicked
     | CloseFormClicked
+    | SettingsEditClicked
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -495,6 +496,9 @@ update msg ({ userGroup } as model) =
         CloseFormClicked ->
             ( { model | currentForm = Nothing }, Cmd.none )
 
+        SettingsEditClicked ->
+            ( { model | currentForm = Just SettingsForm }, Cmd.none )
+
 
 postError :
     { address : String
@@ -581,6 +585,7 @@ view { userGroup, contactFormError, currentForm } =
                     , Html.h2 [ Attrs.class "text-md w-full p-2.5" ] [ Html.text userGroup.name ]
                     ]
                 , viewContact userGroup.contactDetails
+                , viewSettings userGroup.settings
                 , Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
                     [ Html.h1 [ Attrs.class "text-lg p-2.5 w-full" ] [ Html.text "Child groups:" ]
                     , Html.span []
@@ -589,6 +594,86 @@ view { userGroup, contactFormError, currentForm } =
                         )
                     ]
                 ]
+        )
+
+
+viewSettings : Settings -> Html Msg
+viewSettings { dataRetentionPolicy } =
+    Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded p-2.5 gap-4" ]
+        ([ Html.div [ Attrs.class "w-full flex flex-row justify-between gap-4 border-b pb-2" ]
+            [ Html.h1 [ Attrs.class "text-lg font-semibold text-stone-800" ] [ Html.text "Settings" ]
+            , Html.button
+                [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
+                , Events.onClick SettingsEditClicked
+                ]
+                [ Html.text "edit" ]
+            ]
+         , Html.h1 [ Attrs.class "text-md font-semibold text-stone-800" ] [ Html.text "Data retention policy:" ]
+         ]
+            ++ ([ dataRetentionPolicy.idleDocTimeOutCancelled
+                    |> Maybe.map
+                        (\policy ->
+                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
+                                [ Html.p [] [ Html.text "cancelled:" ]
+                                , Html.p [] [ Html.text (String.fromInt policy) ]
+                                ]
+                        )
+                , dataRetentionPolicy.idleDocTimeOutClosed
+                    |> Maybe.map
+                        (\policy ->
+                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
+                                [ Html.p [] [ Html.text "closed:" ]
+                                , Html.p [] [ Html.text (String.fromInt policy) ]
+                                ]
+                        )
+                , dataRetentionPolicy.idleDocTimeOutError
+                    |> Maybe.map
+                        (\policy ->
+                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
+                                [ Html.p [] [ Html.text "error:" ]
+                                , Html.p [] [ Html.text (String.fromInt policy) ]
+                                ]
+                        )
+                , dataRetentionPolicy.idleDocTimeOutPreparation
+                    |> Maybe.map
+                        (\policy ->
+                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
+                                [ Html.p [] [ Html.text "preparation:" ]
+                                , Html.p [] [ Html.text (String.fromInt policy) ]
+                                ]
+                        )
+                , dataRetentionPolicy.idleDocTimeOutRejected
+                    |> Maybe.map
+                        (\policy ->
+                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
+                                [ Html.p [] [ Html.text "rejected:" ]
+                                , Html.p [] [ Html.text (String.fromInt policy) ]
+                                ]
+                        )
+                , dataRetentionPolicy.idleDocTimeOutTimedOut
+                    |> Maybe.map
+                        (\policy ->
+                            Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
+                                [ Html.p [] [ Html.text "timed out:" ]
+                                , Html.p [] [ Html.text (String.fromInt policy) ]
+                                ]
+                        )
+                ]
+                    |> List.filterMap identity
+               )
+            ++ [ Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
+                    [ Html.p [] [ Html.text "immediate trash:" ]
+                    , Html.p []
+                        [ Html.text
+                            (if dataRetentionPolicy.immediateTrash then
+                                "yes"
+
+                             else
+                                "no"
+                            )
+                        ]
+                    ]
+               ]
         )
 
 
