@@ -1,4 +1,4 @@
-module Main exposing (main, preferredContactMethodDecoder)
+module Main exposing (main)
 
 import Browser
 import Data
@@ -36,8 +36,14 @@ main =
 
 type alias Model =
     { userGroup : UserGroup
+    , currentForm : Maybe Form
     , contactFormError : ContactFormError
     }
+
+
+type Form
+    = SettingsForm
+    | ContactForm
 
 
 type alias ContactFormError =
@@ -311,7 +317,10 @@ init =
                 |> Result.toMaybe
                 |> Maybe.withDefault emptyUserGroup
     in
-    ( { userGroup = userGroup, contactFormError = Nothing }
+    ( { userGroup = userGroup
+      , currentForm = Nothing
+      , contactFormError = Nothing
+      }
     , Cmd.none
     )
 
@@ -331,6 +340,8 @@ type Msg
     | CityChanged String
     | CountryChanged String
     | Submitted
+    | ContactEditClicked
+    | CloseFormClicked
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -448,6 +459,7 @@ update msg ({ userGroup } as model) =
                 { preferredContactMethod, email, phone, address, zip, city, country } =
                     userGroup.contactDetails.address
 
+                error : Maybe ( ContactFormField, String )
                 error =
                     case preferredContactMethod of
                         Email ->
@@ -464,11 +476,24 @@ update msg ({ userGroup } as model) =
                                 , country = country
                                 }
             in
-            ( { model
-                | contactFormError = error
-              }
+            case error of
+                Nothing ->
+                    ( { model | currentForm = Nothing }, Cmd.none )
+
+                Just _ ->
+                    ( { model
+                        | contactFormError = error
+                      }
+                    , Cmd.none
+                    )
+
+        ContactEditClicked ->
+            ( { model | currentForm = Just ContactForm }
             , Cmd.none
             )
+
+        CloseFormClicked ->
+            ( { model | currentForm = Nothing }, Cmd.none )
 
 
 postError :
@@ -538,18 +563,82 @@ phoneError phone =
 
 
 view : Model -> Html Msg
-view { userGroup, contactFormError } =
+view { userGroup, contactFormError, currentForm } =
     Html.div [ Attrs.class "flex flex-col items-center font-montserrat" ]
-        [ viewContact userGroup.parentId userGroup.contactDetails contactFormError
+        (currentForm
+            |> Maybe.map
+                (\form ->
+                    case form of
+                        ContactForm ->
+                            [ viewContactForm userGroup.parentId userGroup.contactDetails contactFormError ]
+
+                        SettingsForm ->
+                            []
+                )
+            |> Maybe.withDefault
+                [ Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
+                    [ Html.h1 [ Attrs.class "text-lg mb-2 bg-stone-100 border-b p-2.5" ] [ Html.text "Group Details:" ]
+                    , Html.h2 [ Attrs.class "text-md w-full p-2.5" ] [ Html.text userGroup.name ]
+                    ]
+                , viewContact userGroup.contactDetails
+                , Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
+                    [ Html.h1 [ Attrs.class "text-lg p-2.5 w-full" ] [ Html.text "Child groups:" ]
+                    , Html.span []
+                        (userGroup.children
+                            |> List.map (\childGroup -> Html.div [ Attrs.class "text-md p-2.5 w-full bg-stone-100 mb-1 " ] [ Html.text childGroup.name ])
+                        )
+                    ]
+                ]
+        )
+
+
+viewContact : ContactDetails -> Html Msg
+viewContact contactDetails =
+    Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded p-2.5 gap-4" ]
+        [ Html.div [ Attrs.class "w-full flex flex-row justify-between gap-4 border-b pb-2" ]
+            [ Html.h1 [ Attrs.class "text-lg font-semibold text-stone-800" ] [ Html.text "Contact" ]
+            , Html.button
+                [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
+                , Events.onClick ContactEditClicked
+                ]
+                [ Html.text "edit" ]
+            ]
+        , Html.div [ Attrs.class "w-full flex flex-col" ]
+            ([ Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
+                [ Html.text contactDetails.address.companyName ]
+             ]
+                ++ (case contactDetails.address.preferredContactMethod of
+                        Email ->
+                            [ Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
+                                [ Html.text contactDetails.address.email ]
+                            ]
+
+                        Phone ->
+                            [ Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
+                                [ Html.text contactDetails.address.phone ]
+                            ]
+
+                        Post ->
+                            [ Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
+                                [ Html.text contactDetails.address.address ]
+                            , Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
+                                [ Html.text contactDetails.address.zip ]
+                            , Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
+                                [ Html.text contactDetails.address.city ]
+                            , Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
+                                [ Html.text contactDetails.address.country ]
+                            ]
+                   )
+            )
         ]
 
 
-viewContact : String -> ContactDetails -> ContactFormError -> Html Msg
-viewContact parentId { inheritedFrom, address } error =
+viewContactForm : String -> ContactDetails -> ContactFormError -> Html Msg
+viewContactForm parentId { inheritedFrom, address } error =
     let
         isInherited : Bool
         isInherited =
-            not (String.isEmpty inheritedFrom) && not (String.isEmpty parentId)
+            not (String.isEmpty inheritedFrom) || not (String.isEmpty parentId)
     in
     Html.form
         [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-auto border rounded whitespace-nowrap text-ellipsis overflow-hidden"
@@ -570,7 +659,7 @@ viewContact parentId { inheritedFrom, address } error =
             (if isInherited then
                 [ Html.button
                     [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
-                    , Events.onClick NoOp
+                    , Events.onClick CloseFormClicked
                     ]
                     [ Html.text "close" ]
                 ]
@@ -578,7 +667,7 @@ viewContact parentId { inheritedFrom, address } error =
              else
                 [ Html.button
                     [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
-                    , Events.onClick NoOp
+                    , Events.onClick CloseFormClicked
                     ]
                     [ Html.text "cancel" ]
                 , Html.button
@@ -599,7 +688,7 @@ viewPreferredContactMethods isInherited preferredContactMethod =
         ]
         [ Html.label [ Attrs.class "text-sm pl-2" ]
             [ Html.text "Preferred contact method" ]
-        , Html.ul
+        , Html.div
             [ Attrs.class "flex gap-2 p-2"
             , Attrs.classList [ ( "border-transparent", isInherited ) ]
             ]
