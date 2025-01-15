@@ -434,12 +434,43 @@ viewContact { inheritedFrom, address } =
         isInherited =
             not (String.isEmpty inheritedFrom)
     in
-    Html.form [ Attrs.class "flex flex-col gap-4 my-2 w-auto", Events.onSubmit NoOp ]
+    Html.form
+        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-auto border rounded"
+        , Events.onSubmit NoOp
+        ]
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
         , viewEmail isInherited address.email
         , viewPhone isInherited address.phone
         , viewCompanyName isInherited address.companyName
         , viewAddress isInherited address
+        , Html.span
+            [ Attrs.class "flex flex-row gap-4"
+            , Attrs.classList
+                [ ( "justify-end", not isInherited )
+                , ( "justify-center", isInherited )
+                ]
+            ]
+            (if isInherited then
+                [ Html.button
+                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6"
+                    , Events.onClick NoOp
+                    ]
+                    [ Html.text "close" ]
+                ]
+
+             else
+                [ Html.button
+                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black"
+                    , Events.onClick NoOp
+                    ]
+                    [ Html.text "cancel" ]
+                , Html.button
+                    [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white"
+                    , Events.onClick NoOp
+                    ]
+                    [ Html.text "apply" ]
+                ]
+            )
         ]
 
 
@@ -455,7 +486,7 @@ viewPreferredContactMethods isInherited preferredContactMethod =
                     Html.button
                         [ Attrs.class "border rounded px-2 py-1"
                         , Attrs.classList
-                            [ ( "bg-[#4ba0e8] border-transparent", method == preferredContactMethod )
+                            [ ( "bg-[#4ba0e8] border-transparent text-white", method == preferredContactMethod )
                             , ( "hover:bg-[#d2e7f9]", method /= preferredContactMethod && not isInherited )
                             , ( "border-transparent", isInherited )
                             ]
