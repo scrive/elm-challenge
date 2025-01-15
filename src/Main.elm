@@ -511,19 +511,19 @@ phoneError phone =
 view : Model -> Html Msg
 view { userGroup, contactFormError } =
     Html.div [ Attrs.class "flex flex-col items-center font-montserrat" ]
-        [ viewContact userGroup.contactDetails contactFormError
+        [ viewContact userGroup.parentId userGroup.contactDetails contactFormError
         ]
 
 
-viewContact : ContactDetails -> ContactFormError -> Html Msg
-viewContact { inheritedFrom, address } error =
+viewContact : String -> ContactDetails -> ContactFormError -> Html Msg
+viewContact parentId { inheritedFrom, address } error =
     let
         isInherited : Bool
         isInherited =
-            not (String.isEmpty inheritedFrom)
+            not (String.isEmpty inheritedFrom) && not (String.isEmpty parentId)
     in
     Html.form
-        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-auto border rounded"
+        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-auto border rounded"
         , Events.onSubmit Submitted
         ]
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
@@ -564,26 +564,34 @@ viewContact { inheritedFrom, address } error =
 
 viewPreferredContactMethods : Bool -> PreferredContactMethod -> Html Msg
 viewPreferredContactMethods isInherited preferredContactMethod =
-    Html.ul
-        [ Attrs.class "flex gap-2 p-2 rounded"
+    Html.span
+        [ Attrs.class "rounded"
         , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
         ]
-        (allContactMethods
-            |> List.map
-                (\method ->
-                    Html.button
-                        [ Attrs.class "border rounded px-2 py-1"
-                        , Attrs.classList
-                            [ ( "bg-[#4ba0e8] border-transparent text-white", method == preferredContactMethod )
-                            , ( "hover:bg-[#d2e7f9]", method /= preferredContactMethod && not isInherited )
-                            , ( "border-transparent", isInherited )
+        [ Html.label [ Attrs.class "text-sm pl-2" ]
+            [ Html.text "Preferred contact method" ]
+        , Html.ul
+            [ Attrs.class "flex gap-2 p-2"
+            , Attrs.classList [ ( "border-transparent", isInherited ) ]
+            ]
+            (allContactMethods
+                |> List.map
+                    (\method ->
+                        Html.button
+                            [ Attrs.class "border rounded px-2 py-1 w-2/6 sm:w-1/6"
+                            , Attrs.classList
+                                [ ( "bg-[#4ba0e8] border-transparent text-white", method == preferredContactMethod )
+                                , ( "hover:bg-[#d2e7f9]", method /= preferredContactMethod && not isInherited )
+                                , ( "border-transparent", isInherited )
+                                ]
+                            , Attrs.disabled isInherited
+                            , Events.onClick (PreferredContactMethodChanged method)
+                            , Attrs.type_ "button"
                             ]
-                        , Attrs.disabled isInherited
-                        , Events.onClick (PreferredContactMethodChanged method)
-                        ]
-                        [ Html.text (contactMethodToString method) ]
-                )
-        )
+                            [ Html.text (contactMethodToString method) ]
+                    )
+            )
+        ]
 
 
 viewEmail : Bool -> String -> ContactFormError -> Html Msg
@@ -662,7 +670,7 @@ viewAddress isInherited { address, zip, city, country } =
         , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
         ]
         [ Html.span [ Attrs.class "flex flex-row w-full" ]
-            [ Html.span [ Attrs.class "w-full" ]
+            [ Html.span [ Attrs.class "w-4/6" ]
                 [ viewInput
                     { label = "address"
                     , disabled = isInherited
@@ -683,8 +691,8 @@ viewAddress isInherited { address, zip, city, country } =
                     }
                 ]
             ]
-        , Html.span [ Attrs.class "flex flex-row w-full" ]
-            [ Html.span [ Attrs.class "w-full" ]
+        , Html.span [ Attrs.class "flex flex-row w-full sm:w-auto" ]
+            [ Html.span [ Attrs.class "w-3/6" ]
                 [ viewInput
                     { label = "city"
                     , disabled = isInherited
@@ -694,7 +702,7 @@ viewAddress isInherited { address, zip, city, country } =
                     , errorMessage = Nothing
                     }
                 ]
-            , Html.span [ Attrs.class "w-full" ]
+            , Html.span [ Attrs.class "w-3/6" ]
                 [ viewInput
                     { label = "country"
                     , disabled = isInherited
