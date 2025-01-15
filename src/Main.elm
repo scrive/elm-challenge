@@ -480,16 +480,16 @@ postError :
     -> Maybe ( ContactFormField, String )
 postError { address, zip, city, country } =
     if String.isEmpty address then
-        Just ( AddressField, "Address is required" )
+        Just ( AddressField, "address is required" )
 
     else if String.isEmpty zip then
-        Just ( ZipField, "Zip is required" )
+        Just ( ZipField, "zip is required" )
 
     else if String.isEmpty city then
-        Just ( CityField, "City is required" )
+        Just ( CityField, "city is required" )
 
     else if String.isEmpty country then
-        Just ( CountryField, "Country is required" )
+        Just ( CountryField, "country is required" )
 
     else
         Nothing
@@ -505,10 +505,10 @@ emailError email =
                 (Regex.fromString "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
     in
     if String.isEmpty email then
-        Just ( EmailField, "Email cannot be empty." )
+        Just ( EmailField, "email cannot be empty." )
 
     else if not (Regex.contains emailRegex email) then
-        Just ( EmailField, "Invalid e-mail" )
+        Just ( EmailField, "invalid e-mail" )
 
     else
         Nothing
@@ -524,10 +524,10 @@ phoneError phone =
                 (Regex.fromString "^\\+?[0-9][0-9\\s]*$")
     in
     if String.isEmpty phone then
-        Just ( PhoneField, "Phone cannot be empty." )
+        Just ( PhoneField, "phone cannot be empty." )
 
     else if not (Regex.contains phoneRegex phone) then
-        Just ( PhoneField, "Invalid phone" )
+        Just ( PhoneField, "invalid phone" )
 
     else
         Nothing
@@ -552,7 +552,7 @@ viewContact parentId { inheritedFrom, address } error =
             not (String.isEmpty inheritedFrom) && not (String.isEmpty parentId)
     in
     Html.form
-        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-auto border rounded"
+        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-auto border rounded whitespace-nowrap text-ellipsis overflow-hidden"
         , Events.onSubmit Submitted
         ]
         [ viewPreferredContactMethods isInherited address.preferredContactMethod
@@ -582,7 +582,7 @@ viewContact parentId { inheritedFrom, address } error =
                     ]
                     [ Html.text "cancel" ]
                 , Html.button
-                    [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white hover:text-[#d2e7f9]"
+                    [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
                     , Events.onClick Submitted
                     ]
                     [ Html.text "apply" ]
@@ -698,8 +698,8 @@ viewAddress isInherited { address, zip, city, country } error =
         [ Attrs.class "flex flex-col rounded py-1"
         , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
         ]
-        [ Html.span [ Attrs.class "flex flex-row w-full" ]
-            [ Html.span [ Attrs.class "w-4/6" ]
+        [ Html.span [ Attrs.class "flex flex-col sm:flex-row  w-full" ]
+            [ Html.span [ Attrs.class "w-full sm:w-4/6" ]
                 [ viewInput
                     { label = "address"
                     , disabled = isInherited
@@ -709,7 +709,7 @@ viewAddress isInherited { address, zip, city, country } error =
                     , errorMessage = error |> Maybe.andThen (errorToMessage AddressField)
                     }
                 ]
-            , Html.span [ Attrs.class "w-2/6" ]
+            , Html.span [ Attrs.class "w-full sm:w-2/6" ]
                 [ viewInput
                     { label = "zip"
                     , disabled = isInherited
@@ -720,8 +720,8 @@ viewAddress isInherited { address, zip, city, country } error =
                     }
                 ]
             ]
-        , Html.span [ Attrs.class "flex flex-row w-full sm:w-auto" ]
-            [ Html.span [ Attrs.class "w-3/6" ]
+        , Html.span [ Attrs.class "flex flex-col sm:flex-row w-full sm:w-auto" ]
+            [ Html.span [ Attrs.class "w-full sm:w-3/6" ]
                 [ viewInput
                     { label = "city"
                     , disabled = isInherited
@@ -731,7 +731,7 @@ viewAddress isInherited { address, zip, city, country } error =
                     , errorMessage = error |> Maybe.andThen (errorToMessage CityField)
                     }
                 ]
-            , Html.span [ Attrs.class "w-3/6" ]
+            , Html.span [ Attrs.class "w-full sm:w-3/6" ]
                 [ viewInput
                     { label = "country"
                     , disabled = isInherited
