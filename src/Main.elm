@@ -43,7 +43,6 @@ type alias Model =
     , contactForm : Contact.Model
     , settingsForm : Settings.Model
     , tagsForm : Tags.Model
-    , isInherited : Bool
     }
 
 
@@ -125,28 +124,22 @@ init =
             Decode.decodeString userGroupDecoder Data.userGroup
                 |> Result.toMaybe
                 |> Maybe.withDefault emptyUserGroup
-
-        isInherited : Bool
-        isInherited =
-            not (String.isEmpty userGroup.contactDetails.inheritedFrom)
-                && not (String.isEmpty userGroup.parentId)
     in
     ( { userGroup = userGroup
       , currentForm = Nothing
       , contactForm =
             Contact.initialModel
                 userGroup.contactDetails.address
-                { isInherited = isInherited }
+                { isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) }
       , settingsForm =
             Settings.initialModel
                 userGroup.settings.dataRetentionPolicy
-                { isInherited = isInherited }
+                { isInherited = not (String.isEmpty userGroup.settings.inheritedFrom) }
       , tagsForm =
             Tags.initialModel
                 { tags = userGroup.tags
-                , isInherited = isInherited
+                , isInherited = not (String.isEmpty userGroup.parentId)
                 }
-      , isInherited = isInherited
       }
     , Cmd.none
     )
@@ -217,7 +210,7 @@ update msg ({ userGroup } as model) =
                 , contactForm =
                     Contact.initialModel
                         newAddressDetails
-                        { isInherited = model.isInherited }
+                        { isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) }
               }
             , Cmd.none
             )
@@ -233,15 +226,15 @@ update msg ({ userGroup } as model) =
                 , contactForm =
                     Contact.initialModel
                         userGroup.contactDetails.address
-                        { isInherited = model.isInherited }
+                        { isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) }
                 , settingsForm =
                     Settings.initialModel
                         userGroup.settings.dataRetentionPolicy
-                        { isInherited = model.isInherited }
+                        { isInherited = not (String.isEmpty userGroup.settings.inheritedFrom) }
                 , tagsForm =
                     Tags.initialModel
                         { tags = userGroup.tags
-                        , isInherited = model.isInherited
+                        , isInherited = not (String.isEmpty userGroup.parentId)
                         }
               }
             , Cmd.none
@@ -283,7 +276,7 @@ update msg ({ userGroup } as model) =
                 , settingsForm =
                     Settings.initialModel
                         newDataRetentionPolicy
-                        { isInherited = model.isInherited }
+                        { isInherited = not (String.isEmpty userGroup.settings.inheritedFrom) }
                 , userGroup =
                     { userGroup
                         | settings =
@@ -329,7 +322,7 @@ update msg ({ userGroup } as model) =
                 , tagsForm =
                     Tags.initialModel
                         { tags = newTags
-                        , isInherited = model.isInherited
+                        , isInherited = not (String.isEmpty userGroup.parentId)
                         }
               }
             , Cmd.none
