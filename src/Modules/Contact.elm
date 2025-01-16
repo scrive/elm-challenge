@@ -1,4 +1,15 @@
-module Modules.Contact exposing (..)
+module Modules.Contact exposing
+    ( Address
+    , Details
+    , Model
+    , Msg
+    , PreferredContactMethod(..)
+    , decoder
+    , empty
+    , initialModel
+    , update
+    , view
+    )
 
 import Components.Input as Input
 import Html exposing (Html)

@@ -1,4 +1,16 @@
-module Modules.Settings exposing (..)
+module Modules.Settings exposing
+    ( DataRetentionPolicy
+    , Model
+    , Msg
+    , Settings
+    , decoder
+    , empty
+    , existingPolicies
+    , initialModel
+    , policyToString
+    , update
+    , view
+    )
 
 import Browser.Dom as Dom
 import Html exposing (Html)

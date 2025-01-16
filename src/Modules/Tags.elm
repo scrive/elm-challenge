@@ -1,4 +1,11 @@
-module Modules.Tags exposing (..)
+module Modules.Tags exposing
+    ( Model
+    , Msg
+    , decoder
+    , initialModel
+    , update
+    , view
+    )
 
 import Browser.Dom as Dom
 import Components.Input as Input
