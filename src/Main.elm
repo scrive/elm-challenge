@@ -295,17 +295,11 @@ init =
     ( { userGroup = userGroup
       , currentForm = Nothing
       , contactForm =
-            { preferredContactMethod = userGroup.contactDetails.address.preferredContactMethod
-            , email = userGroup.contactDetails.address.email
-            , phone = userGroup.contactDetails.address.phone
-            , companyName = userGroup.contactDetails.address.companyName
-            , address = userGroup.contactDetails.address.address
-            , zip = userGroup.contactDetails.address.zip
-            , city = userGroup.contactDetails.address.city
-            , country = userGroup.contactDetails.address.country
-            , isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) && not (String.isEmpty userGroup.parentId)
-            , error = Nothing
-            }
+            Contact.initialModel
+                userGroup.contactDetails.address
+                (not (String.isEmpty userGroup.contactDetails.inheritedFrom)
+                    && not (String.isEmpty userGroup.parentId)
+                )
       }
     , Cmd.none
     )

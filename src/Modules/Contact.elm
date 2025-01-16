@@ -102,6 +102,32 @@ errorToMessage field error =
         Nothing
 
 
+initialModel :
+    { preferredContactMethod : PreferredContactMethod
+    , email : String
+    , phone : String
+    , companyName : String
+    , address : String
+    , zip : String
+    , city : String
+    , country : String
+    }
+    -> Bool
+    -> Model
+initialModel address isInherited =
+    { preferredContactMethod = address.preferredContactMethod
+    , email = address.email
+    , phone = address.phone
+    , companyName = address.companyName
+    , address = address.address
+    , zip = address.zip
+    , city = address.city
+    , country = address.country
+    , isInherited = isInherited
+    , error = Nothing
+    }
+
+
 type Msg
     = PreferredContactMethodChanged PreferredContactMethod
     | EmailChanged String
