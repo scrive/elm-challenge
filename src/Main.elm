@@ -163,6 +163,7 @@ type Msg
     | SettingsFormMsg Settings.Msg
     | SettingsSubmitted Settings.Model
     | SettingsEditClicked
+    | TagsFormMsg Tags.Msg
     | TagsEditClicked
 
 
@@ -280,6 +281,16 @@ update msg ({ userGroup } as model) =
         SettingsEditClicked ->
             ( { model | currentForm = Just SettingsForm }, Cmd.none )
 
+        TagsFormMsg tagsMsg ->
+            let
+                ( tagsForm, tagsCmd ) =
+                    Tags.update tagsMsg
+                        model.tagsForm
+            in
+            ( { model | tagsForm = tagsForm }
+            , tagsCmd
+            )
+
         TagsEditClicked ->
             ( { model | currentForm = Just TagsForm }, Cmd.none )
 
@@ -302,7 +313,7 @@ view { userGroup, currentForm, contactForm, settingsForm, tagsForm } =
                             [ Settings.view settingsForm |> Html.map SettingsFormMsg ]
 
                         TagsForm ->
-                            [ Tags.view tagsForm |> Html.map (\_ -> NoOp) ]
+                            [ Tags.view tagsForm |> Html.map TagsFormMsg ]
                 )
             |> Maybe.withDefault
                 [ Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
