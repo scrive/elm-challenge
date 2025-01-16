@@ -478,7 +478,7 @@ viewAddress isInherited { address, zip, city, country, error } =
                     |> Input.withLabel "zip"
                     |> Input.withDisabled isInherited
                     |> Input.withOnChange (Just ZipChanged)
-                    |> Input.withValue address
+                    |> Input.withValue zip
                     |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage ZipField))
                     |> Input.viewTextOrNumber
                 ]

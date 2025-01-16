@@ -43,6 +43,7 @@ type alias Model =
     , contactForm : Contact.Model
     , settingsForm : Settings.Model
     , tagsForm : Tags.Model
+    , isInherited : Bool
     }
 
 
@@ -145,6 +146,7 @@ init =
                 { tags = userGroup.tags
                 , isInherited = isInherited
                 }
+      , isInherited = isInherited
       }
     , Cmd.none
     )
@@ -225,16 +227,15 @@ update msg ({ userGroup } as model) =
                 , contactForm =
                     Contact.initialModel
                         userGroup.contactDetails.address
-                        { isInherited =
-                            not (String.isEmpty userGroup.contactDetails.inheritedFrom)
-                                && not (String.isEmpty userGroup.parentId)
-                        }
+                        { isInherited = model.isInherited }
                 , settingsForm =
                     Settings.initialModel
                         userGroup.settings.dataRetentionPolicy
-                        { isInherited =
-                            not (String.isEmpty userGroup.contactDetails.inheritedFrom)
-                                && not (String.isEmpty userGroup.parentId)
+                        { isInherited = model.isInherited }
+                , tagsForm =
+                    Tags.initialModel
+                        { tags = userGroup.tags
+                        , isInherited = model.isInherited
                         }
               }
             , Cmd.none
