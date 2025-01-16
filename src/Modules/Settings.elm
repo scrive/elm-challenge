@@ -180,6 +180,7 @@ type Msg
     | AddPolicy Policy
     | PolicyChanged Policy String
     | ImmediateTrashChecked Bool
+    | Removed Policy
 
 
 update : Msg -> Model -> { onSubmit : Model -> msg, onClose : msg, onFocus : msg } -> ( Model, Cmd msg )
@@ -219,6 +220,11 @@ update msg model config =
 
         ImmediateTrashChecked bool ->
             ( { model | immediateTrash = bool }
+            , Cmd.none
+            )
+
+        Removed policy ->
+            ( changePolicy policy Nothing model
             , Cmd.none
             )
 
@@ -263,7 +269,7 @@ view ({ isInherited } as model) =
         , Attrs.class "whitespace-nowrap text-ellipsis overflow-hidden"
         , Events.onSubmit Submitted
         ]
-        ([ [ Html.h1 [ Attrs.class Styles.darkGreyText ]
+        ([ [ Html.h1 [ Attrs.class Styles.darkGreyText, Attrs.class "border-b" ]
                 [ Html.text "Data retention policy" ]
            ]
          , existingPolicies model
@@ -275,20 +281,36 @@ view ({ isInherited } as model) =
                         ]
                         [ Html.label [ Attrs.class Styles.darkGreyText ]
                             [ Html.text (policyToString policy ++ ":") ]
-                        , Html.input
-                            [ Attrs.type_ "number"
-                            , Attrs.id (policyToString policy ++ "-input")
-                            , Attrs.class "focus:outline-none border-stone-400 w-24 text-md"
-                            , Attrs.class "text-right text-normal text-stone-700 appearance-none"
-                            , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none"
-                            , Attrs.class "[&::-webkit-inner-spin-button]:appearance-none"
-                            , Attrs.class Styles.inputBorder
-                            , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-                            , Attrs.disabled isInherited
-                            , Attrs.value (String.fromInt value)
-                            , Events.onInput (PolicyChanged policy)
-                            ]
-                            []
+                        , Html.div []
+                            ([ Html.input
+                                [ Attrs.type_ "number"
+                                , Attrs.id (policyToString policy ++ "-input")
+                                , Attrs.class "focus:outline-none border-stone-400 w-24 text-md"
+                                , Attrs.class "text-right text-normal text-stone-700 appearance-none"
+                                , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none"
+                                , Attrs.class "[&::-webkit-inner-spin-button]:appearance-none"
+                                , Attrs.class Styles.inputBorder
+                                , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                                , Attrs.disabled isInherited
+                                , Attrs.value (String.fromInt value)
+                                , Events.onInput (PolicyChanged policy)
+                                ]
+                                []
+                             ]
+                                ++ (if isInherited then
+                                        []
+
+                                    else
+                                        [ Html.button
+                                            [ Attrs.class "border border-transparent rounded px-2 py-1 my-1 bg-red-400"
+                                            , Attrs.class "text-white outline-black hover:text-[#d2e7f9] w-12 ml-1"
+                                            , Attrs.type_ "button"
+                                            , Events.onClick (Removed policy)
+                                            ]
+                                            [ Html.text "x" ]
+                                        ]
+                                   )
+                            )
                         ]
                 )
          , [ Html.span
