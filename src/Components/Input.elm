@@ -3,6 +3,7 @@ module Components.Input exposing
     , viewTextOrNumber
     , withDisabled
     , withErrorMessage
+    , withId
     , withLabel
     , withOnBlur
     , withOnChange
@@ -24,6 +25,7 @@ type alias Config msg =
     , onBlur : Maybe msg
     , value : String
     , errorMessage : Maybe String
+    , id : String
     }
 
 
@@ -36,7 +38,13 @@ defaultConfig =
     , onBlur = Nothing
     , value = ""
     , errorMessage = Nothing
+    , id = ""
     }
+
+
+withId : String -> Config msg -> Config msg
+withId id config =
+    { config | id = id }
 
 
 withOnBlur : Maybe msg -> Config msg -> Config msg
@@ -75,7 +83,7 @@ withErrorMessage errorMessage config =
 
 
 viewTextOrNumber : Config msg -> Html msg
-viewTextOrNumber { label, disabled, type_, onChange, onBlur, value, errorMessage } =
+viewTextOrNumber { label, disabled, type_, onChange, onBlur, value, errorMessage, id } =
     let
         hasError : Bool
         hasError =
@@ -89,6 +97,7 @@ viewTextOrNumber { label, disabled, type_, onChange, onBlur, value, errorMessage
             [ Html.text (errorMessage |> Maybe.withDefault label) ]
         , Html.input
             ([ Attrs.type_ type_
+             , Attrs.id id
              , Attrs.class "focus:outline-none w-full"
              , Attrs.class Styles.inputBorder
              , Attrs.classList

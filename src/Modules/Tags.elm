@@ -1,5 +1,6 @@
 module Modules.Tags exposing (..)
 
+import Browser.Dom as Dom
 import Components.Input as Input
 import Dict exposing (Dict)
 import Html exposing (Html)
@@ -14,6 +15,7 @@ import Task
 type alias Model =
     { tags : Dict Int { name : String, value : String }
     , newTagName : String
+    , newTagValue : String
     , isInherited : Bool
     , newTagError : Maybe String
     , error : Dict Int String
@@ -48,6 +50,7 @@ initialModel { tags, isInherited } =
                 )
             |> Dict.fromList
     , newTagName = ""
+    , newTagValue = ""
     , isInherited = isInherited
     , newTagError = Nothing
     , error = Dict.empty
@@ -61,12 +64,13 @@ type Msg
     | Removed Int
     | TagAdded
     | NewTagNameChanged String
+    | NewTagValueChanged String
     | TagValidated Int
     | Submitted
     | Closed
 
 
-update : Msg -> Model -> { onSubmit : Model -> msg, onClose : msg } -> ( Model, Cmd msg )
+update : Msg -> Model -> { onSubmit : Model -> msg, onClose : msg, onFocus : msg } -> ( Model, Cmd msg )
 update msg model config =
     case msg of
         NoOp ->
@@ -130,18 +134,22 @@ update msg model config =
                             |> List.map Tuple.second
                             |> (\newTags ->
                                     newTags
-                                        ++ [ { name = model.newTagName, value = "" } ]
+                                        ++ [ { name = model.newTagName, value = model.newTagValue } ]
                                )
                             |> List.indexedMap (\index value -> ( index, value ))
                             |> Dict.fromList
                     , newTagName = ""
+                    , newTagValue = ""
                     , newTagError = Nothing
                 }
-            , Cmd.none
+            , Task.attempt (\_ -> config.onFocus) (Dom.focus "new-tag-input")
             )
 
         NewTagNameChanged newTagName ->
             ( { model | newTagName = newTagName }, Cmd.none )
+
+        NewTagValueChanged newTagValue ->
+            ( { model | newTagValue = newTagValue }, Cmd.none )
 
         TagValidated key ->
             ( validateTag key model
@@ -268,18 +276,29 @@ viewFormSubmitSection model =
 
 viewAddTag : Model -> Html Msg
 viewAddTag model =
-    Html.span
+    Html.form
         [ Attrs.class "flex flex-row py-1 px-2 mt-2 justify-between items-end border-b"
         , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
+        , Events.onSubmit TagAdded
         ]
         [ Input.defaultConfig
             |> Input.withLabel "new tag:"
+            |> Input.withId "new-tag-input"
             |> Input.withDisabled model.isInherited
             |> Input.withType "text"
             |> Input.withOnChange (Just NewTagNameChanged)
             |> Input.withErrorMessage model.newTagError
             |> Input.withValue model.newTagName
             |> Input.viewTextOrNumber
+        , Input.defaultConfig
+            |> Input.withLabel "value:"
+            |> Input.withId "new-tag-value-input"
+            |> Input.withDisabled model.isInherited
+            |> Input.withOnChange (Just NewTagValueChanged)
+            |> Input.withValue model.newTagValue
+            |> Input.viewTextOrNumber
+        , Html.input [ Attrs.type_ "submit", Attrs.class "hidden" ]
+            []
         , Html.button
             [ Attrs.class "my-1 bg-green-200"
             , Attrs.class Styles.blackButtonBorder

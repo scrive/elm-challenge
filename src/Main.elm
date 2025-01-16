@@ -181,7 +181,9 @@ update msg ({ userGroup } as model) =
                 ( contactForm, contactCmd ) =
                     Contact.update contactMsg
                         model.contactForm
-                        { onSubmit = ContactSubmitted, onClose = FormClosed }
+                        { onSubmit = ContactSubmitted
+                        , onClose = FormClosed
+                        }
             in
             ( { model | contactForm = contactForm }
             , contactCmd
@@ -250,7 +252,10 @@ update msg ({ userGroup } as model) =
                 ( settingsForm, settingsCmd ) =
                     Settings.update settingsMsg
                         model.settingsForm
-                        { onSubmit = SettingsSubmitted, onClose = FormClosed, onFocus = NoOp }
+                        { onSubmit = SettingsSubmitted
+                        , onClose = FormClosed
+                        , onFocus = NoOp
+                        }
             in
             ( { model | settingsForm = settingsForm }
             , settingsCmd
@@ -296,7 +301,10 @@ update msg ({ userGroup } as model) =
                 ( tagsForm, tagsCmd ) =
                     Tags.update tagsMsg
                         model.tagsForm
-                        { onSubmit = TagsSubmitted, onClose = FormClosed }
+                        { onSubmit = TagsSubmitted
+                        , onClose = FormClosed
+                        , onFocus = NoOp
+                        }
             in
             ( { model | tagsForm = tagsForm }
             , tagsCmd
@@ -328,7 +336,9 @@ update msg ({ userGroup } as model) =
             )
 
         TagsEditClicked ->
-            ( { model | currentForm = Just TagsForm }, Cmd.none )
+            ( { model | currentForm = Just TagsForm }
+            , Cmd.none
+            )
 
 
 
