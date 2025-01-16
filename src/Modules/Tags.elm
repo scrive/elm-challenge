@@ -116,22 +116,16 @@ view model =
                                     [ Attrs.class "flex flex-row py-2.5 justify-between items-center border-b"
                                     , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
                                     ]
-                                    ([ Input.viewTextOrNumber
-                                        { label = ""
-                                        , disabled = model.isInherited
-                                        , type_ = "text"
-                                        , onChange = \newName -> NameChanged key { name = newName }
-                                        , value = value.name
-                                        , errorMessage = Nothing
-                                        }
-                                     , Input.viewTextOrNumber
-                                        { label = ""
-                                        , disabled = model.isInherited
-                                        , type_ = "text"
-                                        , onChange = \newValue -> ValueChanged key { value = newValue }
-                                        , value = value.value
-                                        , errorMessage = Nothing
-                                        }
+                                    ([ Input.defaultConfig
+                                        |> Input.withDisabled model.isInherited
+                                        |> Input.withOnChange (Just (\newName -> NameChanged key { name = newName }))
+                                        |> Input.withValue value.name
+                                        |> Input.viewTextOrNumber
+                                     , Input.defaultConfig
+                                        |> Input.withDisabled model.isInherited
+                                        |> Input.withOnChange (Just (\newValue -> ValueChanged key { value = newValue }))
+                                        |> Input.withValue value.value
+                                        |> Input.viewTextOrNumber
                                      ]
                                         ++ (if not model.isInherited then
                                                 [ Html.button
@@ -151,14 +145,13 @@ view model =
                     [ Attrs.class "flex flex-row py-2.5 justify-between items-center border-b"
                     , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
                     ]
-                    [ Input.viewTextOrNumber
-                        { label = ""
-                        , disabled = model.isInherited
-                        , type_ = "text"
-                        , onChange = NewTagNameChanged
-                        , value = model.newTagName
-                        , errorMessage = Nothing
-                        }
+                    [ Input.defaultConfig
+                        |> Input.withLabel ""
+                        |> Input.withDisabled model.isInherited
+                        |> Input.withType "text"
+                        |> Input.withOnChange (Just NewTagNameChanged)
+                        |> Input.withValue model.newTagName
+                        |> Input.viewTextOrNumber
                     , Html.button
                         [ Attrs.class "border border-black black rounded px-2 py-1 bg-green-200 text-black hover:bg-[#d2e7f9]"
                         , Attrs.type_ "button"

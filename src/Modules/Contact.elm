@@ -420,38 +420,36 @@ viewPreferredContactMethods isInherited preferredContactMethod =
 
 viewEmail : Bool -> String -> ContactFormError -> Html Msg
 viewEmail isInherited email error =
-    Input.viewTextOrNumber
-        { label = "e-mail"
-        , disabled = isInherited
-        , type_ = "email"
-        , onChange = EmailChanged
-        , value = email
-        , errorMessage = error |> Maybe.andThen (errorToMessage EmailField)
-        }
+    Input.defaultConfig
+        |> Input.withLabel "e-mail"
+        |> Input.withDisabled isInherited
+        |> Input.withType "email"
+        |> Input.withOnChange (Just EmailChanged)
+        |> Input.withValue email
+        |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage EmailField))
+        |> Input.viewTextOrNumber
 
 
 viewPhone : Bool -> String -> ContactFormError -> Html Msg
 viewPhone isInherited phone error =
-    Input.viewTextOrNumber
-        { label = "phone"
-        , disabled = isInherited
-        , type_ = "tel"
-        , onChange = PhoneChanged
-        , value = phone
-        , errorMessage = error |> Maybe.andThen (errorToMessage PhoneField)
-        }
+    Input.defaultConfig
+        |> Input.withLabel "phone"
+        |> Input.withDisabled isInherited
+        |> Input.withType "tel"
+        |> Input.withOnChange (Just PhoneChanged)
+        |> Input.withValue phone
+        |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage PhoneField))
+        |> Input.viewTextOrNumber
 
 
 viewCompanyName : Bool -> String -> Html Msg
 viewCompanyName isInherited companyName =
-    Input.viewTextOrNumber
-        { label = "company name"
-        , disabled = isInherited
-        , type_ = "text"
-        , onChange = CompanyNameChanged
-        , value = companyName
-        , errorMessage = Nothing
-        }
+    Input.defaultConfig
+        |> Input.withLabel "company name"
+        |> Input.withDisabled isInherited
+        |> Input.withOnChange (Just CompanyNameChanged)
+        |> Input.withValue companyName
+        |> Input.viewTextOrNumber
 
 
 viewAddress : Bool -> Model -> Html Msg
@@ -462,46 +460,42 @@ viewAddress isInherited { address, zip, city, country, error } =
         ]
         [ Html.span [ Attrs.class "flex flex-col sm:flex-row  w-full" ]
             [ Html.span [ Attrs.class "w-full sm:w-4/6" ]
-                [ Input.viewTextOrNumber
-                    { label = "address"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = AddressChanged
-                    , value = address
-                    , errorMessage = error |> Maybe.andThen (errorToMessage AddressField)
-                    }
+                [ Input.defaultConfig
+                    |> Input.withLabel "address"
+                    |> Input.withDisabled isInherited
+                    |> Input.withOnChange (Just AddressChanged)
+                    |> Input.withValue address
+                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage AddressField))
+                    |> Input.viewTextOrNumber
                 ]
             , Html.span [ Attrs.class "w-full sm:w-2/6" ]
-                [ Input.viewTextOrNumber
-                    { label = "zip"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = ZipChanged
-                    , value = zip
-                    , errorMessage = error |> Maybe.andThen (errorToMessage ZipField)
-                    }
+                [ Input.defaultConfig
+                    |> Input.withLabel "zip"
+                    |> Input.withDisabled isInherited
+                    |> Input.withOnChange (Just ZipChanged)
+                    |> Input.withValue address
+                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage ZipField))
+                    |> Input.viewTextOrNumber
                 ]
             ]
         , Html.span [ Attrs.class "flex flex-col sm:flex-row w-full sm:w-auto" ]
             [ Html.span [ Attrs.class "w-full sm:w-3/6" ]
-                [ Input.viewTextOrNumber
-                    { label = "city"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = CityChanged
-                    , value = city
-                    , errorMessage = error |> Maybe.andThen (errorToMessage CityField)
-                    }
+                [ Input.defaultConfig
+                    |> Input.withLabel "city"
+                    |> Input.withDisabled isInherited
+                    |> Input.withOnChange (Just CityChanged)
+                    |> Input.withValue city
+                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage CityField))
+                    |> Input.viewTextOrNumber
                 ]
             , Html.span [ Attrs.class "w-full sm:w-3/6" ]
-                [ Input.viewTextOrNumber
-                    { label = "country"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = CountryChanged
-                    , value = country
-                    , errorMessage = error |> Maybe.andThen (errorToMessage CountryField)
-                    }
+                [ Input.defaultConfig
+                    |> Input.withLabel "country"
+                    |> Input.withDisabled isInherited
+                    |> Input.withOnChange (Just CountryChanged)
+                    |> Input.withValue country
+                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage CountryField))
+                    |> Input.viewTextOrNumber
                 ]
             ]
         ]
