@@ -272,6 +272,7 @@ type Msg
     | SettingsFormMsg Settings.Msg
     | SettingsSubmitted Settings.Model
     | SettingsEditClicked
+    | TagsEditClicked
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -388,6 +389,9 @@ update msg ({ userGroup } as model) =
         SettingsEditClicked ->
             ( { model | currentForm = Just SettingsForm }, Cmd.none )
 
+        TagsEditClicked ->
+            ( model, Cmd.none )
+
 
 
 ---- VIEW ----
@@ -413,6 +417,7 @@ view { userGroup, currentForm, contactForm, settingsForm } =
                     ]
                 , viewContact userGroup.contactDetails
                 , viewSettings userGroup.settings
+                , viewTags userGroup.tags
                 , Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
                     [ Html.h1 [ Attrs.class "text-lg p-2.5 w-full" ] [ Html.text "Child groups:" ]
                     , Html.span []
@@ -421,6 +426,40 @@ view { userGroup, currentForm, contactForm, settingsForm } =
                         )
                     ]
                 ]
+        )
+
+
+viewTags : List Tag -> Html Msg
+viewTags tags =
+    Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded p-2.5 gap-4" ]
+        ([ Html.div [ Attrs.class "w-full flex flex-row justify-between gap-4 border-b pb-2" ]
+            [ Html.h1 [ Attrs.class "text-lg font-semibold text-stone-800" ] [ Html.text "Tags" ]
+            , Html.button
+                [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
+                , Events.onClick TagsEditClicked
+                ]
+                [ Html.text "edit" ]
+            ]
+         ]
+            ++ (if List.isEmpty tags then
+                    [ Html.p [] [ Html.text "No tags found." ] ]
+
+                else
+                    [ Html.div [ Attrs.class "flex gap-4" ]
+                        (tags
+                            |> List.map
+                                (\tag ->
+                                    Html.p [ Attrs.class "bg-[#e8f3fc] w-fit p-1 rounded" ]
+                                        [ Html.text
+                                            ([ tag.name, tag.value ]
+                                                |> List.filter (not << String.isEmpty)
+                                                |> String.join " : "
+                                            )
+                                        ]
+                                )
+                        )
+                    ]
+               )
         )
 
 
