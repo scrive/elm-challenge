@@ -1,5 +1,6 @@
 module Modules.Tags exposing (..)
 
+import Components.Input as Input
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attrs
@@ -54,25 +55,25 @@ view model =
                     |> List.map
                         (\( name, value ) ->
                             Html.span
-                                [ Attrs.class "flex flex-row py-2.5 justify-between items-center gap-4 border-b"
+                                [ Attrs.class "flex flex-row py-2.5 justify-between items-center border-b"
                                 , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
                                 ]
-                                ([ Html.input
-                                    [ Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400 w-full text-md text-right text-normal text-stone-700 appearance-none"
-                                    , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
-                                    , Attrs.disabled model.isInherited
-                                    , Attrs.value name
-                                    ]
-                                    []
-                                 , Html.input
-                                    [ Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400 w-full text-md text-right text-normal text-stone-700 appearance-none"
-                                    , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
-                                    , Attrs.disabled model.isInherited
-                                    , Attrs.value value
-                                    ]
-                                    []
+                                ([ Input.viewTextOrNumber
+                                    { label = ""
+                                    , disabled = model.isInherited
+                                    , type_ = "text"
+                                    , onChange = \_ -> NoOp
+                                    , value = name
+                                    , errorMessage = Nothing
+                                    }
+                                 , Input.viewTextOrNumber
+                                    { label = ""
+                                    , disabled = model.isInherited
+                                    , type_ = "text"
+                                    , onChange = \_ -> NoOp
+                                    , value = value
+                                    , errorMessage = Nothing
+                                    }
                                  ]
                                     ++ (if not model.isInherited then
                                             [ Html.button

@@ -28,7 +28,7 @@ viewTextOrNumber { label, disabled, type_, onChange, value, errorMessage } =
             [ Html.text (errorMessage |> Maybe.withDefault label) ]
         , Html.input
             [ Attrs.type_ type_
-            , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400"
+            , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400 w-full"
             , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ), ( "border-red-500", hasError ) ]
             , Attrs.disabled disabled
             , Attrs.value value
