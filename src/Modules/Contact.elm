@@ -112,9 +112,9 @@ initialModel :
     , city : String
     , country : String
     }
-    -> Bool
+    -> { isInherited : Bool }
     -> Model
-initialModel address isInherited =
+initialModel address { isInherited } =
     { preferredContactMethod = address.preferredContactMethod
     , email = address.email
     , phone = address.phone
