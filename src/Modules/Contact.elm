@@ -5,6 +5,7 @@ import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 import Regex
 import Task
 
@@ -78,6 +79,64 @@ toAllContactMethods method methods =
 
         Post ->
             Post :: methods
+
+
+type alias Details =
+    { inheritedFrom : String
+    , address : Address
+    }
+
+
+empty : Details
+empty =
+    { inheritedFrom = ""
+    , address = emptyAddress
+    }
+
+
+decoder : Decode.Decoder Details
+decoder =
+    Decode.succeed Details
+        |> Decode.optional "inherited_from" Decode.string ""
+        |> Decode.required "address" addressDecoder
+
+
+type alias Address =
+    { preferredContactMethod : PreferredContactMethod
+    , email : String
+    , phone : String
+    , companyName : String
+    , address : String
+    , zip : String
+    , city : String
+    , country : String
+    }
+
+
+emptyAddress : Address
+emptyAddress =
+    { preferredContactMethod = Email
+    , email = ""
+    , phone = ""
+    , companyName = ""
+    , address = ""
+    , zip = ""
+    , city = ""
+    , country = ""
+    }
+
+
+addressDecoder : Decode.Decoder Address
+addressDecoder =
+    Decode.succeed Address
+        |> Decode.required "preferred_contact_method" preferredContactMethodDecoder
+        |> Decode.optional "email" Decode.string ""
+        |> Decode.optional "phone" Decode.string ""
+        |> Decode.optional "company_name" Decode.string ""
+        |> Decode.optional "address" Decode.string ""
+        |> Decode.optional "zip" Decode.string ""
+        |> Decode.optional "city" Decode.string ""
+        |> Decode.optional "country" Decode.string ""
 
 
 type alias ContactFormError =

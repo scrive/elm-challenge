@@ -4,6 +4,8 @@ import Browser.Dom as Dom
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
+import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 import Task
 
 
@@ -17,6 +19,61 @@ type alias Model =
     , immediateTrash : Bool
     , isInherited : Bool
     }
+
+
+type alias Settings =
+    { inheritedFrom : String
+    , dataRetentionPolicy : DataRetentionPolicy
+    }
+
+
+empty : Settings
+empty =
+    { inheritedFrom = ""
+    , dataRetentionPolicy = emptyDataRetentionPolicy
+    }
+
+
+decoder : Decode.Decoder Settings
+decoder =
+    Decode.succeed Settings
+        |> Decode.optional "inherited_from" Decode.string ""
+        |> Decode.required "data_retention_policy" dataRetentionPolicyDecoder
+
+
+type alias DataRetentionPolicy =
+    { idleDocTimeOutPreparation : Maybe Int
+    , idleDocTimeOutClosed : Maybe Int
+    , idleDocTimeOutCancelled : Maybe Int
+    , idleDocTimeOutTimedOut : Maybe Int
+    , idleDocTimeOutRejected : Maybe Int
+    , idleDocTimeOutError : Maybe Int
+    , immediateTrash : Bool
+    }
+
+
+emptyDataRetentionPolicy : DataRetentionPolicy
+emptyDataRetentionPolicy =
+    { idleDocTimeOutPreparation = Nothing
+    , idleDocTimeOutClosed = Nothing
+    , idleDocTimeOutCancelled = Nothing
+    , idleDocTimeOutTimedOut = Nothing
+    , idleDocTimeOutRejected = Nothing
+    , idleDocTimeOutError = Nothing
+    , immediateTrash = False
+    }
+
+
+dataRetentionPolicyDecoder : Decode.Decoder DataRetentionPolicy
+dataRetentionPolicyDecoder =
+    Decode.succeed DataRetentionPolicy
+        |> Decode.optional "idle_doc_timeout_preparation" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_closed" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_canceled" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_timedout" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_rejected" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "idle_doc_timeout_error" (Decode.map Just Decode.int) Nothing
+        |> Decode.required "immediate_trash" Decode.bool
 
 
 existingPolicies :

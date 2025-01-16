@@ -2,13 +2,15 @@ module Main exposing (..)
 
 import Browser
 import Data
+import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Modules.Contact as Contact
-import Modules.Settings as Settings
+import Modules.Settings as Settings exposing (Settings)
+import Modules.Tags as Tags
 
 
 
@@ -58,8 +60,8 @@ type alias UserGroup =
     , name : String
     , children : List Children
     , settings : Settings
-    , contactDetails : ContactDetails
-    , tags : List Tag
+    , contactDetails : Contact.Details
+    , tags : Dict String String
     }
 
 
@@ -69,9 +71,9 @@ emptyUserGroup =
     , parentId = ""
     , name = ""
     , children = []
-    , settings = emptySettings
-    , contactDetails = emptyContactDetails
-    , tags = []
+    , settings = Settings.empty
+    , contactDetails = Contact.empty
+    , tags = Dict.empty
     }
 
 
@@ -82,9 +84,17 @@ userGroupDecoder =
         |> Decode.optional "parent_id" Decode.string ""
         |> Decode.required "name" Decode.string
         |> Decode.required "children" (Decode.list childrenDecoder)
-        |> Decode.required "settings" settingsDecoder
-        |> Decode.required "contact_details" contactDetailsDecoder
-        |> Decode.required "tags" (Decode.list tagDecoder)
+        |> Decode.required "settings" Settings.decoder
+        |> Decode.required "contact_details" Contact.decoder
+        |> Decode.required "tags"
+            (Decode.map
+                (\tags ->
+                    tags
+                        |> List.map (\tag -> ( tag.name, tag.value ))
+                        |> Dict.fromList
+                )
+                (Decode.list Tags.decoder)
+            )
 
 
 type alias Children =
@@ -100,134 +110,8 @@ childrenDecoder =
         |> Decode.required "name" Decode.string
 
 
-type alias Tag =
-    { name : String
-    , value : String
-    }
-
-
-tagDecoder : Decode.Decoder Tag
-tagDecoder =
-    Decode.succeed Tag
-        |> Decode.required "name" Decode.string
-        |> Decode.optional "value" Decode.string ""
-
-
 
 -- Settings
-
-
-type alias Settings =
-    { inheritedFrom : String
-    , dataRetentionPolicy : DataRetentionPolicy
-    }
-
-
-emptySettings : Settings
-emptySettings =
-    { inheritedFrom = ""
-    , dataRetentionPolicy = emptyDataRetentionPolicy
-    }
-
-
-settingsDecoder : Decode.Decoder Settings
-settingsDecoder =
-    Decode.succeed Settings
-        |> Decode.optional "inherited_from" Decode.string ""
-        |> Decode.required "data_retention_policy" dataRetentionPolicyDecoder
-
-
-type alias DataRetentionPolicy =
-    { idleDocTimeOutPreparation : Maybe Int
-    , idleDocTimeOutClosed : Maybe Int
-    , idleDocTimeOutCancelled : Maybe Int
-    , idleDocTimeOutTimedOut : Maybe Int
-    , idleDocTimeOutRejected : Maybe Int
-    , idleDocTimeOutError : Maybe Int
-    , immediateTrash : Bool
-    }
-
-
-emptyDataRetentionPolicy : DataRetentionPolicy
-emptyDataRetentionPolicy =
-    { idleDocTimeOutPreparation = Nothing
-    , idleDocTimeOutClosed = Nothing
-    , idleDocTimeOutCancelled = Nothing
-    , idleDocTimeOutTimedOut = Nothing
-    , idleDocTimeOutRejected = Nothing
-    , idleDocTimeOutError = Nothing
-    , immediateTrash = False
-    }
-
-
-dataRetentionPolicyDecoder : Decode.Decoder DataRetentionPolicy
-dataRetentionPolicyDecoder =
-    Decode.succeed DataRetentionPolicy
-        |> Decode.optional "idle_doc_timeout_preparation" (Decode.map Just Decode.int) Nothing
-        |> Decode.optional "idle_doc_timeout_closed" (Decode.map Just Decode.int) Nothing
-        |> Decode.optional "idle_doc_timeout_canceled" (Decode.map Just Decode.int) Nothing
-        |> Decode.optional "idle_doc_timeout_timedout" (Decode.map Just Decode.int) Nothing
-        |> Decode.optional "idle_doc_timeout_rejected" (Decode.map Just Decode.int) Nothing
-        |> Decode.optional "idle_doc_timeout_error" (Decode.map Just Decode.int) Nothing
-        |> Decode.required "immediate_trash" Decode.bool
-
-
-type alias ContactDetails =
-    { inheritedFrom : String
-    , address : Address
-    }
-
-
-emptyContactDetails : ContactDetails
-emptyContactDetails =
-    { inheritedFrom = ""
-    , address = emptyAddress
-    }
-
-
-contactDetailsDecoder : Decode.Decoder ContactDetails
-contactDetailsDecoder =
-    Decode.succeed ContactDetails
-        |> Decode.optional "inherited_from" Decode.string ""
-        |> Decode.required "address" addressDecoder
-
-
-type alias Address =
-    { preferredContactMethod : Contact.PreferredContactMethod
-    , email : String
-    , phone : String
-    , companyName : String
-    , address : String
-    , zip : String
-    , city : String
-    , country : String
-    }
-
-
-emptyAddress : Address
-emptyAddress =
-    { preferredContactMethod = Contact.Email
-    , email = ""
-    , phone = ""
-    , companyName = ""
-    , address = ""
-    , zip = ""
-    , city = ""
-    , country = ""
-    }
-
-
-addressDecoder : Decode.Decoder Address
-addressDecoder =
-    Decode.succeed Address
-        |> Decode.required "preferred_contact_method" Contact.preferredContactMethodDecoder
-        |> Decode.optional "email" Decode.string ""
-        |> Decode.optional "phone" Decode.string ""
-        |> Decode.optional "company_name" Decode.string ""
-        |> Decode.optional "address" Decode.string ""
-        |> Decode.optional "zip" Decode.string ""
-        |> Decode.optional "city" Decode.string ""
-        |> Decode.optional "country" Decode.string ""
 
 
 init : ( Model, Cmd Msg )
@@ -294,7 +178,7 @@ update msg ({ userGroup } as model) =
 
         ContactSubmitted contact ->
             let
-                newAddressDetails : Address
+                newAddressDetails : Contact.Address
                 newAddressDetails =
                     { preferredContactMethod = contact.preferredContactMethod
                     , email = contact.email
@@ -306,7 +190,7 @@ update msg ({ userGroup } as model) =
                     , country = contact.country
                     }
 
-                toNewContactDetails : ContactDetails -> ContactDetails
+                toNewContactDetails : Contact.Details -> Contact.Details
                 toNewContactDetails contactDetails =
                     { contactDetails | address = newAddressDetails }
             in
@@ -360,7 +244,7 @@ update msg ({ userGroup } as model) =
 
         SettingsSubmitted settings ->
             let
-                newDataRetentionPolicy : DataRetentionPolicy
+                newDataRetentionPolicy : Settings.DataRetentionPolicy
                 newDataRetentionPolicy =
                     { idleDocTimeOutPreparation = settings.idleDocTimeOutPreparation
                     , idleDocTimeOutClosed = settings.idleDocTimeOutClosed
@@ -417,7 +301,7 @@ view { userGroup, currentForm, contactForm, settingsForm } =
                     ]
                 , viewContact userGroup.contactDetails
                 , viewSettings userGroup.settings
-                , viewTags userGroup.tags
+                , viewTags { tags = userGroup.tags }
                 , Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
                     [ Html.h1 [ Attrs.class "text-lg p-2.5 w-full" ] [ Html.text "Child groups:" ]
                     , Html.span []
@@ -429,8 +313,8 @@ view { userGroup, currentForm, contactForm, settingsForm } =
         )
 
 
-viewTags : List Tag -> Html Msg
-viewTags tags =
+viewTags : { tags : Dict String String } -> Html Msg
+viewTags { tags } =
     Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded p-2.5 gap-4" ]
         ([ Html.div [ Attrs.class "w-full flex flex-row justify-between gap-4 border-b pb-2" ]
             [ Html.h1 [ Attrs.class "text-lg font-semibold text-stone-800" ] [ Html.text "Tags" ]
@@ -441,17 +325,18 @@ viewTags tags =
                 [ Html.text "edit" ]
             ]
          ]
-            ++ (if List.isEmpty tags then
+            ++ (if Dict.isEmpty tags then
                     [ Html.p [] [ Html.text "No tags found." ] ]
 
                 else
                     [ Html.div [ Attrs.class "flex gap-4" ]
                         (tags
+                            |> Dict.toList
                             |> List.map
-                                (\tag ->
+                                (\( name, value ) ->
                                     Html.p [ Attrs.class "bg-[#e8f3fc] w-fit p-1 rounded" ]
                                         [ Html.text
-                                            ([ tag.name, tag.value ]
+                                            ([ name, value ]
                                                 |> List.filter (not << String.isEmpty)
                                                 |> String.join " : "
                                             )
@@ -501,7 +386,7 @@ viewSettings { dataRetentionPolicy } =
         )
 
 
-viewContact : ContactDetails -> Html Msg
+viewContact : Contact.Details -> Html Msg
 viewContact contactDetails =
     Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded p-2.5 gap-4" ]
         [ Html.div [ Attrs.class "w-full flex flex-row justify-between gap-4 border-b pb-2" ]
