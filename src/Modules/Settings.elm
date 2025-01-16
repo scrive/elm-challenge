@@ -6,6 +6,7 @@ import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
+import Shared.Styles as Styles
 import Task
 
 
@@ -235,10 +236,12 @@ changePolicy policy value model =
 view : Model -> Html Msg
 view ({ isInherited } as model) =
     Html.form
-        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-6/12 md:w-3/6 lg:w-2/6 border rounded whitespace-nowrap text-ellipsis overflow-hidden"
+        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full"
+        , Attrs.class "sm:w-6/12 md:w-3/6 lg:w-2/6 border rounded"
+        , Attrs.class "whitespace-nowrap text-ellipsis overflow-hidden"
         , Events.onSubmit Submitted
         ]
-        ([ [ Html.h1 [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
+        ([ [ Html.h1 [ Attrs.class Styles.darkGreyText ]
                 [ Html.text "Data retention policy" ]
            ]
          , existingPolicies model
@@ -248,13 +251,16 @@ view ({ isInherited } as model) =
                         [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center"
                         , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                         ]
-                        [ Html.label [ Attrs.class "text-md pl-1 font-semibold text-stone-700" ]
+                        [ Html.label [ Attrs.class Styles.darkGreyText ]
                             [ Html.text (policyToString policy ++ ":") ]
                         , Html.input
                             [ Attrs.type_ "number"
                             , Attrs.id (policyToString policy ++ "-input")
-                            , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400 w-24 text-md text-right text-normal text-stone-700 appearance-none"
-                            , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            , Attrs.class "focus:outline-none border-stone-400 w-24 text-md"
+                            , Attrs.class "text-right text-normal text-stone-700 appearance-none"
+                            , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none"
+                            , Attrs.class "[&::-webkit-inner-spin-button]:appearance-none"
+                            , Attrs.class Styles.inputBorder
                             , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                             , Attrs.disabled isInherited
                             , Attrs.value (String.fromInt value)
@@ -267,11 +273,12 @@ view ({ isInherited } as model) =
                 [ Attrs.class "flex flex-row rounded p-2.5 justify-between"
                 , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                 ]
-                [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
+                [ Html.label [ Attrs.class Styles.darkGreyText ]
                     [ Html.text "immediate trash" ]
                 , Html.input
                     [ Attrs.type_ "checkbox"
-                    , Attrs.class "border rounded px-2 py-1 border-stone-400 w-4"
+                    , Attrs.class "border-stone-400 w-4"
+                    , Attrs.class Styles.inputBorder
                     , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                     , Attrs.disabled isInherited
                     , Events.onCheck ImmediateTrashChecked
@@ -289,11 +296,13 @@ view ({ isInherited } as model) =
                             [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center bg-stone-100"
                             , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                             ]
-                            [ Html.label [ Attrs.class "text-md pl-1 font-semibold text-stone-700" ]
+                            [ Html.label [ Attrs.class Styles.darkGreyText ]
                                 [ Html.text (policyToString policy ++ ":") ]
                             , Html.button
                                 [ Attrs.type_ "button"
-                                , Attrs.class "border rounded px-2 py-1 hover:bg-[#d2e7f9] border-stone-400 text-md text-right text-normal text-stone-700"
+                                , Attrs.class "hover:bg-[#d2e7f9] border-stone-400 text-md"
+                                , Attrs.class "text-right text-normal text-stone-700"
+                                , Attrs.class Styles.inputBorder
                                 , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                                 , Attrs.disabled isInherited
                                 , Events.onClick (AddPolicy policy)
@@ -313,7 +322,8 @@ view ({ isInherited } as model) =
                 ]
                 (if isInherited then
                     [ Html.button
-                        [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
+                        [ Attrs.class "w-2/6"
+                        , Attrs.class Styles.blackButtonBorder
                         , Attrs.type_ "button"
                         , Events.onClick FormClosed
                         ]
@@ -322,13 +332,14 @@ view ({ isInherited } as model) =
 
                  else
                     [ Html.button
-                        [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
+                        [ Attrs.class Styles.blackButtonBorder
                         , Attrs.type_ "button"
                         , Events.onClick FormClosed
                         ]
                         [ Html.text "cancel" ]
                     , Html.button
-                        [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
+                        [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2]"
+                        , Attrs.class "text-white outline-black hover:text-[#d2e7f9]"
                         , Attrs.type_ "submit"
                         , Events.onClick Submitted
                         ]
