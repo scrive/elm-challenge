@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (..)
 
 import Browser
 import Data
@@ -7,7 +7,7 @@ import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
-import Regex
+import Modules.Contact as Contact
 
 
 
@@ -37,37 +37,13 @@ main =
 type alias Model =
     { userGroup : UserGroup
     , currentForm : Maybe Form
-    , contactFormError : ContactFormError
+    , contactForm : Contact.Model
     }
 
 
 type Form
     = SettingsForm
     | ContactForm
-
-
-type alias ContactFormError =
-    Maybe ( ContactFormField, String )
-
-
-{-| Contact form field.
--}
-type ContactFormField
-    = EmailField
-    | PhoneField
-    | AddressField
-    | ZipField
-    | CityField
-    | CountryField
-
-
-errorToMessage : ContactFormField -> ( ContactFormField, String ) -> Maybe String
-errorToMessage field error =
-    if Tuple.first error == field then
-        Just (Tuple.second error)
-
-    else
-        Nothing
 
 
 
@@ -271,7 +247,7 @@ contactDetailsDecoder =
 
 
 type alias Address =
-    { preferredContactMethod : PreferredContactMethod
+    { preferredContactMethod : Contact.PreferredContactMethod
     , email : String
     , phone : String
     , companyName : String
@@ -284,7 +260,7 @@ type alias Address =
 
 emptyAddress : Address
 emptyAddress =
-    { preferredContactMethod = Email
+    { preferredContactMethod = Contact.Email
     , email = ""
     , phone = ""
     , companyName = ""
@@ -298,7 +274,7 @@ emptyAddress =
 addressDecoder : Decode.Decoder Address
 addressDecoder =
     Decode.succeed Address
-        |> Decode.required "preferred_contact_method" preferredContactMethodDecoder
+        |> Decode.required "preferred_contact_method" Contact.preferredContactMethodDecoder
         |> Decode.optional "email" Decode.string ""
         |> Decode.optional "phone" Decode.string ""
         |> Decode.optional "company_name" Decode.string ""
@@ -306,63 +282,6 @@ addressDecoder =
         |> Decode.optional "zip" Decode.string ""
         |> Decode.optional "city" Decode.string ""
         |> Decode.optional "country" Decode.string ""
-
-
-type PreferredContactMethod
-    = Email
-    | Phone
-    | Post
-
-
-contactMethodToString : PreferredContactMethod -> String
-contactMethodToString method =
-    case method of
-        Email ->
-            "email"
-
-        Phone ->
-            "phone"
-
-        Post ->
-            "post"
-
-
-allContactMethods : List PreferredContactMethod
-allContactMethods =
-    toAllContactMethods Email []
-
-
-toAllContactMethods : PreferredContactMethod -> List PreferredContactMethod -> List PreferredContactMethod
-toAllContactMethods method methods =
-    case method of
-        Email ->
-            toAllContactMethods Phone (Email :: methods)
-
-        Phone ->
-            toAllContactMethods Post (Phone :: methods)
-
-        Post ->
-            Post :: methods
-
-
-preferredContactMethodDecoder : Decode.Decoder PreferredContactMethod
-preferredContactMethodDecoder =
-    Decode.string
-        |> Decode.andThen
-            (\method ->
-                case method of
-                    "email" ->
-                        Decode.succeed Email
-
-                    "phone" ->
-                        Decode.succeed Phone
-
-                    "letter" ->
-                        Decode.succeed Post
-
-                    _ ->
-                        Decode.fail "Not valid contact method"
-            )
 
 
 init : ( Model, Cmd Msg )
@@ -375,7 +294,18 @@ init =
     in
     ( { userGroup = userGroup
       , currentForm = Nothing
-      , contactFormError = Nothing
+      , contactForm =
+            { preferredContactMethod = userGroup.contactDetails.address.preferredContactMethod
+            , email = userGroup.contactDetails.address.email
+            , phone = userGroup.contactDetails.address.phone
+            , companyName = userGroup.contactDetails.address.companyName
+            , address = userGroup.contactDetails.address.address
+            , zip = userGroup.contactDetails.address.zip
+            , city = userGroup.contactDetails.address.city
+            , country = userGroup.contactDetails.address.country
+            , isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) && not (String.isEmpty userGroup.parentId)
+            , error = Nothing
+            }
       }
     , Cmd.none
     )
@@ -387,17 +317,10 @@ init =
 
 type Msg
     = NoOp
-    | PreferredContactMethodChanged PreferredContactMethod
-    | EmailChanged String
-    | PhoneChanged String
-    | CompanyNameChanged String
-    | AddressChanged String
-    | ZipChanged String
-    | CityChanged String
-    | CountryChanged String
-    | Submitted
+    | ContactFormMsg Contact.Msg
+    | ContactSubmitted Contact.Model
     | ContactEditClicked
-    | CloseFormClicked
+    | FormClosed
     | SettingsEditClicked
     | AddPolicy Policy
     | ImmediateTrashChecked Bool
@@ -409,149 +332,52 @@ update msg ({ userGroup } as model) =
         NoOp ->
             ( model, Cmd.none )
 
-        PreferredContactMethodChanged method ->
+        ContactFormMsg contactMsg ->
             let
-                toUpdatedContactMethod : ContactDetails -> ContactDetails
-                toUpdatedContactMethod ({ address } as contactDetails) =
-                    { contactDetails | address = { address | preferredContactMethod = method } }
+                ( contactForm, contactCmd ) =
+                    Contact.update contactMsg
+                        model.contactForm
+                        { onSubmit = ContactSubmitted, onClose = FormClosed }
+            in
+            ( { model | contactForm = contactForm }
+            , contactCmd
+            )
+
+        ContactSubmitted contact ->
+            let
+                newAddressDetails : Address
+                newAddressDetails =
+                    { preferredContactMethod = contact.preferredContactMethod
+                    , email = contact.email
+                    , phone = contact.phone
+                    , companyName = contact.companyName
+                    , address = contact.address
+                    , zip = contact.zip
+                    , city = contact.city
+                    , country = contact.country
+                    }
+
+                toNewContactDetails : ContactDetails -> ContactDetails
+                toNewContactDetails contactDetails =
+                    { contactDetails | address = newAddressDetails }
             in
             ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedContactMethod userGroup.contactDetails }
+                | currentForm = Nothing
+                , userGroup =
+                    { userGroup
+                        | contactDetails =
+                            toNewContactDetails userGroup.contactDetails
+                    }
               }
             , Cmd.none
             )
-
-        EmailChanged email ->
-            let
-                toUpdatedEmail : ContactDetails -> ContactDetails
-                toUpdatedEmail ({ address } as contactDetails) =
-                    { contactDetails | address = { address | email = email } }
-            in
-            ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedEmail userGroup.contactDetails }
-              }
-            , Cmd.none
-            )
-
-        PhoneChanged phone ->
-            let
-                toUpdatedPhone : ContactDetails -> ContactDetails
-                toUpdatedPhone ({ address } as contactDetails) =
-                    { contactDetails | address = { address | phone = phone } }
-            in
-            ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedPhone userGroup.contactDetails }
-              }
-            , Cmd.none
-            )
-
-        CompanyNameChanged companyName ->
-            let
-                toUpdatedCompanyName : ContactDetails -> ContactDetails
-                toUpdatedCompanyName ({ address } as contactDetails) =
-                    { contactDetails | address = { address | companyName = companyName } }
-            in
-            ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedCompanyName userGroup.contactDetails }
-              }
-            , Cmd.none
-            )
-
-        AddressChanged address_ ->
-            let
-                toUpdatedAddress : ContactDetails -> ContactDetails
-                toUpdatedAddress ({ address } as contactDetails) =
-                    { contactDetails | address = { address | address = address_ } }
-            in
-            ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedAddress userGroup.contactDetails }
-              }
-            , Cmd.none
-            )
-
-        ZipChanged zip ->
-            let
-                toUpdatedZip : ContactDetails -> ContactDetails
-                toUpdatedZip ({ address } as contactDetails) =
-                    { contactDetails | address = { address | zip = zip } }
-            in
-            ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedZip userGroup.contactDetails }
-              }
-            , Cmd.none
-            )
-
-        CityChanged city ->
-            let
-                toUpdatedCity : ContactDetails -> ContactDetails
-                toUpdatedCity ({ address } as contactDetails) =
-                    { contactDetails | address = { address | city = city } }
-            in
-            ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedCity userGroup.contactDetails }
-              }
-            , Cmd.none
-            )
-
-        CountryChanged country ->
-            let
-                toUpdatedCountry : ContactDetails -> ContactDetails
-                toUpdatedCountry ({ address } as contactDetails) =
-                    { contactDetails | address = { address | country = country } }
-            in
-            ( { model
-                | userGroup =
-                    { userGroup | contactDetails = toUpdatedCountry userGroup.contactDetails }
-              }
-            , Cmd.none
-            )
-
-        Submitted ->
-            let
-                { preferredContactMethod, email, phone, address, zip, city, country } =
-                    userGroup.contactDetails.address
-
-                error : Maybe ( ContactFormField, String )
-                error =
-                    case preferredContactMethod of
-                        Email ->
-                            emailError email
-
-                        Phone ->
-                            phoneError phone
-
-                        Post ->
-                            postError
-                                { address = address
-                                , zip = zip
-                                , city = city
-                                , country = country
-                                }
-            in
-            case error of
-                Nothing ->
-                    ( { model | currentForm = Nothing }, Cmd.none )
-
-                Just _ ->
-                    ( { model
-                        | contactFormError = error
-                      }
-                    , Cmd.none
-                    )
 
         ContactEditClicked ->
             ( { model | currentForm = Just ContactForm }
             , Cmd.none
             )
 
-        CloseFormClicked ->
+        FormClosed ->
             ( { model | currentForm = Nothing }, Cmd.none )
 
         SettingsEditClicked ->
@@ -615,81 +441,19 @@ toggleImmediateTresh bool dataRetentionPolicy =
     { dataRetentionPolicy | immediateTrash = bool }
 
 
-postError :
-    { address : String
-    , zip : String
-    , city : String
-    , country : String
-    }
-    -> Maybe ( ContactFormField, String )
-postError { address, zip, city, country } =
-    if String.isEmpty address then
-        Just ( AddressField, "address is required" )
-
-    else if String.isEmpty zip then
-        Just ( ZipField, "zip is required" )
-
-    else if String.isEmpty city then
-        Just ( CityField, "city is required" )
-
-    else if String.isEmpty country then
-        Just ( CountryField, "country is required" )
-
-    else
-        Nothing
-
-
-emailError : String -> Maybe ( ContactFormField, String )
-emailError email =
-    let
-        emailRegex : Regex.Regex
-        emailRegex =
-            Maybe.withDefault
-                Regex.never
-                (Regex.fromString "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
-    in
-    if String.isEmpty email then
-        Just ( EmailField, "email cannot be empty." )
-
-    else if not (Regex.contains emailRegex email) then
-        Just ( EmailField, "invalid e-mail" )
-
-    else
-        Nothing
-
-
-phoneError : String -> Maybe ( ContactFormField, String )
-phoneError phone =
-    let
-        phoneRegex : Regex.Regex
-        phoneRegex =
-            Maybe.withDefault
-                Regex.never
-                (Regex.fromString "^\\+?[0-9][0-9\\s]*$")
-    in
-    if String.isEmpty phone then
-        Just ( PhoneField, "phone cannot be empty." )
-
-    else if not (Regex.contains phoneRegex phone) then
-        Just ( PhoneField, "invalid phone" )
-
-    else
-        Nothing
-
-
 
 ---- VIEW ----
 
 
 view : Model -> Html Msg
-view { userGroup, contactFormError, currentForm } =
+view { userGroup, currentForm, contactForm } =
     Html.div [ Attrs.class "flex flex-col items-center font-montserrat" ]
         (currentForm
             |> Maybe.map
                 (\form ->
                     case form of
                         ContactForm ->
-                            [ viewContactForm userGroup.parentId userGroup.contactDetails contactFormError ]
+                            [ Contact.view contactForm |> Html.map ContactFormMsg ]
 
                         SettingsForm ->
                             [ viewSettingsForm userGroup.parentId userGroup.settings ]
@@ -721,9 +485,12 @@ viewSettingsForm parentId { inheritedFrom, dataRetentionPolicy } =
     in
     Html.form
         [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-6/12 md:w-3/6 lg:w-2/6 border rounded whitespace-nowrap text-ellipsis overflow-hidden"
-        , Events.onSubmit Submitted
+        , Events.onSubmit FormClosed
         ]
-        ([ existingPolicies dataRetentionPolicy
+        ([ [ Html.h1 [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
+                [ Html.text "Data retention policy" ]
+           ]
+         , existingPolicies dataRetentionPolicy
             |> List.map
                 (\( policy, value ) ->
                     Html.span
@@ -760,25 +527,30 @@ viewSettingsForm parentId { inheritedFrom, dataRetentionPolicy } =
                     []
                 ]
            ]
-         , missingPolicies dataRetentionPolicy
-            |> List.map
-                (\policy ->
-                    Html.span
-                        [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center bg-stone-100"
-                        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-                        ]
-                        [ Html.label [ Attrs.class "text-md pl-1 font-semibold text-stone-700" ]
-                            [ Html.text (policyToString policy ++ ":") ]
-                        , Html.button
-                            [ Attrs.type_ "button"
-                            , Attrs.class "border rounded px-2 py-1 hover:bg-[#d2e7f9] border-stone-400 text-md text-right text-normal text-stone-700"
+         , if not isInherited then
+            missingPolicies
+                dataRetentionPolicy
+                |> List.map
+                    (\policy ->
+                        Html.span
+                            [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center bg-stone-100"
                             , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-                            , Attrs.disabled isInherited
-                            , Events.onClick (AddPolicy policy)
                             ]
-                            [ Html.text "add" ]
-                        ]
-                )
+                            [ Html.label [ Attrs.class "text-md pl-1 font-semibold text-stone-700" ]
+                                [ Html.text (policyToString policy ++ ":") ]
+                            , Html.button
+                                [ Attrs.type_ "button"
+                                , Attrs.class "border rounded px-2 py-1 hover:bg-[#d2e7f9] border-stone-400 text-md text-right text-normal text-stone-700"
+                                , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                                , Attrs.disabled isInherited
+                                , Events.onClick (AddPolicy policy)
+                                ]
+                                [ Html.text "add" ]
+                            ]
+                    )
+
+           else
+            []
          , [ Html.span
                 [ Attrs.class "flex flex-row gap-4"
                 , Attrs.classList
@@ -790,7 +562,7 @@ viewSettingsForm parentId { inheritedFrom, dataRetentionPolicy } =
                     [ Html.button
                         [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
                         , Attrs.type_ "button"
-                        , Events.onClick CloseFormClicked
+                        , Events.onClick FormClosed
                         ]
                         [ Html.text "close" ]
                     ]
@@ -799,13 +571,13 @@ viewSettingsForm parentId { inheritedFrom, dataRetentionPolicy } =
                     [ Html.button
                         [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                         , Attrs.type_ "button"
-                        , Events.onClick CloseFormClicked
+                        , Events.onClick FormClosed
                         ]
                         [ Html.text "cancel" ]
                     , Html.button
                         [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
                         , Attrs.type_ "submit"
-                        , Events.onClick Submitted
+                        , Events.onClick FormClosed
                         ]
                         [ Html.text "apply" ]
                     ]
@@ -870,17 +642,17 @@ viewContact contactDetails =
                 [ Html.text contactDetails.address.companyName ]
              ]
                 ++ (case contactDetails.address.preferredContactMethod of
-                        Email ->
+                        Contact.Email ->
                             [ Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
                                 [ Html.text contactDetails.address.email ]
                             ]
 
-                        Phone ->
+                        Contact.Phone ->
                             [ Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
                                 [ Html.text contactDetails.address.phone ]
                             ]
 
-                        Post ->
+                        Contact.Post ->
                             [ Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
                                 [ Html.text contactDetails.address.address ]
                             , Html.p [ Attrs.class "text-md font-semibold text-stone-800" ]
@@ -892,208 +664,4 @@ viewContact contactDetails =
                             ]
                    )
             )
-        ]
-
-
-viewContactForm : String -> ContactDetails -> ContactFormError -> Html Msg
-viewContactForm parentId { inheritedFrom, address } error =
-    let
-        isInherited : Bool
-        isInherited =
-            not (String.isEmpty inheritedFrom) && not (String.isEmpty parentId)
-    in
-    Html.form
-        [ Attrs.class "flex flex-col gap-4 my-2 p-2.5 w-full sm:w-auto border rounded whitespace-nowrap text-ellipsis overflow-hidden"
-        , Events.onSubmit Submitted
-        ]
-        [ viewPreferredContactMethods isInherited address.preferredContactMethod
-        , viewEmail isInherited address.email error
-        , viewPhone isInherited address.phone error
-        , viewCompanyName isInherited address.companyName
-        , viewAddress isInherited address error
-        , Html.span
-            [ Attrs.class "flex flex-row gap-4"
-            , Attrs.classList
-                [ ( "justify-end", not isInherited )
-                , ( "justify-center", isInherited )
-                ]
-            ]
-            (if isInherited then
-                [ Html.button
-                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
-                    , Attrs.type_ "button"
-                    , Events.onClick CloseFormClicked
-                    ]
-                    [ Html.text "close" ]
-                ]
-
-             else
-                [ Html.button
-                    [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
-                    , Attrs.type_ "button"
-                    , Events.onClick CloseFormClicked
-                    ]
-                    [ Html.text "cancel" ]
-                , Html.button
-                    [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
-                    , Attrs.type_ "submit"
-                    , Events.onClick Submitted
-                    ]
-                    [ Html.text "apply" ]
-                ]
-            )
-        ]
-
-
-viewPreferredContactMethods : Bool -> PreferredContactMethod -> Html Msg
-viewPreferredContactMethods isInherited preferredContactMethod =
-    Html.span
-        [ Attrs.class "rounded"
-        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-        ]
-        [ Html.label [ Attrs.class "text-sm pl-2" ]
-            [ Html.text "Preferred contact method" ]
-        , Html.div
-            [ Attrs.class "flex gap-2 p-2"
-            , Attrs.classList [ ( "border-transparent", isInherited ) ]
-            ]
-            (allContactMethods
-                |> List.map
-                    (\method ->
-                        Html.button
-                            [ Attrs.class "border rounded px-2 py-1 w-2/6 sm:w-1/6"
-                            , Attrs.classList
-                                [ ( "bg-[#4ba0e8] border-transparent text-white", method == preferredContactMethod )
-                                , ( "hover:bg-[#d2e7f9]", method /= preferredContactMethod && not isInherited )
-                                , ( "border-transparent", isInherited )
-                                ]
-                            , Attrs.disabled isInherited
-                            , Events.onClick (PreferredContactMethodChanged method)
-                            , Attrs.type_ "button"
-                            ]
-                            [ Html.text (contactMethodToString method) ]
-                    )
-            )
-        ]
-
-
-viewEmail : Bool -> String -> ContactFormError -> Html Msg
-viewEmail isInherited email error =
-    viewInput
-        { label = "e-mail"
-        , disabled = isInherited
-        , type_ = "email"
-        , onChange = EmailChanged
-        , value = email
-        , errorMessage = error |> Maybe.andThen (errorToMessage EmailField)
-        }
-
-
-viewPhone : Bool -> String -> ContactFormError -> Html Msg
-viewPhone isInherited phone error =
-    viewInput
-        { label = "phone"
-        , disabled = isInherited
-        , type_ = "tel"
-        , onChange = PhoneChanged
-        , value = phone
-        , errorMessage = error |> Maybe.andThen (errorToMessage PhoneField)
-        }
-
-
-viewInput :
-    { label : String
-    , disabled : Bool
-    , type_ : String
-    , onChange : String -> Msg
-    , value : String
-    , errorMessage : Maybe String
-    }
-    -> Html Msg
-viewInput { label, disabled, type_, onChange, value, errorMessage } =
-    let
-        hasError : Bool
-        hasError =
-            errorMessage /= Nothing
-    in
-    Html.span
-        [ Attrs.class "flex flex-col rounded px-2 py-1"
-        , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ]
-        ]
-        [ Html.label [ Attrs.class "text-sm pl-1", Attrs.classList [ ( "text-red-500", hasError ) ] ]
-            [ Html.text (errorMessage |> Maybe.withDefault label) ]
-        , Html.input
-            [ Attrs.type_ type_
-            , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400"
-            , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ), ( "border-red-500", hasError ) ]
-            , Attrs.disabled disabled
-            , Attrs.value value
-            , Events.onInput onChange
-            ]
-            []
-        ]
-
-
-viewCompanyName : Bool -> String -> Html Msg
-viewCompanyName isInherited companyName =
-    viewInput
-        { label = "company name"
-        , disabled = isInherited
-        , type_ = "text"
-        , onChange = CompanyNameChanged
-        , value = companyName
-        , errorMessage = Nothing
-        }
-
-
-viewAddress : Bool -> Address -> ContactFormError -> Html Msg
-viewAddress isInherited { address, zip, city, country } error =
-    Html.div
-        [ Attrs.class "flex flex-col rounded py-1"
-        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-        ]
-        [ Html.span [ Attrs.class "flex flex-col sm:flex-row  w-full" ]
-            [ Html.span [ Attrs.class "w-full sm:w-4/6" ]
-                [ viewInput
-                    { label = "address"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = AddressChanged
-                    , value = address
-                    , errorMessage = error |> Maybe.andThen (errorToMessage AddressField)
-                    }
-                ]
-            , Html.span [ Attrs.class "w-full sm:w-2/6" ]
-                [ viewInput
-                    { label = "zip"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = ZipChanged
-                    , value = zip
-                    , errorMessage = error |> Maybe.andThen (errorToMessage ZipField)
-                    }
-                ]
-            ]
-        , Html.span [ Attrs.class "flex flex-col sm:flex-row w-full sm:w-auto" ]
-            [ Html.span [ Attrs.class "w-full sm:w-3/6" ]
-                [ viewInput
-                    { label = "city"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = CityChanged
-                    , value = city
-                    , errorMessage = error |> Maybe.andThen (errorToMessage CityField)
-                    }
-                ]
-            , Html.span [ Attrs.class "w-full sm:w-3/6" ]
-                [ viewInput
-                    { label = "country"
-                    , disabled = isInherited
-                    , type_ = "text"
-                    , onChange = CountryChanged
-                    , value = country
-                    , errorMessage = error |> Maybe.andThen (errorToMessage CountryField)
-                    }
-                ]
-            ]
         ]
