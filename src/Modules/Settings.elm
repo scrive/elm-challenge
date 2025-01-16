@@ -186,8 +186,20 @@ update : Msg -> Model -> { onSubmit : Model -> msg, onClose : msg, onFocus : msg
 update msg model config =
     case msg of
         Submitted ->
-            ( model
-            , Task.perform config.onSubmit (Task.succeed model)
+            let
+                newModel : Model
+                newModel =
+                    { model
+                        | idleDocTimeOutPreparation = nonZero model.idleDocTimeOutPreparation
+                        , idleDocTimeOutClosed = nonZero model.idleDocTimeOutClosed
+                        , idleDocTimeOutCancelled = nonZero model.idleDocTimeOutCancelled
+                        , idleDocTimeOutTimedOut = nonZero model.idleDocTimeOutTimedOut
+                        , idleDocTimeOutRejected = nonZero model.idleDocTimeOutRejected
+                        , idleDocTimeOutError = nonZero model.idleDocTimeOutError
+                    }
+            in
+            ( newModel
+            , Task.perform config.onSubmit (Task.succeed newModel)
             )
 
         FormClosed ->
@@ -201,13 +213,23 @@ update msg model config =
             )
 
         PolicyChanged policy value ->
-            ( changePolicy policy (String.toInt value) model
+            ( changePolicy policy (String.toFloat value |> Maybe.map Basics.round) model
             , Cmd.none
             )
 
         ImmediateTrashChecked bool ->
             ( { model | immediateTrash = bool }
             , Cmd.none
+            )
+
+
+nonZero : Maybe Int -> Maybe Int
+nonZero maybeInt =
+    maybeInt
+        |> Maybe.andThen
+            (List.singleton
+                >> List.filter ((/=) 0)
+                >> List.head
             )
 
 

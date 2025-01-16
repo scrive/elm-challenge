@@ -212,6 +212,10 @@ update msg ({ userGroup } as model) =
                         | contactDetails =
                             toNewContactDetails userGroup.contactDetails
                     }
+                , contactForm =
+                    Contact.initialModel
+                        newAddressDetails
+                        { isInherited = model.isInherited }
               }
             , Cmd.none
             )
@@ -271,6 +275,10 @@ update msg ({ userGroup } as model) =
             in
             ( { model
                 | currentForm = Nothing
+                , settingsForm =
+                    Settings.initialModel
+                        newDataRetentionPolicy
+                        { isInherited = model.isInherited }
                 , userGroup =
                     { userGroup
                         | settings =
@@ -307,7 +315,15 @@ update msg ({ userGroup } as model) =
                 toNewTags =
                     { userGroup | tags = newTags }
             in
-            ( { model | currentForm = Nothing, userGroup = toNewTags }
+            ( { model
+                | currentForm = Nothing
+                , userGroup = toNewTags
+                , tagsForm =
+                    Tags.initialModel
+                        { tags = newTags
+                        , isInherited = model.isInherited
+                        }
+              }
             , Cmd.none
             )
 
