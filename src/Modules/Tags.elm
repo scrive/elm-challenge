@@ -7,6 +7,7 @@ import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
+import Task
 
 
 type alias Model =
@@ -53,10 +54,12 @@ type Msg
     | TagAdded
     | NewTagNameChanged String
     | TagValidated Int
+    | Submitted
+    | Closed
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
-update msg model =
+update : Msg -> Model -> { onSubmit : Model -> msg, onClose : msg } -> ( Model, Cmd msg )
+update msg model config =
     case msg of
         NoOp ->
             ( model, Cmd.none )
@@ -131,6 +134,16 @@ update msg model =
         TagValidated key ->
             ( validateTag key model
             , Cmd.none
+            )
+
+        Submitted ->
+            ( model
+            , Task.perform config.onSubmit (Task.succeed model)
+            )
+
+        Closed ->
+            ( model
+            , Task.perform (\_ -> config.onClose) (Task.succeed "")
             )
 
 
@@ -249,7 +262,7 @@ view model =
                         [ Html.button
                             [ Attrs.class "border border-black black rounded px-2 py-1 text-black w-2/6 hover:bg-[#d2e7f9]"
                             , Attrs.type_ "button"
-                            , Events.onClick NoOp
+                            , Events.onClick Closed
                             ]
                             [ Html.text "close" ]
                         ]
@@ -258,7 +271,7 @@ view model =
                         [ Html.button
                             [ Attrs.class "border border-black black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                             , Attrs.type_ "button"
-                            , Events.onClick NoOp
+                            , Events.onClick Closed
                             ]
                             [ Html.text "cancel" ]
                         , Html.button
@@ -266,7 +279,7 @@ view model =
                             , Attrs.classList [ ( "bg-[#1e88e2]", Dict.isEmpty model.error ), ( "bg-red-200", not (Dict.isEmpty model.error) ) ]
                             , Attrs.type_ "submit"
                             , Attrs.disabled (not (Dict.isEmpty model.error))
-                            , Events.onClick NoOp
+                            , Events.onClick Submitted
                             ]
                             [ Html.text "apply" ]
                         ]

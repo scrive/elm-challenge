@@ -164,6 +164,7 @@ type Msg
     | SettingsSubmitted Settings.Model
     | SettingsEditClicked
     | TagsFormMsg Tags.Msg
+    | TagsSubmitted Tags.Model
     | TagsEditClicked
 
 
@@ -286,9 +287,27 @@ update msg ({ userGroup } as model) =
                 ( tagsForm, tagsCmd ) =
                     Tags.update tagsMsg
                         model.tagsForm
+                        { onSubmit = TagsSubmitted, onClose = FormClosed }
             in
             ( { model | tagsForm = tagsForm }
             , tagsCmd
+            )
+
+        TagsSubmitted tags ->
+            let
+                newTags : Dict String String
+                newTags =
+                    tags.tags
+                        |> Dict.values
+                        |> List.map (\{ name, value } -> ( name, value ))
+                        |> Dict.fromList
+
+                toNewTags : UserGroup
+                toNewTags =
+                    { userGroup | tags = newTags }
+            in
+            ( { model | currentForm = Nothing, userGroup = toNewTags }
+            , Cmd.none
             )
 
         TagsEditClicked ->
@@ -350,12 +369,12 @@ viewTags { tags } =
                     [ Html.p [] [ Html.text "No tags found." ] ]
 
                 else
-                    [ Html.div [ Attrs.class "flex gap-4" ]
+                    [ Html.div [ Attrs.class "flex flex-wrap overflow-hidden gap-4" ]
                         (tags
                             |> Dict.toList
                             |> List.map
                                 (\( name, value ) ->
-                                    Html.p [ Attrs.class "bg-[#e8f3fc] w-fit p-1 rounded" ]
+                                    Html.p [ Attrs.class "bg-[#e8f3fc] w-fit p-1 rounded ellipsis" ]
                                         [ Html.text
                                             ([ name, value ]
                                                 |> List.filter (not << String.isEmpty)
