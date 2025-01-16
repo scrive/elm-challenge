@@ -351,7 +351,7 @@ update msg ({ userGroup } as model) =
                 ( settingsForm, settingsCmd ) =
                     Settings.update settingsMsg
                         model.settingsForm
-                        { onSubmit = SettingsSubmitted, onClose = FormClosed }
+                        { onSubmit = SettingsSubmitted, onClose = FormClosed, onFocus = NoOp }
             in
             ( { model | settingsForm = settingsForm }
             , settingsCmd

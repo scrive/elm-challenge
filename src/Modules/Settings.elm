@@ -1,5 +1,6 @@
 module Modules.Settings exposing (..)
 
+import Browser.Dom as Dom
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
@@ -123,7 +124,7 @@ type Msg
     | ImmediateTrashChecked Bool
 
 
-update : Msg -> Model -> { onSubmit : Model -> msg, onClose : msg } -> ( Model, Cmd msg )
+update : Msg -> Model -> { onSubmit : Model -> msg, onClose : msg, onFocus : msg } -> ( Model, Cmd msg )
 update msg model config =
     case msg of
         Submitted ->
@@ -138,7 +139,7 @@ update msg model config =
 
         AddPolicy policy ->
             ( changePolicy policy (Just 0) model
-            , Cmd.none
+            , Task.attempt (\_ -> config.onFocus) (Dom.focus (policyToString policy ++ "-input"))
             )
 
         PolicyChanged policy value ->
@@ -194,6 +195,7 @@ view ({ isInherited } as model) =
                             [ Html.text (policyToString policy ++ ":") ]
                         , Html.input
                             [ Attrs.type_ "number"
+                            , Attrs.id (policyToString policy ++ "-input")
                             , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400 w-24 text-md text-right text-normal text-stone-700 appearance-none"
                             , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
