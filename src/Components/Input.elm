@@ -4,6 +4,7 @@ module Components.Input exposing
     , withDisabled
     , withErrorMessage
     , withLabel
+    , withOnBlur
     , withOnChange
     , withType
     , withValue
@@ -19,6 +20,7 @@ type alias Config msg =
     , disabled : Bool
     , type_ : String
     , onChange : Maybe (String -> msg)
+    , onBlur : Maybe msg
     , value : String
     , errorMessage : Maybe String
     }
@@ -30,9 +32,15 @@ defaultConfig =
     , disabled = False
     , type_ = "text"
     , onChange = Nothing
+    , onBlur = Nothing
     , value = ""
     , errorMessage = Nothing
     }
+
+
+withOnBlur : Maybe msg -> Config msg -> Config msg
+withOnBlur onBlur config =
+    { config | onBlur = onBlur }
 
 
 withLabel : String -> Config msg -> Config msg
@@ -66,7 +74,7 @@ withErrorMessage errorMessage config =
 
 
 viewTextOrNumber : Config msg -> Html msg
-viewTextOrNumber { label, disabled, type_, onChange, value, errorMessage } =
+viewTextOrNumber { label, disabled, type_, onChange, onBlur, value, errorMessage } =
     let
         hasError : Bool
         hasError =
@@ -80,13 +88,21 @@ viewTextOrNumber { label, disabled, type_, onChange, value, errorMessage } =
             [ Html.text (errorMessage |> Maybe.withDefault label) ]
         , Html.input
             ([ Attrs.type_ type_
-             , Attrs.class "border rounded px-2 py-1 focus:outline-none border-stone-400 w-full"
-             , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ), ( "border-red-500", hasError ) ]
+             , Attrs.class "border rounded px-2 py-1 focus:outline-none w-full"
+             , Attrs.classList
+                [ ( "bg-[#e8f3fc]", disabled )
+                , ( "border-red-500", hasError )
+                , ( "border-stone-400", not hasError )
+                ]
              , Attrs.disabled disabled
              , Attrs.value value
              ]
                 ++ (onChange
                         |> Maybe.map (Events.onInput >> List.singleton)
+                        |> Maybe.withDefault []
+                   )
+                ++ (onBlur
+                        |> Maybe.map (Events.onBlur >> List.singleton)
                         |> Maybe.withDefault []
                    )
             )
