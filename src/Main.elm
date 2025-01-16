@@ -42,12 +42,14 @@ type alias Model =
     , currentForm : Maybe Form
     , contactForm : Contact.Model
     , settingsForm : Settings.Model
+    , tagsForm : Tags.Model
     }
 
 
 type Form
     = SettingsForm
     | ContactForm
+    | TagsForm
 
 
 
@@ -117,26 +119,31 @@ childrenDecoder =
 init : ( Model, Cmd Msg )
 init =
     let
+        userGroup : UserGroup
         userGroup =
             Decode.decodeString userGroupDecoder Data.userGroup
                 |> Result.toMaybe
                 |> Maybe.withDefault emptyUserGroup
+
+        isInherited : Bool
+        isInherited =
+            not (String.isEmpty userGroup.contactDetails.inheritedFrom)
+                && not (String.isEmpty userGroup.parentId)
     in
     ( { userGroup = userGroup
       , currentForm = Nothing
       , contactForm =
             Contact.initialModel
                 userGroup.contactDetails.address
-                { isInherited =
-                    not (String.isEmpty userGroup.contactDetails.inheritedFrom)
-                        && not (String.isEmpty userGroup.parentId)
-                }
+                { isInherited = isInherited }
       , settingsForm =
             Settings.initialModel
                 userGroup.settings.dataRetentionPolicy
-                { isInherited =
-                    not (String.isEmpty userGroup.contactDetails.inheritedFrom)
-                        && not (String.isEmpty userGroup.parentId)
+                { isInherited = isInherited }
+      , tagsForm =
+            Tags.initialModel
+                { tags = userGroup.tags
+                , isInherited = isInherited
                 }
       }
     , Cmd.none
@@ -274,7 +281,7 @@ update msg ({ userGroup } as model) =
             ( { model | currentForm = Just SettingsForm }, Cmd.none )
 
         TagsEditClicked ->
-            ( model, Cmd.none )
+            ( { model | currentForm = Just TagsForm }, Cmd.none )
 
 
 
@@ -282,7 +289,7 @@ update msg ({ userGroup } as model) =
 
 
 view : Model -> Html Msg
-view { userGroup, currentForm, contactForm, settingsForm } =
+view { userGroup, currentForm, contactForm, settingsForm, tagsForm } =
     Html.div [ Attrs.class "flex flex-col items-center font-montserrat" ]
         (currentForm
             |> Maybe.map
@@ -293,6 +300,9 @@ view { userGroup, currentForm, contactForm, settingsForm } =
 
                         SettingsForm ->
                             [ Settings.view settingsForm |> Html.map SettingsFormMsg ]
+
+                        TagsForm ->
+                            [ Tags.view tagsForm |> Html.map (\_ -> NoOp) ]
                 )
             |> Maybe.withDefault
                 [ Html.div [ Attrs.class "flex flex-col text-left my-2 w-full sm:w-3/6 border rounded" ]
