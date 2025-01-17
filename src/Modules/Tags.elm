@@ -273,22 +273,22 @@ viewAddTag model =
         , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
         , Events.onSubmit TagAdded
         ]
-        [ Input.defaultConfig
-            |> Input.withLabel "new tag:"
-            |> Input.withId "new-tag-input"
-            |> Input.withDisabled model.isInherited
-            |> Input.withType "text"
-            |> Input.withOnChange (Just NewTagNameChanged)
-            |> Input.withErrorMessage model.newTagError
-            |> Input.withValue model.newTagName
-            |> Input.viewTextOrNumber
-        , Input.defaultConfig
-            |> Input.withLabel "value:"
-            |> Input.withId "new-tag-value-input"
-            |> Input.withDisabled model.isInherited
-            |> Input.withOnChange (Just NewTagValueChanged)
-            |> Input.withValue model.newTagValue
-            |> Input.viewTextOrNumber
+        [ Input.viewTextOrNumber
+            [ Input.label "new tag:"
+            , Input.id "new-tag-input"
+            , Input.disabled model.isInherited
+            , Input.type_ "text"
+            , Input.onChange (Just NewTagNameChanged)
+            , Input.error model.newTagError
+            , Input.value model.newTagName
+            ]
+        , Input.viewTextOrNumber
+            [ Input.label "value:"
+            , Input.id "new-tag-value-input"
+            , Input.disabled model.isInherited
+            , Input.onChange (Just NewTagValueChanged)
+            , Input.value model.newTagValue
+            ]
         , Html.input [ Attrs.type_ "submit", Attrs.class "hidden" ]
             []
         , Html.button
@@ -307,20 +307,20 @@ viewTag model ( key, value ) =
         [ Attrs.class "flex flex-row px-2 justify-between border-b items-end rounded"
         , Attrs.classList [ ( "bg-[#e8f3fc]", model.isInherited ) ]
         ]
-        ([ Input.defaultConfig
-            |> Input.withDisabled model.isInherited
-            |> Input.withOnChange (Just (\newName -> NameChanged key { name = newName }))
-            |> Input.withValue value.name
-            |> Input.withLabel "name:"
-            |> Input.withOnBlur (Just TagsValidated)
-            |> Input.withErrorMessage (Dict.get key model.tagsErrors |> Maybe.withDefault "")
-            |> Input.viewTextOrNumber
-         , Input.defaultConfig
-            |> Input.withDisabled model.isInherited
-            |> Input.withOnChange (Just (\newValue -> ValueChanged key { value = newValue }))
-            |> Input.withValue value.value
-            |> Input.withLabel "value:"
-            |> Input.viewTextOrNumber
+        ([ Input.viewTextOrNumber
+            [ Input.disabled model.isInherited
+            , Input.onChange (Just (\newName -> NameChanged key { name = newName }))
+            , Input.value value.name
+            , Input.label "name:"
+            , Input.onBlur (Just TagsValidated)
+            , Input.error (Dict.get key model.tagsErrors |> Maybe.withDefault "")
+            ]
+         , Input.viewTextOrNumber
+            [ Input.disabled model.isInherited
+            , Input.onChange (Just (\newValue -> ValueChanged key { value = newValue }))
+            , Input.value value.value
+            , Input.label "value:"
+            ]
          ]
             ++ (if not model.isInherited then
                     [ Html.button

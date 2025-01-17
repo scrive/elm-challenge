@@ -1,14 +1,13 @@
 module Components.Input exposing
-    ( defaultConfig
+    ( disabled
+    , error
+    , id
+    , label
+    , onBlur
+    , onChange
+    , type_
+    , value
     , viewTextOrNumber
-    , withDisabled
-    , withErrorMessage
-    , withId
-    , withLabel
-    , withOnBlur
-    , withOnChange
-    , withType
-    , withValue
     )
 
 import Html exposing (Html)
@@ -23,7 +22,7 @@ type alias Config msg =
     , onChange : Maybe (String -> msg)
     , onBlur : Maybe msg
     , value : String
-    , errorMessage : String
+    , error : String
     , id : String
     }
 
@@ -36,89 +35,96 @@ defaultConfig =
     , onChange = Nothing
     , onBlur = Nothing
     , value = ""
-    , errorMessage = ""
+    , error = ""
     , id = ""
     }
 
 
-withId : String -> Config msg -> Config msg
-withId id config =
-    { config | id = id }
+id : String -> Config msg -> Config msg
+id id_ config =
+    { config | id = id_ }
 
 
-withOnBlur : Maybe msg -> Config msg -> Config msg
-withOnBlur onBlur config =
-    { config | onBlur = onBlur }
+onBlur : Maybe msg -> Config msg -> Config msg
+onBlur onBlur_ config =
+    { config | onBlur = onBlur_ }
 
 
-withLabel : String -> Config msg -> Config msg
-withLabel label config =
-    { config | label = label }
+label : String -> Config msg -> Config msg
+label label_ config =
+    { config | label = label_ }
 
 
-withDisabled : Bool -> Config msg -> Config msg
-withDisabled disabled config =
-    { config | disabled = disabled }
+disabled : Bool -> Config msg -> Config msg
+disabled disabled_ config =
+    { config | disabled = disabled_ }
 
 
-withType : String -> Config msg -> Config msg
-withType type_ config =
-    { config | type_ = type_ }
+type_ : String -> Config msg -> Config msg
+type_ type__ config =
+    { config | type_ = type__ }
 
 
-withOnChange : Maybe (String -> msg) -> Config msg -> Config msg
-withOnChange onChange config =
-    { config | onChange = onChange }
+onChange : Maybe (String -> msg) -> Config msg -> Config msg
+onChange onChange_ config =
+    { config | onChange = onChange_ }
 
 
-withValue : String -> Config msg -> Config msg
-withValue value config =
-    { config | value = value }
+value : String -> Config msg -> Config msg
+value value_ config =
+    { config | value = value_ }
 
 
-withErrorMessage : String -> Config msg -> Config msg
-withErrorMessage errorMessage config =
-    { config | errorMessage = errorMessage }
+error : String -> Config msg -> Config msg
+error error_ config =
+    { config | error = error_ }
 
 
-viewTextOrNumber : Config msg -> Html msg
-viewTextOrNumber { label, disabled, type_, onChange, onBlur, value, errorMessage, id } =
+viewTextOrNumber : List (Config msg -> Config msg) -> Html msg
+viewTextOrNumber customConfigurations =
     let
+        config : Config msg
+        config =
+            customConfigurations
+                |> List.foldl
+                    (\customConfiguration config_ -> customConfiguration config_)
+                    defaultConfig
+
         hasError : Bool
         hasError =
-            not (String.isEmpty errorMessage)
+            not (String.isEmpty config.error)
     in
     Html.span
         [ Attrs.class "flex flex-col rounded px-2 py-1"
-        , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ]
+        , Attrs.classList [ ( "bg-[#e8f3fc]", config.disabled ) ]
         ]
         [ Html.label [ Attrs.class "text-sm pl-1", Attrs.classList [ ( "text-red-500", hasError ) ] ]
             [ Html.text
                 (if hasError then
-                    errorMessage
+                    config.error
 
                  else
-                    label
+                    config.label
                 )
             ]
         , Html.input
-            ([ Attrs.type_ type_
-             , Attrs.id id
+            ([ Attrs.type_ config.type_
+             , Attrs.id config.id
              , Attrs.class "focus:outline-none w-full"
              , Attrs.class "border rounded px-2 py-1"
              , Attrs.classList
-                [ ( "bg-[#e8f3fc]", disabled )
+                [ ( "bg-[#e8f3fc]", config.disabled )
                 , ( "border-red-500", hasError )
                 , ( "border-stone-400", not hasError )
                 ]
-             , Attrs.disabled disabled
-             , Attrs.value value
+             , Attrs.disabled config.disabled
+             , Attrs.value config.value
              ]
-                ++ (onChange
+                ++ (config.onChange
                         |> Maybe.map (Events.onInput >> List.singleton)
                         |> Maybe.withDefault []
                    )
-                ++ (onBlur
+                ++ (config.onBlur
                         |> Maybe.map (Events.onBlur >> List.singleton)
                         |> Maybe.withDefault []
                    )
