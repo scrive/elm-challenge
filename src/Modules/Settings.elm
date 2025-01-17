@@ -3,9 +3,9 @@ module Modules.Settings exposing
     , Model
     , Msg
     , Settings
+    , activePolicies
     , decoder
     , empty
-    , existingPolicies
     , initialModel
     , policyToString
     , update
@@ -88,7 +88,7 @@ dataRetentionPolicyDecoder =
         |> Decode.required "immediate_trash" Decode.bool
 
 
-existingPolicies :
+activePolicies :
     { a
         | idleDocTimeOutPreparation : Maybe Int
         , idleDocTimeOutClosed : Maybe Int
@@ -98,7 +98,7 @@ existingPolicies :
         , idleDocTimeOutError : Maybe Int
     }
     -> List ( Policy, Int )
-existingPolicies policies =
+activePolicies policies =
     [ policies.idleDocTimeOutPreparation |> Maybe.map (\value -> ( Preparation, value ))
     , policies.idleDocTimeOutClosed |> Maybe.map (\value -> ( Closed, value ))
     , policies.idleDocTimeOutCancelled |> Maybe.map (\value -> ( Cancelled, value ))
@@ -140,7 +140,7 @@ policyToString policy =
             "error"
 
 
-missingPolicies :
+inactivePolicies :
     { a
         | idleDocTimeOutPreparation : Maybe Int
         , idleDocTimeOutClosed : Maybe Int
@@ -150,7 +150,7 @@ missingPolicies :
         , idleDocTimeOutError : Maybe Int
     }
     -> List Policy
-missingPolicies policies =
+inactivePolicies policies =
     [ ( policies.idleDocTimeOutPreparation, Preparation )
     , ( policies.idleDocTimeOutClosed, Closed )
     , ( policies.idleDocTimeOutCancelled, Cancelled )
@@ -283,47 +283,8 @@ view ({ isInherited } as model) =
         ([ [ Html.h1 [ Attrs.class "text-md font-semibold text-stone-700 pl-1", Attrs.class "border-b" ]
                 [ Html.text "Data retention policy" ]
            ]
-         , existingPolicies model
-            |> List.map
-                (\( policy, value ) ->
-                    Html.span
-                        [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center"
-                        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-                        ]
-                        [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
-                            [ Html.text (policyToString policy ++ ":") ]
-                        , Html.div []
-                            ([ Html.input
-                                [ Attrs.type_ "number"
-                                , Attrs.id (policyToString policy ++ "-input")
-                                , Attrs.class "focus:outline-none border-stone-400 w-24 text-md"
-                                , Attrs.class "text-right text-normal text-stone-700 appearance-none"
-                                , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none"
-                                , Attrs.class "[&::-webkit-inner-spin-button]:appearance-none"
-                                , Attrs.class "border rounded px-2 py-1"
-                                , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-                                , Attrs.disabled isInherited
-                                , Attrs.value (String.fromInt value)
-                                , Events.onInput (PolicyChanged policy)
-                                ]
-                                []
-                             ]
-                                ++ (if isInherited then
-                                        []
-
-                                    else
-                                        [ Html.button
-                                            [ Attrs.class "border border-transparent rounded px-2 py-1 my-1 bg-red-400"
-                                            , Attrs.class "text-white outline-black hover:text-[#d2e7f9] w-12 ml-1"
-                                            , Attrs.type_ "button"
-                                            , Events.onClick (Removed policy)
-                                            ]
-                                            [ Html.text "x" ]
-                                        ]
-                                   )
-                            )
-                        ]
-                )
+         , activePolicies model
+            |> List.map (viewActivePolicy isInherited)
          , [ Html.span
                 [ Attrs.class "flex flex-row rounded p-2.5 justify-between"
                 , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
@@ -343,65 +304,111 @@ view ({ isInherited } as model) =
                 ]
            ]
          , if not isInherited then
-            missingPolicies
-                model
-                |> List.map
-                    (\policy ->
-                        Html.span
-                            [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center bg-stone-100"
-                            , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-                            ]
-                            [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
-                                [ Html.text (policyToString policy ++ ":") ]
-                            , Html.button
-                                [ Attrs.type_ "button"
-                                , Attrs.class "hover:bg-[#d2e7f9] border-stone-400 text-md"
-                                , Attrs.class "text-right text-normal text-stone-700"
-                                , Attrs.class "border rounded px-2 py-1"
-                                , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
-                                , Attrs.disabled isInherited
-                                , Events.onClick (AddPolicy policy)
-                                ]
-                                [ Html.text "add" ]
-                            ]
-                    )
+            inactivePolicies model
+                |> List.map (viewInactivePolicy isInherited)
 
            else
             []
-         , [ Html.span
-                [ Attrs.class "flex flex-row gap-4"
-                , Attrs.classList
-                    [ ( "justify-end", not isInherited )
-                    , ( "justify-center", isInherited )
-                    ]
-                ]
-                (if isInherited then
-                    [ Html.button
-                        [ Attrs.class "w-2/6"
-                        , Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
-                        , Attrs.type_ "button"
-                        , Events.onClick FormClosed
-                        ]
-                        [ Html.text "close" ]
-                    ]
-
-                 else
-                    [ Html.button
-                        [ Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
-                        , Attrs.type_ "button"
-                        , Events.onClick FormClosed
-                        ]
-                        [ Html.text "cancel" ]
-                    , Html.button
-                        [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2]"
-                        , Attrs.class "text-white outline-black hover:text-[#d2e7f9]"
-                        , Attrs.type_ "submit"
-                        , Events.onClick Submitted
-                        ]
-                        [ Html.text "apply" ]
-                    ]
-                )
-           ]
+         , [ viewSubmitSection isInherited ]
          ]
             |> List.concat
+        )
+
+
+viewActivePolicy : Bool -> ( Policy, Int ) -> Html Msg
+viewActivePolicy isInherited ( policy, value ) =
+    Html.span
+        [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center"
+        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+        ]
+        [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
+            [ Html.text (policyToString policy ++ ":") ]
+        , Html.div []
+            ([ Html.input
+                [ Attrs.type_ "number"
+                , Attrs.id (policyToString policy ++ "-input")
+                , Attrs.class "focus:outline-none border-stone-400 w-24 text-md"
+                , Attrs.class "text-right text-normal text-stone-700 appearance-none"
+                , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none"
+                , Attrs.class "[&::-webkit-inner-spin-button]:appearance-none"
+                , Attrs.class "border rounded px-2 py-1"
+                , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+                , Attrs.disabled isInherited
+                , Attrs.value (String.fromInt value)
+                , Events.onInput (PolicyChanged policy)
+                ]
+                []
+             ]
+                ++ (if isInherited then
+                        []
+
+                    else
+                        [ Html.button
+                            [ Attrs.class "border border-transparent rounded px-2 py-1 my-1 bg-red-400"
+                            , Attrs.class "text-white outline-black hover:text-[#d2e7f9] w-12 ml-1"
+                            , Attrs.type_ "button"
+                            , Events.onClick (Removed policy)
+                            ]
+                            [ Html.text "x" ]
+                        ]
+                   )
+            )
+        ]
+
+
+viewInactivePolicy : Bool -> Policy -> Html Msg
+viewInactivePolicy isInherited policy =
+    Html.span
+        [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center bg-stone-100"
+        , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+        ]
+        [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
+            [ Html.text (policyToString policy ++ ":") ]
+        , Html.button
+            [ Attrs.type_ "button"
+            , Attrs.class "hover:bg-[#d2e7f9] border-stone-400 text-md"
+            , Attrs.class "text-right text-normal text-stone-700"
+            , Attrs.class "border rounded px-2 py-1"
+            , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
+            , Attrs.disabled isInherited
+            , Events.onClick (AddPolicy policy)
+            ]
+            [ Html.text "add" ]
+        ]
+
+
+viewSubmitSection : Bool -> Html Msg
+viewSubmitSection isInherited =
+    Html.span
+        [ Attrs.class "flex flex-row gap-4"
+        , Attrs.classList
+            [ ( "justify-end", not isInherited )
+            , ( "justify-center", isInherited )
+            ]
+        ]
+        (if isInherited then
+            [ Html.button
+                [ Attrs.class "w-2/6"
+                , Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
+                , Attrs.type_ "button"
+                , Events.onClick FormClosed
+                ]
+                [ Html.text "close" ]
+            ]
+
+         else
+            [ Html.button
+                [ Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
+                , Attrs.type_ "button"
+                , Events.onClick FormClosed
+                ]
+                [ Html.text "cancel" ]
+            , Html.button
+                [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2]"
+                , Attrs.class "text-white outline-black hover:text-[#d2e7f9]"
+                , Attrs.type_ "submit"
+                , Events.onClick Submitted
+                ]
+                [ Html.text "apply" ]
+            ]
         )

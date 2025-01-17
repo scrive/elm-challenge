@@ -436,7 +436,7 @@ viewSettings { dataRetentionPolicy } =
             [ Attrs.class "text-md font-semibold text-stone-800" ]
             [ Html.text "Data retention policy:" ]
          ]
-            ++ (Settings.existingPolicies dataRetentionPolicy
+            ++ (Settings.activePolicies dataRetentionPolicy
                     |> List.map
                         (\( policy, value ) ->
                             Html.div [ Attrs.class "w-full flex flex-row gap-4" ]
