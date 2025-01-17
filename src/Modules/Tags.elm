@@ -20,7 +20,7 @@ import Task
 
 
 type alias Model =
-    { tags : Dict Int { name : String, value : String }
+    { tags : Dict Int Tag
     , newTagName : String
     , newTagValue : String
     , isInherited : Bool
@@ -72,7 +72,7 @@ type Msg
     | TagAdded
     | NewTagNameChanged String
     | NewTagValueChanged String
-    | TagValidated Int
+    | TagsValidated
     | Submitted
     | Closed
 
@@ -114,41 +114,29 @@ update msg model config =
             )
 
         TagAdded ->
-            let
-                tagAlreadyExists : Bool
-                tagAlreadyExists =
-                    model.tags
-                        |> Dict.toList
-                        |> List.map (Tuple.second >> .name)
-                        |> List.filter ((==) model.newTagName)
-                        |> List.head
-                        |> Maybe.map (\_ -> True)
-                        |> Maybe.withDefault False
-            in
-            ( if tagAlreadyExists then
-                { model | newTagError = Just "exists" }
-
-              else if String.isEmpty model.newTagName then
-                { model | newTagError = Just "empty" }
-
-              else if String.length model.newTagName > 32 then
-                { model | newTagError = Just "too long (32)" }
-
-              else
-                { model
-                    | tags =
-                        Dict.toList model.tags
-                            |> List.map Tuple.second
-                            |> (\newTags ->
-                                    newTags
-                                        ++ [ { name = model.newTagName, value = model.newTagValue } ]
-                               )
-                            |> List.indexedMap (\index value -> ( index, value ))
-                            |> Dict.fromList
-                    , newTagName = ""
-                    , newTagValue = ""
-                    , newTagError = Nothing
+            ( checkTag model.tags
+                { name = model.newTagName
+                , value = model.newTagValue
                 }
+                |> Maybe.map
+                    (\error ->
+                        { model | newTagError = Just error }
+                    )
+                |> Maybe.withDefault
+                    { model
+                        | tags =
+                            Dict.toList model.tags
+                                |> List.map Tuple.second
+                                |> (\newTags ->
+                                        newTags
+                                            ++ [ { name = model.newTagName, value = model.newTagValue } ]
+                                   )
+                                |> List.indexedMap (\index value -> ( index, value ))
+                                |> Dict.fromList
+                        , newTagName = ""
+                        , newTagValue = ""
+                        , newTagError = Nothing
+                    }
             , Task.attempt (\_ -> config.onFocus) (Dom.focus "new-tag-input")
             )
 
@@ -158,8 +146,21 @@ update msg model config =
         NewTagValueChanged newTagValue ->
             ( { model | newTagValue = newTagValue }, Cmd.none )
 
-        TagValidated key ->
-            ( validateTag key model
+        TagsValidated ->
+            let
+                tagsErrors : Dict Int String
+                tagsErrors =
+                    Dict.foldl
+                        (\k _ acc ->
+                            Dict.get k model.tags
+                                |> Maybe.andThen (checkTag (Dict.remove k model.tags))
+                                |> Maybe.map (\err -> Dict.insert k err acc)
+                                |> Maybe.withDefault acc
+                        )
+                        Dict.empty
+                        model.tags
+            in
+            ( { model | error = tagsErrors }
             , Cmd.none
             )
 
@@ -174,38 +175,23 @@ update msg model config =
             )
 
 
-validateTag : Int -> Model -> Model
-validateTag key model =
-    let
-        error : Maybe String
-        error =
-            Dict.get key model.tags
-                |> Maybe.andThen
-                    (\value ->
-                        if String.isEmpty value.name then
-                            Just "empty"
+checkTag : Dict Int Tag -> Tag -> Maybe String
+checkTag tags tag =
+    if String.isEmpty tag.name then
+        Just "empty"
 
-                        else if String.length value.name > 32 then
-                            Just "too long (32)"
+    else if String.length tag.name > 32 then
+        Just "too long (32)"
 
-                        else if
-                            Dict.values model.tags
-                                |> List.map .name
-                                |> List.filter ((==) value.name)
-                                |> (\sameNames -> List.length sameNames > 1)
-                        then
-                            Just "exists"
+    else if
+        Dict.values tags
+            |> List.map .name
+            |> List.any ((==) tag.name)
+    then
+        Just "exists"
 
-                        else
-                            Nothing
-                    )
-    in
-    error
-        |> Maybe.map
-            (\err ->
-                { model | error = Dict.insert key err model.error }
-            )
-        |> Maybe.withDefault { model | error = Dict.remove key model.error }
+    else
+        Nothing
 
 
 view : Model -> Html Msg
@@ -327,7 +313,7 @@ viewTag model ( key, value ) =
             |> Input.withOnChange (Just (\newName -> NameChanged key { name = newName }))
             |> Input.withValue value.name
             |> Input.withLabel "name:"
-            |> Input.withOnBlur (Just (TagValidated key))
+            |> Input.withOnBlur (Just TagsValidated)
             |> Input.withErrorMessage (Dict.get key model.error)
             |> Input.viewTextOrNumber
          , Input.defaultConfig
