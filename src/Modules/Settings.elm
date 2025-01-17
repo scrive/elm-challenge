@@ -18,7 +18,6 @@ import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
-import Shared.Styles as Styles
 import Task
 
 
@@ -281,7 +280,7 @@ view ({ isInherited } as model) =
         , Attrs.class "whitespace-nowrap text-ellipsis overflow-hidden"
         , Events.onSubmit Submitted
         ]
-        ([ [ Html.h1 [ Attrs.class Styles.darkGreyText, Attrs.class "border-b" ]
+        ([ [ Html.h1 [ Attrs.class "text-md font-semibold text-stone-700 pl-1", Attrs.class "border-b" ]
                 [ Html.text "Data retention policy" ]
            ]
          , existingPolicies model
@@ -291,7 +290,7 @@ view ({ isInherited } as model) =
                         [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center"
                         , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                         ]
-                        [ Html.label [ Attrs.class Styles.darkGreyText ]
+                        [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
                             [ Html.text (policyToString policy ++ ":") ]
                         , Html.div []
                             ([ Html.input
@@ -301,7 +300,7 @@ view ({ isInherited } as model) =
                                 , Attrs.class "text-right text-normal text-stone-700 appearance-none"
                                 , Attrs.class "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none"
                                 , Attrs.class "[&::-webkit-inner-spin-button]:appearance-none"
-                                , Attrs.class Styles.inputBorder
+                                , Attrs.class "border rounded px-2 py-1"
                                 , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                                 , Attrs.disabled isInherited
                                 , Attrs.value (String.fromInt value)
@@ -329,12 +328,12 @@ view ({ isInherited } as model) =
                 [ Attrs.class "flex flex-row rounded p-2.5 justify-between"
                 , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                 ]
-                [ Html.label [ Attrs.class Styles.darkGreyText ]
+                [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
                     [ Html.text "immediate trash" ]
                 , Html.input
                     [ Attrs.type_ "checkbox"
                     , Attrs.class "border-stone-400 w-4"
-                    , Attrs.class Styles.inputBorder
+                    , Attrs.class "border rounded px-2 py-1"
                     , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                     , Attrs.disabled isInherited
                     , Events.onCheck ImmediateTrashChecked
@@ -352,13 +351,13 @@ view ({ isInherited } as model) =
                             [ Attrs.class "flex flex-row rounded p-2.5 justify-between items-center bg-stone-100"
                             , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                             ]
-                            [ Html.label [ Attrs.class Styles.darkGreyText ]
+                            [ Html.label [ Attrs.class "text-md font-semibold text-stone-700 pl-1" ]
                                 [ Html.text (policyToString policy ++ ":") ]
                             , Html.button
                                 [ Attrs.type_ "button"
                                 , Attrs.class "hover:bg-[#d2e7f9] border-stone-400 text-md"
                                 , Attrs.class "text-right text-normal text-stone-700"
-                                , Attrs.class Styles.inputBorder
+                                , Attrs.class "border rounded px-2 py-1"
                                 , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
                                 , Attrs.disabled isInherited
                                 , Events.onClick (AddPolicy policy)
@@ -379,7 +378,7 @@ view ({ isInherited } as model) =
                 (if isInherited then
                     [ Html.button
                         [ Attrs.class "w-2/6"
-                        , Attrs.class Styles.blackButtonBorder
+                        , Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                         , Attrs.type_ "button"
                         , Events.onClick FormClosed
                         ]
@@ -388,7 +387,7 @@ view ({ isInherited } as model) =
 
                  else
                     [ Html.button
-                        [ Attrs.class Styles.blackButtonBorder
+                        [ Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                         , Attrs.type_ "button"
                         , Events.onClick FormClosed
                         ]

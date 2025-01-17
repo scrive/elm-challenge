@@ -14,7 +14,6 @@ module Components.Input exposing
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
-import Shared.Styles as Styles
 
 
 type alias Config msg =
@@ -99,7 +98,7 @@ viewTextOrNumber { label, disabled, type_, onChange, onBlur, value, errorMessage
             ([ Attrs.type_ type_
              , Attrs.id id
              , Attrs.class "focus:outline-none w-full"
-             , Attrs.class Styles.inputBorder
+             , Attrs.class "border rounded px-2 py-1"
              , Attrs.classList
                 [ ( "bg-[#e8f3fc]", disabled )
                 , ( "border-red-500", hasError )

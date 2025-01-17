@@ -18,7 +18,6 @@ import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Regex
-import Shared.Styles as Styles
 import Task
 
 
@@ -372,7 +371,7 @@ view model =
             (if model.isInherited then
                 [ Html.button
                     [ Attrs.class "w-2/6"
-                    , Attrs.class Styles.blackButtonBorder
+                    , Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                     , Attrs.type_ "button"
                     , Events.onClick Closed
                     ]
@@ -381,14 +380,14 @@ view model =
 
              else
                 [ Html.button
-                    [ Attrs.class Styles.blackButtonBorder
+                    [ Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                     , Attrs.type_ "button"
                     , Events.onClick Closed
                     ]
                     [ Html.text "cancel" ]
                 , Html.button
                     [ Attrs.class "border-transparent bg-[#1e88e2] text-white outline-black hover:text-[#d2e7f9]"
-                    , Attrs.class Styles.inputBorder
+                    , Attrs.class "border rounded px-2 py-1"
                     , Attrs.type_ "submit"
                     , Events.onClick Submitted
                     ]
@@ -415,7 +414,7 @@ viewPreferredContactMethods isInherited preferredContactMethod =
                     (\method ->
                         Html.button
                             [ Attrs.class "w-2/6 sm:w-1/6"
-                            , Attrs.class Styles.inputBorder
+                            , Attrs.class "border rounded px-2 py-1"
                             , Attrs.classList
                                 [ ( "bg-[#4ba0e8] border-transparent text-white", method == preferredContactMethod )
                                 , ( "hover:bg-[#d2e7f9]", method /= preferredContactMethod && not isInherited )

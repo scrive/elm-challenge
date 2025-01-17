@@ -15,7 +15,6 @@ import Html.Attributes as Attrs
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
-import Shared.Styles as Styles
 import Task
 
 
@@ -237,7 +236,7 @@ viewFormSubmitSection model =
         (if model.isInherited then
             [ Html.button
                 [ Attrs.class "w-2/6"
-                , Attrs.class Styles.blackButtonBorder
+                , Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                 , Attrs.type_ "button"
                 , Events.onClick Closed
                 ]
@@ -246,7 +245,7 @@ viewFormSubmitSection model =
 
          else
             [ Html.button
-                [ Attrs.class Styles.blackButtonBorder
+                [ Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
                 , Attrs.type_ "button"
                 , Events.onClick Closed
                 ]
@@ -294,7 +293,7 @@ viewAddTag model =
             []
         , Html.button
             [ Attrs.class "my-1 bg-green-200"
-            , Attrs.class Styles.blackButtonBorder
+            , Attrs.class "border border-black rounded px-2 py-1 text-black hover:bg-[#d2e7f9]"
             , Attrs.type_ "button"
             , Events.onClick TagAdded
             ]
