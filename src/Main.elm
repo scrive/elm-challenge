@@ -216,7 +216,7 @@ update msg ({ userGroup } as model) =
                 , contactForm =
                     Contact.initialModel
                         newAddressDetails
-                        { isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) }
+                        { isInherited = model.contactForm.isInherited }
               }
             , Cmd.none
             )
@@ -232,15 +232,15 @@ update msg ({ userGroup } as model) =
                 , contactForm =
                     Contact.initialModel
                         userGroup.contactDetails.address
-                        { isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) }
+                        { isInherited = model.contactForm.isInherited }
                 , settingsForm =
                     Settings.initialModel
                         userGroup.settings.dataRetentionPolicy
-                        { isInherited = not (String.isEmpty userGroup.settings.inheritedFrom) }
+                        { isInherited = model.settingsForm.isInherited }
                 , tagsForm =
                     Tags.initialModel
                         { tags = userGroup.tags
-                        , isInherited = not (String.isEmpty userGroup.parentId)
+                        , isInherited = model.tagsForm.isInherited
                         }
               }
             , Cmd.none
@@ -282,7 +282,7 @@ update msg ({ userGroup } as model) =
                 , settingsForm =
                     Settings.initialModel
                         newDataRetentionPolicy
-                        { isInherited = not (String.isEmpty userGroup.settings.inheritedFrom) }
+                        { isInherited = model.settingsForm.isInherited }
                 , userGroup =
                     { userGroup
                         | settings =
@@ -328,7 +328,7 @@ update msg ({ userGroup } as model) =
                 , tagsForm =
                     Tags.initialModel
                         { tags = newTags
-                        , isInherited = not (String.isEmpty userGroup.parentId)
+                        , isInherited = model.tagsForm.isInherited
                         }
               }
             , Cmd.none

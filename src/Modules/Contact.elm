@@ -258,17 +258,20 @@ update msg model config =
             let
                 error : Maybe ( ContactFormField, String )
                 error =
-                    [ emailError model.email
-                    , phoneError model.phone
-                    , postError
-                        { address = model.address
-                        , zip = model.zip
-                        , city = model.city
-                        , country = model.country
-                        }
-                    ]
-                        |> List.filterMap identity
-                        |> List.head
+                    case model.preferredContactMethod of
+                        Email ->
+                            emailError model.email
+
+                        Phone ->
+                            phoneError model.phone
+
+                        Post ->
+                            postError
+                                { address = model.address
+                                , zip = model.zip
+                                , city = model.city
+                                , country = model.country
+                                }
             in
             case error of
                 Nothing ->
