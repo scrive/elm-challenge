@@ -242,12 +242,12 @@ update msg model config =
 
 nonZero : Maybe Int -> Maybe Int
 nonZero maybeInt =
-    maybeInt
-        |> Maybe.andThen
-            (List.singleton
-                >> List.filter ((/=) 0)
-                >> List.head
-            )
+    case maybeInt of
+        Just 0 ->
+            Nothing
+
+        _ ->
+            maybeInt
 
 
 changePolicy : Policy -> Maybe Int -> Model -> Model
