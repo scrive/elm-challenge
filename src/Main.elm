@@ -130,11 +130,17 @@ init =
       , contactForm =
             Contact.initialModel
                 userGroup.contactDetails.address
-                { isInherited = not (String.isEmpty userGroup.contactDetails.inheritedFrom) }
+                { isInherited =
+                    not (String.isEmpty userGroup.contactDetails.inheritedFrom)
+                        && not (String.isEmpty userGroup.parentId)
+                }
       , settingsForm =
             Settings.initialModel
                 userGroup.settings.dataRetentionPolicy
-                { isInherited = not (String.isEmpty userGroup.settings.inheritedFrom) }
+                { isInherited =
+                    not (String.isEmpty userGroup.settings.inheritedFrom)
+                        && not (String.isEmpty userGroup.parentId)
+                }
       , tagsForm =
             Tags.initialModel
                 { tags = userGroup.tags

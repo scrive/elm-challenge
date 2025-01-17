@@ -163,13 +163,13 @@ type ContactFormField
     | CountryField
 
 
-errorToMessage : ContactFormField -> ( ContactFormField, String ) -> Maybe String
+errorToMessage : ContactFormField -> ( ContactFormField, String ) -> String
 errorToMessage field error =
     if Tuple.first error == field then
-        Just (Tuple.second error)
+        Tuple.second error
 
     else
-        Nothing
+        ""
 
 
 initialModel :
@@ -438,7 +438,11 @@ viewEmail isInherited email error =
         |> Input.withType "email"
         |> Input.withOnChange (Just EmailChanged)
         |> Input.withValue email
-        |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage EmailField))
+        |> Input.withErrorMessage
+            (error
+                |> Maybe.map (errorToMessage EmailField)
+                |> Maybe.withDefault ""
+            )
         |> Input.viewTextOrNumber
 
 
@@ -450,7 +454,11 @@ viewPhone isInherited phone error =
         |> Input.withType "tel"
         |> Input.withOnChange (Just PhoneChanged)
         |> Input.withValue phone
-        |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage PhoneField))
+        |> Input.withErrorMessage
+            (error
+                |> Maybe.map (errorToMessage PhoneField)
+                |> Maybe.withDefault ""
+            )
         |> Input.viewTextOrNumber
 
 
@@ -466,6 +474,13 @@ viewCompanyName isInherited companyName =
 
 viewAddress : Bool -> Model -> Html Msg
 viewAddress isInherited { address, zip, city, country, error } =
+    let
+        toError : ContactFormField -> String
+        toError field =
+            error
+                |> Maybe.map (errorToMessage field)
+                |> Maybe.withDefault ""
+    in
     Html.div
         [ Attrs.class "flex flex-col rounded py-1"
         , Attrs.classList [ ( "bg-[#e8f3fc]", isInherited ) ]
@@ -477,7 +492,7 @@ viewAddress isInherited { address, zip, city, country, error } =
                     |> Input.withDisabled isInherited
                     |> Input.withOnChange (Just AddressChanged)
                     |> Input.withValue address
-                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage AddressField))
+                    |> Input.withErrorMessage (toError AddressField)
                     |> Input.viewTextOrNumber
                 ]
             , Html.span [ Attrs.class "w-full sm:w-2/6" ]
@@ -486,7 +501,7 @@ viewAddress isInherited { address, zip, city, country, error } =
                     |> Input.withDisabled isInherited
                     |> Input.withOnChange (Just ZipChanged)
                     |> Input.withValue zip
-                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage ZipField))
+                    |> Input.withErrorMessage (toError ZipField)
                     |> Input.viewTextOrNumber
                 ]
             ]
@@ -497,7 +512,7 @@ viewAddress isInherited { address, zip, city, country, error } =
                     |> Input.withDisabled isInherited
                     |> Input.withOnChange (Just CityChanged)
                     |> Input.withValue city
-                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage CityField))
+                    |> Input.withErrorMessage (toError CityField)
                     |> Input.viewTextOrNumber
                 ]
             , Html.span [ Attrs.class "w-full sm:w-3/6" ]
@@ -506,7 +521,7 @@ viewAddress isInherited { address, zip, city, country, error } =
                     |> Input.withDisabled isInherited
                     |> Input.withOnChange (Just CountryChanged)
                     |> Input.withValue country
-                    |> Input.withErrorMessage (error |> Maybe.andThen (errorToMessage CountryField))
+                    |> Input.withErrorMessage (toError CountryField)
                     |> Input.viewTextOrNumber
                 ]
             ]

@@ -23,8 +23,8 @@ type alias Model =
     , newTagName : String
     , newTagValue : String
     , isInherited : Bool
-    , newTagError : Maybe String
-    , error : Dict Int String
+    , newTagError : String
+    , tagsErrors : Dict Int String
     }
 
 
@@ -58,8 +58,8 @@ initialModel { tags, isInherited } =
     , newTagName = ""
     , newTagValue = ""
     , isInherited = isInherited
-    , newTagError = Nothing
-    , error = Dict.empty
+    , newTagError = ""
+    , tagsErrors = Dict.empty
     }
 
 
@@ -107,7 +107,7 @@ update msg model config =
         Removed key ->
             ( { model
                 | tags = Dict.remove key model.tags
-                , error = Dict.remove key model.error
+                , tagsErrors = Dict.remove key model.tagsErrors
               }
             , Cmd.none
             )
@@ -119,7 +119,7 @@ update msg model config =
                 }
                 |> Maybe.map
                     (\error ->
-                        { model | newTagError = Just error }
+                        { model | newTagError = error }
                     )
                 |> Maybe.withDefault
                     { model
@@ -134,7 +134,7 @@ update msg model config =
                                 |> Dict.fromList
                         , newTagName = ""
                         , newTagValue = ""
-                        , newTagError = Nothing
+                        , newTagError = ""
                     }
             , Task.attempt (\_ -> config.onFocus) (Dom.focus "new-tag-input")
             )
@@ -159,7 +159,7 @@ update msg model config =
                         Dict.empty
                         model.tags
             in
-            ( { model | error = tagsErrors }
+            ( { model | tagsErrors = tagsErrors }
             , Cmd.none
             )
 
@@ -254,11 +254,11 @@ viewFormSubmitSection model =
                 [ Attrs.class "border border-transparent rounded px-2 py-1 bg-[#1e88e2]"
                 , Attrs.class "text-white outline-black hover:text-[#d2e7f9]"
                 , Attrs.classList
-                    [ ( "bg-[#1e88e2]", Dict.isEmpty model.error )
-                    , ( "bg-red-200", not (Dict.isEmpty model.error) )
+                    [ ( "bg-[#1e88e2]", Dict.isEmpty model.tagsErrors )
+                    , ( "bg-red-200", not (Dict.isEmpty model.tagsErrors) )
                     ]
                 , Attrs.type_ "submit"
-                , Attrs.disabled (not (Dict.isEmpty model.error))
+                , Attrs.disabled (not (Dict.isEmpty model.tagsErrors))
                 , Events.onClick Submitted
                 ]
                 [ Html.text "apply" ]
@@ -313,7 +313,7 @@ viewTag model ( key, value ) =
             |> Input.withValue value.name
             |> Input.withLabel "name:"
             |> Input.withOnBlur (Just TagsValidated)
-            |> Input.withErrorMessage (Dict.get key model.error)
+            |> Input.withErrorMessage (Dict.get key model.tagsErrors |> Maybe.withDefault "")
             |> Input.viewTextOrNumber
          , Input.defaultConfig
             |> Input.withDisabled model.isInherited

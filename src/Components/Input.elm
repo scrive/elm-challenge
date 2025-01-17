@@ -23,7 +23,7 @@ type alias Config msg =
     , onChange : Maybe (String -> msg)
     , onBlur : Maybe msg
     , value : String
-    , errorMessage : Maybe String
+    , errorMessage : String
     , id : String
     }
 
@@ -36,7 +36,7 @@ defaultConfig =
     , onChange = Nothing
     , onBlur = Nothing
     , value = ""
-    , errorMessage = Nothing
+    , errorMessage = ""
     , id = ""
     }
 
@@ -76,7 +76,7 @@ withValue value config =
     { config | value = value }
 
 
-withErrorMessage : Maybe String -> Config msg -> Config msg
+withErrorMessage : String -> Config msg -> Config msg
 withErrorMessage errorMessage config =
     { config | errorMessage = errorMessage }
 
@@ -86,14 +86,21 @@ viewTextOrNumber { label, disabled, type_, onChange, onBlur, value, errorMessage
     let
         hasError : Bool
         hasError =
-            errorMessage /= Nothing
+            not (String.isEmpty errorMessage)
     in
     Html.span
         [ Attrs.class "flex flex-col rounded px-2 py-1"
         , Attrs.classList [ ( "bg-[#e8f3fc]", disabled ) ]
         ]
         [ Html.label [ Attrs.class "text-sm pl-1", Attrs.classList [ ( "text-red-500", hasError ) ] ]
-            [ Html.text (errorMessage |> Maybe.withDefault label) ]
+            [ Html.text
+                (if hasError then
+                    errorMessage
+
+                 else
+                    label
+                )
+            ]
         , Html.input
             ([ Attrs.type_ type_
              , Attrs.id id
