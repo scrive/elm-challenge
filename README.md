@@ -6,7 +6,7 @@ This repository contains the requirements definition of a project used for job a
 for a **position of an [Elm](https://elm-lang.org/) developer at Scrive**.
 The whole task is based on a real part of our production application and real needs we have addressed.
 
-It also contains the skeleton of an Elm application with technologies we are currently 
+It also contains the skeleton of an Elm application with technologies we are currently
 using - [Tailwind CSS](https://tailwindcss.com) and [Vite](https://vitejs.dev).
 
 ## Task parts
@@ -18,7 +18,6 @@ You can choose from following parts:
 - [Settings](task-settings.md)
 - [Contact details](task-contact-details.md)
 - [Tags](task-tags.md)
-
 
 ## Goal
 
@@ -47,7 +46,6 @@ Otherwise:
 Good luck and enjoy the challenge.
 
 ## How to start the dev server
-
 
 ```
 npm ci

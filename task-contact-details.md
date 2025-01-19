@@ -1,4 +1,4 @@
-# Task - Contact details 
+# Task - Contact details
 
 ## Instructions
 
@@ -14,12 +14,13 @@ The form should display fields for all values of contact details values.
 
 Values for email and phone should be validated to contain proper format of values.
 
-User group can have one of these means of preferred contact - `post`, `email`, `phone`. 
+User group can have one of these means of preferred contact - `post`, `email`, `phone`.
 
 These restrictions are in play:
-  - if `post` is selected then the address is mandatory to be filled
-  - if `email` is selected, then the email is mandatory to be filled
-  - if `phone` is selected then the phone is mandatory to be filled
+
+- if `post` is selected then the address is mandatory to be filled
+- if `email` is selected, then the email is mandatory to be filled
+- if `phone` is selected then the phone is mandatory to be filled
 
 If settings are inherited, you should just display values without being able to edit them.
 
@@ -39,8 +40,5 @@ These settings can be also inherited from any user group above.
 
 ### Inheritance
 
-User groups live in a tree structure - they can have many children User Groups which can inherit Settings and Contact details. 
+User groups live in a tree structure - they can have many children User Groups which can inherit Settings and Contact details.
 User group with `parent_id: null` is the root user group and cannot inherit anything.
-
-
-

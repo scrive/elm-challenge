@@ -1,4 +1,4 @@
-# Task - Tags 
+# Task - Tags
 
 ## Instructions
 
@@ -10,7 +10,7 @@ You have a data provided to you as a `JSON` string in `Data.elm` module. They ar
 
 ## Requirements
 
-The form should only display fields for values in tags. 
+The form should only display fields for values in tags.
 
 You should be able to add and remove tags and edit their values.
 
@@ -25,4 +25,3 @@ Names should not be longer than 32 characters
 - form is styled to follow nice UX/UI design
 - is responsive
 - is accessible
-

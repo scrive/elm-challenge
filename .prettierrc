@@ -1,0 +1,18 @@
+{
+  "printWidth": 120,
+  "semi": true,
+  "trailingComma": "all",
+  "singleQuote": false,
+  "arrowParens": "always",
+  "endOfLine": "auto",
+  "useTabs": false,
+  "tabWidth": 2,
+  "overrides": [
+    {
+      "files": ["elm.json", "elm-tooling.json"],
+      "options": {
+        "tabWidth": 4
+      }
+    }
+  ]
+}

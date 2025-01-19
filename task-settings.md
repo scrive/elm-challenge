@@ -1,4 +1,4 @@
-# Task - Settings 
+# Task - Settings
 
 ## Instructions
 
@@ -10,13 +10,13 @@ You have a data provided to you as a `JSON` string in `Data.elm` module. They ar
 
 ## Requirements
 
-The form should only display fields for values that are not null in the incoming request with option to add new ones that are not there yet. Data retention settings are 
+The form should only display fields for values that are not null in the incoming request with option to add new ones that are not there yet. Data retention settings are
 
-- preparation, 
-- closed, 
-- canceled, 
-- timed out, 
-- rejected, 
+- preparation,
+- closed,
+- canceled,
+- timed out,
+- rejected,
 - error
 
 Form should also contain the boolean for immediate trashing value.
@@ -39,8 +39,5 @@ These settings can be also inherited from any user group above.
 
 ### Inheritance
 
-User groups live in a tree structure - they can have many children User Groups which can inherit Settings and Contact details. 
+User groups live in a tree structure - they can have many children User Groups which can inherit Settings and Contact details.
 User group with `parent_id: null` is the root user group and cannot inherit anything.
-
-
-
