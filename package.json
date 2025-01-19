@@ -4,12 +4,14 @@
   "description": "Challenge for new Scrive elm developers",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "start": "vite dev"
+    "start": "vite dev",
+    "review": "elm-format review/src --yes && elm-review src"
   },
   "author": "Scrive",
   "license": "MIT",
   "devDependencies": {
     "autoprefixer": "^10.4.15",
+    "elm-review": "^2.12.0",
     "elm-tooling": "^1.14.0",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.3",
