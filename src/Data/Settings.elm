@@ -6,6 +6,10 @@ import Json.Decode as D
 import Json.Encode as E
 
 
+import Data.NullableInt exposing (NullableInt)
+import Data.NullableInt as NI
+
+
 type DataRetentionPolicy
     = Preparation
     | Closed
@@ -30,7 +34,7 @@ type alias PolicyRec =
 
 
 type alias Settings =
-    { inheritedFrom : Maybe Int
+    { inheritedFrom : NullableInt
     , policy : PolicyRec
     }
 
@@ -114,7 +118,7 @@ decoder : Decoder Settings
 decoder =
     D.map2
         Settings
-        (D.field "inherited_from" <| D.nullable D.int)
+        (D.field "inherited_from" NI.decode)
         (D.field "data_retention_policy" policyDecoder)
 
 
@@ -141,6 +145,6 @@ encodePolicy rec =
 encode : Settings -> E.Value
 encode rec =
     E.object
-        [ ( "inherited_from", Maybe.withDefault E.null <| Maybe.map (E.string << String.fromInt) <| rec.inheritedFrom )
+        [ ( "inherited_from", NI.encode rec.inheritedFrom )
         , ( "data_retention_policy", encodePolicy rec.policy )
         ]

@@ -4,6 +4,9 @@ import Json.Decode exposing (Decoder)
 import Json.Decode as D
 import Json.Encode as E
 
+import Data.NullableInt exposing (NullableInt)
+import Data.NullableInt as NI
+
 
 type PreferredContact
     = PC_Email
@@ -24,7 +27,7 @@ type Phone = Phone String -- TODO: Improve later
 type alias Address =
     { preferredContactMethod : PreferredContact
     , email : Email
-    , phone : Phone
+    , phone : Maybe Phone
     , companyName : String
     , address : String
     , zip : ZipCode
@@ -34,7 +37,7 @@ type alias Address =
 
 
 type alias ContactDetails =
-    { inheritedFrom : Maybe Int
+    { inheritedFrom : NullableInt
     , address : Address
     }
 
@@ -52,7 +55,7 @@ addressDecoder =
         Address
         (D.field "preferred_contact_method" <| D.map decodeContactMethod <| D.string)
         (D.field "email" <| D.map Email <| D.string)
-        (D.field "phone" <| D.map Phone <| D.string)
+        (D.field "phone" <| D.map (Maybe.map Phone) <| D.nullable D.string)
         (D.field "company_name" D.string)
         (D.field "address" D.string)
         (D.field "zip" <| D.map ZipCode <| D.string)
@@ -78,13 +81,13 @@ decoder : Decoder ContactDetails
 decoder =
     D.map2
         ContactDetails
-        (D.field "inherited_from" <| D.nullable D.int)
+        (D.field "inherited_from" <| NI.decode)
         (D.field "address" addressDecoder)
 
 
 encode : ContactDetails -> E.Value
 encode rec =
     E.object
-        [ ( "inherited_from", Maybe.withDefault E.null <| Maybe.map (E.string << String.fromInt) <| rec.inheritedFrom )
+        [ ( "inherited_from", NI.encode rec.inheritedFrom )
         , ( "address", encodeAddress rec.address )
         ]

@@ -36,7 +36,7 @@ decoder =
                 Nothing    -> Left  <| remove name
         )
         (D.field "name" D.string)
-        (D.nullable <| D.field "value" D.string)
+        (D.maybe <| D.field "value" D.string)
 
 
 encode : Either TagToRemove Tag -> E.Value

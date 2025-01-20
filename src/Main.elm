@@ -5,18 +5,26 @@ import Data
 import Html exposing (Html)
 import Html.Attributes as Attrs
 
+import UserGroup exposing (UserGroup)
+import UserGroup as UG
 
+import Json.Decode as Json
 
 ---- MODEL ----
 
 
 type alias Model =
-    {}
+    { userGroup : Result Json.Error UserGroup
+    }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    (
+        { userGroup = Json.decodeString UG.decoder Data.userGroup
+        }
+    , Cmd.none
+    )
 
 
 
@@ -49,13 +57,16 @@ subheader text =
 
 
 view : Model -> Html Msg
-view _ =
+view model =
     Html.div [ Attrs.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
         [ header "Let's start your task"
         , subheader "Here are your data:"
         , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
         , header "Now turn them into form."
         , subheader "See README for details of the task. Good luck 🍀 "
+        , case model.userGroup of
+            Ok userGroup -> Html.text "parsed"
+            Err error -> Html.text <| Json.errorToString error
         ]
 
 

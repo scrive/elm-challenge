@@ -1,4 +1,4 @@
-module DataImpl exposing (..)
+module UserGroup exposing (..)
 
 import Either exposing (Either)
 
@@ -8,15 +8,17 @@ import Data.ContactDetails exposing (ContactDetails)
 import Data.ContactDetails as ContactDetails
 import Data.Tag exposing (Tag, TagToRemove)
 import Data.Tag as Tag
+import Data.NullableInt exposing (NullableInt)
+import Data.NullableInt as NI
 
 import Json.Decode exposing (Decoder)
 import Json.Decode as D
 import Json.Encode as E
 
 
-type alias Data =
-    { id : Int
-    , parentId : Int
+type alias UserGroup =
+    { id : NullableInt
+    , parentId : NullableInt
     , name : String
     -- , children : List UserGroup -- TODO
     , settings : Settings
@@ -25,24 +27,24 @@ type alias Data =
     }
 
 
-decoder : Decoder Data
+decoder : Decoder UserGroup
 decoder =
     D.map6
-        Data
-        (D.field "id" D.int)
-        (D.field "parentId" D.int)
+        UserGroup
+        (D.field "id" NI.decode)
+        (D.field "parent_id" NI.decode)
         (D.field "name" D.string)
         -- TODO: children
         (D.field "settings" Settings.decoder)
-        (D.field "contactDetails" ContactDetails.decoder)
+        (D.field "contact_details" ContactDetails.decoder)
         (D.field "tags" <| D.list <| Tag.decoder)
 
 
-encode : Data -> E.Value
+encode : UserGroup -> E.Value
 encode rec =
     E.object
-        [ ( "id", E.int rec.id )
-        , ( "parent_id", E.int rec.parentId )
+        [ ( "id", NI.encode rec.id )
+        , ( "parent_id", NI.encode rec.parentId )
         , ( "name", E.string rec.name )
         -- TODO: children
         , ( "settings", Settings.encode rec.settings )

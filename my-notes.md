@@ -70,4 +70,6 @@ I will try these steps:
 
 ## Questions
 
-* Could values for timeouts be not Integers, but something else?
+* Could values for timeouts in `ContactDetails` be not Integers, but something else?
+* I have added `none` preferred contact method to handle cases when the string in the JSON doesn't match any sample, so that it wouldn't set something undesired by accident. But may be there's a default value
+* Some IDs are strings in the API / data, but they are numerals, so I had to encode them to strings for safety
