@@ -3,8 +3,13 @@ module Main exposing (main)
 import Browser
 import Browser.Navigation as Navigation
 import Data
+import Form.ContactDetails as ContactDetails
+import Form.Settings as Settings
+import Form.Tags as Tags
 import Html exposing (Html)
 import Html.Attributes as Attributes
+import Json.Decode as Decode
+import Types.UserGroup as UserGroup
 import Url
 
 
@@ -12,8 +17,25 @@ import Url
 ---- MODEL ----
 
 
-type alias Model =
-    {}
+type Model
+    = Error ErrorType
+    | Success SuccessData
+
+
+type ErrorType
+    = DecodeError Decode.Error
+
+
+type alias SuccessData =
+    { userGroup : UserGroup.Model
+    , activeTab : Tab
+    }
+
+
+type Tab
+    = ContactDetails
+    | Settings
+    | Tags
 
 
 type alias Flags =
@@ -22,7 +44,23 @@ type alias Flags =
 
 init : Flags -> Url.Url -> Navigation.Key -> ( Model, Cmd Msg )
 init _ _ _ =
-    ( {}, Cmd.none )
+    let
+        userGroupDecoderResult =
+            Decode.decodeString UserGroup.decode Data.userGroup
+    in
+    ( case userGroupDecoderResult of
+        Ok userGroup ->
+            Success
+                { userGroup = userGroup
+                , activeTab = ContactDetails
+                }
+
+        Err error ->
+            error
+                |> DecodeError
+                |> Error
+    , Cmd.none
+    )
 
 
 
@@ -31,11 +69,57 @@ init _ _ _ =
 
 type Msg
     = NoOp
+    | ChangedTab Tab
+    | ContactDetailsMsg ContactDetails.Msg
+    | SettingsMsg Settings.Msg
+    | TagsMsg Tags.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update msg model =
+    case model of
+        Success ({ userGroup } as successData) ->
+            (case msg of
+                NoOp ->
+                    ( successData
+                    , Cmd.none
+                    )
+
+                ChangedTab tab ->
+                    ( { successData | activeTab = tab }
+                    , Cmd.none
+                    )
+
+                ContactDetailsMsg contactDetailsMsg ->
+                    userGroup
+                        |> UserGroup.getContactDetails
+                        |> ContactDetails.update contactDetailsMsg
+                        |> Tuple.mapBoth
+                            (\contactDetails -> { successData | userGroup = UserGroup.updateContactDetails contactDetails userGroup })
+                            (Cmd.map ContactDetailsMsg)
+
+                SettingsMsg settingsMsg ->
+                    userGroup
+                        |> UserGroup.getSettings
+                        |> Settings.update settingsMsg
+                        |> Tuple.mapBoth
+                            (\settings -> { successData | userGroup = UserGroup.updateSettings settings userGroup })
+                            (Cmd.map SettingsMsg)
+
+                TagsMsg tagsMsg ->
+                    userGroup
+                        |> UserGroup.getTags
+                        |> Tags.update tagsMsg
+                        |> Tuple.mapBoth
+                            (\tags -> { successData | userGroup = UserGroup.updateTags tags userGroup })
+                            (Cmd.map TagsMsg)
+            )
+                |> Tuple.mapFirst Success
+
+        Error _ ->
+            ( model
+            , Cmd.none
+            )
 
 
 
@@ -55,14 +139,25 @@ subheader text =
 
 
 view : Model -> Html Msg
-view _ =
-    Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-        [ header "Let's start your task"
-        , subheader "Here are your data:"
-        , Html.pre [ Attributes.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
-        , header "Now turn them into form."
-        , subheader "See README for details of the task. Good luck 🍀 "
-        ]
+view model =
+    case model of
+        Success _ ->
+            Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
+                [ header "Let's start your task"
+                , subheader "Here are your data:"
+                , Html.pre [ Attributes.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
+                , header "Now turn them into form."
+                , subheader "See README for details of the task. Good luck 🍀 "
+                ]
+
+        Error (DecodeError error) ->
+            let
+                _ =
+                    Debug.log "log" error
+            in
+            Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
+                [ Html.text "Somethint went wrong ..."
+                ]
 
 
 
