@@ -66,4 +66,8 @@ I will try these steps:
 * Try to use `elm-validate` from `rtfeldman` or `elm-form-decoder` from `arowM`
 * If rendering forms turns out to be hard, use either `elm-form` from `etaque` (if it's not too outdated) or `elm-form` from `dillonkearns`
   * But try not to use any more
-* Style forms
+* Style forms / UX / Design
+
+## Questions
+
+* Could values for timeouts be not Integers, but something else?
