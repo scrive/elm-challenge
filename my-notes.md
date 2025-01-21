@@ -4,12 +4,12 @@
 
 * [elm-form](https://package.elm-lang.org/packages/dillonkearns/elm-form/3.0.1/) by `dillonkearns`
   * Pros
-    * Every possible field is supported
+    * Every possible field kind is supported
     * Supports several forms on one page
     * "Monadic" way of validation (with `andMap` / `andThen`)
-    * Rendering is in Elm Html
   * Cons
     * In Ellie example, forms doesn't show required fields from the start, I for sure can do it myself though, may be it is the way the example was written and not the limitation
+    * It seems that rendering can not be customized
     * Form functions get their parameters as arguments, for a lot of fields in the form there could be too much
       * ...but may be it is possible to use records
 * [elm-form](https://package.elm-lang.org/packages/etaque/elm-form/4.0.0/) by `etaque`
@@ -67,6 +67,7 @@ I will try these steps:
 * If rendering forms turns out to be hard, use either `elm-form` from `etaque` (if it's not too outdated) or `elm-form` from `dillonkearns`
   * But try not to use any more
 * Style forms / UX / Design
+* Add tests for decoding / encoding : [fuzzy](https://package.elm-lang.org/packages/elm-explorations/test/latest/Fuzz)
 
 ## Questions
 

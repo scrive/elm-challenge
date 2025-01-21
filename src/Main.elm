@@ -10,6 +10,8 @@ import UserGroup as UG
 
 import Json.Decode as Json
 
+import Form.Tags as Tags
+
 ---- MODEL ----
 
 
@@ -65,7 +67,7 @@ view model =
         , header "Now turn them into form."
         , subheader "See README for details of the task. Good luck 🍀 "
         , case model.userGroup of
-            Ok userGroup -> Html.text "parsed"
+            Ok userGroup -> Html.div [] <| List.map Tags.view userGroup.tags
             Err error -> Html.text <| Json.errorToString error
         ]
 
