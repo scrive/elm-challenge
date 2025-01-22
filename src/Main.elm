@@ -10,7 +10,7 @@ import UserGroup as UG
 
 import Json.Decode as Json
 
-import Data.Tag exposing (Tag)
+import Data.Tag exposing (Tag, TagToRemove)
 
 import Form.Error as Form
 
@@ -43,18 +43,26 @@ init =
 
 type Msg
     = NoOp
-    | MarkInProgress Tags.TagInProgress
-    | RestoreTag Tag
-    | RemoveTag Tag
-    | ChangeTag Tag String
-    | AddTag String
+    | TagInProgress Tags.TagInProgress
+    | TryCreateTag { newName : String, newValue : String }
+    | TryRestoreTag TagToRemove { newValue : String }
+    | TryChangeTag Tag { newValue : String }
+    | TryRemoveTag Tag
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     ( case msg of
-        MarkInProgress inProgress ->
+        TagInProgress inProgress ->
             { model | tagInProgress = Just inProgress }
+        TryCreateTag { newName, newValue } ->
+            { model | tagInProgress = Nothing }
+        TryRestoreTag ttr { newValue } ->
+            { model | tagInProgress = Nothing }
+        TryChangeTag tag { newValue } ->
+            { model | tagInProgress = Nothing }
+        TryRemoveTag tag ->
+            { model | tagInProgress = Nothing }
         _ -> model
     , Cmd.none
     )
@@ -80,11 +88,11 @@ view : Model -> Html Msg
 view model =
     let
         tagHandlers =
-            { onRemove  = always NoOp
-            , onCreate  = always NoOp
-            , onRestore = always NoOp
-            , onChange  = always <| always NoOp
-            , markInProgress = MarkInProgress
+            { tryCreate  = TryCreateTag
+            , tryChange = TryChangeTag
+            , tryRestore  = TryRestoreTag
+            , tryRemove  = always NoOp
+            , markInProgress = TagInProgress
             }
     in
 
