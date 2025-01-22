@@ -32,7 +32,7 @@ userGroup =
     }
   },
   "contact_details": {
-    "inherited_from": "1",
+    "inherited_from": null,
     "address": {
       "preferred_contact_method": "email",
       "email": "scrive@scrive.com",
