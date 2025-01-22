@@ -1,4 +1,4 @@
-module Data.Tag exposing
+module Scrive.Tag exposing
     ( Tag, TagToRemove
     , make, toRemove
     , setValue, toRemoved

@@ -1,4 +1,4 @@
-module Data.Settings exposing (..)
+module Scrive.Settings exposing (..)
 
 
 import Json.Decode exposing (Decoder)
@@ -6,8 +6,8 @@ import Json.Decode as D
 import Json.Encode as E
 
 
-import Data.NullableInt exposing (NullableInt)
-import Data.NullableInt as NI
+import Scrive.NullableInt exposing (NullableInt)
+import Scrive.NullableInt as NI
 
 
 type DataRetentionPolicy

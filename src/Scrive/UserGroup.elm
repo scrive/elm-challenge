@@ -1,15 +1,15 @@
-module UserGroup exposing (..)
+module Scrive.UserGroup exposing (..)
 
 import Either exposing (Either)
 
-import Data.Settings exposing (Settings)
-import Data.Settings as Settings
-import Data.ContactDetails exposing (ContactDetails)
-import Data.ContactDetails as ContactDetails
-import Data.Tag exposing (Tag, TagToRemove)
-import Data.Tag as Tag
-import Data.NullableInt exposing (NullableInt)
-import Data.NullableInt as NI
+import Scrive.Settings exposing (Settings)
+import Scrive.Settings as Settings
+import Scrive.ContactDetails exposing (ContactDetails)
+import Scrive.ContactDetails as ContactDetails
+import Scrive.Tag exposing (Tag, TagToRemove)
+import Scrive.Tag as Tag
+import Scrive.NullableInt exposing (NullableInt)
+import Scrive.NullableInt as NI
 
 import Json.Decode exposing (Decoder)
 import Json.Decode as D

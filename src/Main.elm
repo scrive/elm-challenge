@@ -8,13 +8,13 @@ import Either exposing (Either(..))
 import Html exposing (Html)
 import Html.Attributes as Attrs
 
-import UserGroup exposing (UserGroup)
-import UserGroup as UG
+import Scrive.UserGroup exposing (UserGroup)
+import Scrive.UserGroup as UG
 
 import Json.Decode as Json
 
-import Data.Tag exposing (Tag, TagToRemove)
-import Data.Tag as Tag
+import Scrive.Tag exposing (Tag, TagToRemove)
+import Scrive.Tag as Tag
 
 import Form.Error as Form
 import Form.Error as FE exposing (textOf, Field(..))

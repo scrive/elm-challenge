@@ -3,15 +3,15 @@ module Form.Tags exposing (TagInProgress, view, none)
 import Either exposing (Either(..))
 import Either as Either
 
-import Data.Tag exposing (Tag, TagToRemove)
-import Data.Tag as Tag
+import Scrive.Tag exposing (Tag, TagToRemove)
+import Scrive.Tag as Tag
 
 import Html exposing (Html)
 import Html as Html
 import Html.Attributes as Attrs
 import Html.Events as Evt
 
-import UserGroup as UG
+import Scrive.UserGroup as UG
 
 type TagInProgress -- constructors are not exposed, except `None`
     = Changing Int { newValue : String }
@@ -127,7 +127,7 @@ viewWhileCreatingTag handlers { newName, newValue } =
     Html.li
         []
         [ Html.input
-            [ Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = str, newValue = "" }
+            [ Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = str, newValue = newValue }
             , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
             , Attrs.class "border-black border-solid border-2"
             ]
@@ -159,6 +159,7 @@ viewWhileChangingTag handlers idx newValue tag =
             [ Evt.onInput <| \str -> handlers.markInProgress <| Changing idx { newValue = str }
             , Evt.onSubmit <| handlers.tryChange tag { newValue = newValue }
             , Attrs.class "border-black border-solid border-2"
+            , Attrs.placeholder <| Tag.valueOf tag
             ]
             [ Html.text newValue ]
         , Html.button
