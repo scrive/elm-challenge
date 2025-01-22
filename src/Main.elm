@@ -10,6 +10,10 @@ import UserGroup as UG
 
 import Json.Decode as Json
 
+import Data.Tag exposing (Tag)
+
+import Form.Error as Form
+
 import Form.Tags as Tags
 
 ---- MODEL ----
@@ -17,6 +21,8 @@ import Form.Tags as Tags
 
 type alias Model =
     { userGroup : Result Json.Error UserGroup
+    , tagInProgress : Maybe Tags.TagInProgress
+    , errors : List ( Form.Field, Form.Error )
     }
 
 
@@ -24,6 +30,8 @@ init : ( Model, Cmd Msg )
 init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
+        , tagInProgress = Nothing
+        , errors = []
         }
     , Cmd.none
     )
@@ -35,11 +43,21 @@ init =
 
 type Msg
     = NoOp
+    | MarkInProgress Tags.TagInProgress
+    | RestoreTag Tag
+    | RemoveTag Tag
+    | ChangeTag Tag String
+    | AddTag String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update msg model =
+    ( case msg of
+        MarkInProgress inProgress ->
+            { model | tagInProgress = Just inProgress }
+        _ -> model
+    , Cmd.none
+    )
 
 
 
@@ -60,15 +78,28 @@ subheader text =
 
 view : Model -> Html Msg
 view model =
-    Html.div [ Attrs.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-        [ header "Let's start your task"
-        , subheader "Here are your data:"
-        , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
-        , header "Now turn them into form."
-        , subheader "See README for details of the task. Good luck 🍀 "
-        , case model.userGroup of
-            Ok userGroup -> Html.div [] <| List.map Tags.view userGroup.tags
-            Err error -> Html.text <| Json.errorToString error
+    let
+        tagHandlers =
+            { onRemove  = always NoOp
+            , onCreate  = always NoOp
+            , onRestore = always NoOp
+            , onChange  = always <| always NoOp
+            , markInProgress = MarkInProgress
+            }
+    in
+
+    Html.div
+        [ ]
+        [ Html.div [ Attrs.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
+            -- [ header "Let's start your task"
+            -- , subheader "Here are your data:"
+            -- , header "Now turn them into form."
+            -- , subheader "See README for details of the task. Good luck 🍀 "
+            [ case model.userGroup of
+                Ok userGroup -> Tags.view tagHandlers model.tagInProgress userGroup.tags
+                Err error ->    Html.text <| Json.errorToString error
+            , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
+            ]
         ]
 
 
