@@ -9,11 +9,11 @@ module Types.UserGroup exposing
     , updateTags
     )
 
-import Form.ContactDetails as ContactDetails
-import Form.Settings as Settings
-import Form.Tags as Tags
+import ContactDetails
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline
+import Settings as Settings
+import Tags as Tags
 
 
 type Model

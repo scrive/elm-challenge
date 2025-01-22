@@ -1,4 +1,7 @@
-module Types.InheritedFrom exposing (Model, decode)
+module Types.InheritedFrom exposing
+    ( Model
+    , decode
+    )
 
 import Json.Decode as Decode exposing (Decoder)
 

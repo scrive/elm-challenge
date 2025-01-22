@@ -1,4 +1,10 @@
-module Form.ContactDetails exposing (Model, Msg, decode, update, view)
+module ContactDetails exposing
+    ( Model
+    , Msg
+    , decode
+    , update
+    , view
+    )
 
 import Html exposing (Html)
 import Json.Decode as Decode exposing (Decoder)
@@ -58,12 +64,12 @@ type Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update _ model =
     ( model
     , Cmd.none
     )
 
 
 view : Model -> Html Msg
-view (Model model) =
+view _ =
     Html.text "Contact details"

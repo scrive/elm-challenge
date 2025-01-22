@@ -2,13 +2,14 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Navigation
+import ContactDetails
 import Data
-import Form.ContactDetails as ContactDetails
-import Form.Settings as Settings
-import Form.Tags as Tags
 import Html exposing (Html)
 import Html.Attributes as Attributes
 import Json.Decode as Decode
+import Settings
+import Tabs
+import Tags
 import Types.UserGroup as UserGroup
 import Url
 
@@ -19,23 +20,17 @@ import Url
 
 type Model
     = Error ErrorType
-    | Success SuccessData
+    | Success SuccessModelData
 
 
 type ErrorType
     = DecodeError Decode.Error
 
 
-type alias SuccessData =
+type alias SuccessModelData =
     { userGroup : UserGroup.Model
-    , activeTab : Tab
+    , tabs : Tabs.Model
     }
-
-
-type Tab
-    = ContactDetails
-    | Settings
-    | Tags
 
 
 type alias Flags =
@@ -52,7 +47,7 @@ init _ _ _ =
         Ok userGroup ->
             Success
                 { userGroup = userGroup
-                , activeTab = ContactDetails
+                , tabs = Tabs.init
                 }
 
         Err error ->
@@ -69,7 +64,7 @@ init _ _ _ =
 
 type Msg
     = NoOp
-    | ChangedTab Tab
+    | TabsMsg Tabs.Msg
     | ContactDetailsMsg ContactDetails.Msg
     | SettingsMsg Settings.Msg
     | TagsMsg Tags.Msg
@@ -78,17 +73,19 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        Success ({ userGroup } as successData) ->
+        Success ({ tabs, userGroup } as successData) ->
             (case msg of
                 NoOp ->
                     ( successData
                     , Cmd.none
                     )
 
-                ChangedTab tab ->
-                    ( { successData | activeTab = tab }
-                    , Cmd.none
-                    )
+                TabsMsg tabsMsg ->
+                    tabs
+                        |> Tabs.update tabsMsg
+                        |> Tuple.mapBoth
+                            (\updatedTabs -> { successData | tabs = updatedTabs })
+                            (Cmd.map TabsMsg)
 
                 ContactDetailsMsg contactDetailsMsg ->
                     userGroup
@@ -126,42 +123,44 @@ update msg model =
 ---- VIEW ----
 
 
-header : String -> Html msg
-header text =
-    Html.span [ Attributes.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
-        [ Html.text text ]
-
-
-subheader : String -> Html msg
-subheader text =
-    Html.span [ Attributes.class "p-2 text-2xl font-extrabold text-slate-800" ]
-        [ Html.text text ]
-
-
 view : Model -> Html Msg
 view model =
     case model of
-        Success _ ->
+        Success ({ tabs } as successModelData) ->
             Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-                [ header "Let's start your task"
-                , subheader "Here are your data:"
-                , Html.pre [ Attributes.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
-                , header "Now turn them into form."
-                , subheader "See README for details of the task. Good luck 🍀 "
+                [ tabs
+                    |> Tabs.view
+                    |> Html.map TabsMsg
+                , formView successModelData
                 ]
 
+        -- TODO error
         Error (DecodeError error) ->
-            let
-                _ =
-                    Debug.log "log" error
-            in
             Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
                 [ Html.text "Somethint went wrong ..."
                 ]
 
 
+formView : SuccessModelData -> Html Msg
+formView { tabs, userGroup } =
+    Html.div [ Attributes.class "p-4 rounded-lg bg-gray-50 dark:bg-gray-800" ]
+        [ case tabs of
+            Tabs.ContactDetails ->
+                Html.text "Contact details"
 
----- PROGRAM ----
+            Tabs.Settings ->
+                Html.text "Settings"
+
+            Tabs.Tags ->
+                userGroup
+                    |> UserGroup.getTags
+                    |> Tags.view
+                    |> Html.map TagsMsg
+        ]
+
+
+
+---- ROGRAM ----
 
 
 main : Program () Model Msg
