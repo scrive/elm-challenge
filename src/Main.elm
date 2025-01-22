@@ -10,6 +10,7 @@ import Html.Attributes as Attrs
 
 import Scrive.UserGroup exposing (UserGroup)
 import Scrive.UserGroup as UG
+import Scrive.Settings as RP
 
 import Json.Decode as Json
 
@@ -19,6 +20,8 @@ import Scrive.Tag as Tag
 import Form.Error as Form
 import Form.Error as FE exposing (textOf, Field(..))
 import Form.Tags as TagsForm
+import Form.ContactDetails as ContactForm
+import Form.RetentionPolicy as RetentionPolicy
 
 import Validate exposing (Validator, Valid)
 import Validate as V
@@ -168,7 +171,7 @@ tagValidator { checkUnique } currentTags =
 
 ---- VIEW ----
 
-
+{-
 header : String -> Html msg
 header text =
     Html.span [ Attrs.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
@@ -179,6 +182,7 @@ subheader : String -> Html msg
 subheader text =
     Html.span [ Attrs.class "p-2 text-2xl font-extrabold text-slate-800" ]
         [ Html.text text ]
+-}
 
 
 view : Model -> Html Msg
@@ -200,10 +204,20 @@ view model =
             -- , subheader "Here are your data:"
             -- , header "Now turn them into form."
             -- , subheader "See README for details of the task. Good luck 🍀 "
-            [ case model.userGroup of
-                Ok userGroup -> TagsForm.view tagHandlers model.tagInProgress userGroup.tags
-                Err error ->    Html.text <| Json.errorToString error
-            , Html.div [] <| List.map (FE.textOf >> Html.text) model.errors
+            <|
+            ( case model.userGroup of
+                Ok userGroup ->
+                    [ Html.h1 [] [ Html.text "Contacts" ]
+                    , ContactForm.view userGroup.contactDetails
+                    , Html.h1 [] [ Html.text "Tags" ]
+                    , TagsForm.view tagHandlers model.tagInProgress userGroup.tags
+                    , Html.h1 [] [ Html.text "Settings" ]
+                    , RetentionPolicy.view <| RP.toList userGroup.settings.policy
+                    ]
+                Err error ->
+                    [ Html.text <| Json.errorToString error ]
+            ) ++
+            [ Html.div [] <| List.map (FE.textOf >> Html.text) model.errors
             , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
             ]
         ]

@@ -181,6 +181,9 @@ viewWhileRestoringTag handlers idx newValue ttr =
         , Html.input
             [ Evt.onInput <| \str -> handlers.markInProgress <| Restoring idx { newValue = str }
             , Evt.onSubmit <| handlers.tryRestore ttr { newValue = newValue }
+            , Attrs.placeholder <| case Tag.lastValueOfRemoved ttr of
+                Just lastValue -> lastValue
+                Nothing -> ""
             , Attrs.class "border-black border-solid border-2"
             ]
             [ Html.text newValue ]

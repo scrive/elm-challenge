@@ -148,3 +148,14 @@ encode rec =
         [ ( "inherited_from", NI.encode rec.inheritedFrom )
         , ( "data_retention_policy", encodePolicy rec.policy )
         ]
+
+
+retentionPolicyToString : DataRetentionPolicy -> String
+retentionPolicyToString drp =
+    case drp of
+        Preparation -> "Preparation"
+        Closed -> "Closed"
+        Canceled -> "Canceled"
+        TimedOut -> "Timed out"
+        Rejected -> "Rejected"
+        Error -> "Error"

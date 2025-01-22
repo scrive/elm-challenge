@@ -26,13 +26,13 @@ type Phone = Phone String -- TODO: Improve later
 
 type alias Address =
     { preferredContactMethod : PreferredContact
-    , email : Email
+    , email : Maybe Email
     , phone : Maybe Phone
-    , companyName : String
-    , address : String
-    , zip : ZipCode
-    , city : String
-    , country : String
+    , companyName : Maybe String
+    , address : Maybe String
+    , zip : Maybe ZipCode
+    , city : Maybe String
+    , country : Maybe String
     }
 
 
@@ -40,6 +40,18 @@ type alias ContactDetails =
     { inheritedFrom : NullableInt
     , address : Address
     }
+
+
+emailToString : Email -> String
+emailToString (Email email) = email
+
+
+zipCodeToString : ZipCode -> String
+zipCodeToString (ZipCode zip) = zip
+
+
+phoneToString : Phone -> String
+phoneToString (Phone phone) = phone
 
 
 addressDecoder : Decoder Address
@@ -54,13 +66,13 @@ addressDecoder =
     in D.map8
         Address
         (D.field "preferred_contact_method" <| D.map decodeContactMethod <| D.string)
-        (D.field "email" <| D.map Email <| D.string)
+        (D.field "email" <| D.map (Maybe.map Email) <| D.nullable D.string)
         (D.field "phone" <| D.map (Maybe.map Phone) <| D.nullable D.string)
-        (D.field "company_name" D.string)
-        (D.field "address" D.string)
-        (D.field "zip" <| D.map ZipCode <| D.string)
-        (D.field "city" D.string)
-        (D.field "country" <| D.string)
+        (D.field "company_name" <| D.nullable D.string)
+        (D.field "address" <| D.nullable D.string)
+        (D.field "zip" <| D.map (Maybe.map ZipCode) <| D.nullable D.string)
+        (D.field "city" <| D.nullable D.string)
+        (D.field "country" <| D.nullable D.string)
 
 
 encodeAddress : Address -> E.Value

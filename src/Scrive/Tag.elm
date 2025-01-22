@@ -2,7 +2,7 @@ module Scrive.Tag exposing
     ( Tag, TagToRemove
     , make, toRemove
     , setValue, toRemoved
-    , nameOf, valueOf, nameOfRemoved
+    , nameOf, valueOf, nameOfRemoved, lastValueOfRemoved
     , decoder, encode
     )
 
@@ -22,7 +22,11 @@ type Tag =
         }
 
 
-type TagToRemove = TagToRemove { name : String }
+type TagToRemove =
+    TagToRemove
+        { name : String
+        , lastValue : Maybe String
+        }
 
 
 make : String -> String -> Tag
@@ -30,7 +34,7 @@ make name value = Tag { name = name, value = value }
 
 
 toRemove : String -> TagToRemove
-toRemove which = TagToRemove { name = which }
+toRemove which = TagToRemove { name = which, lastValue = Nothing }
 
 
 setValue : String -> Tag -> Tag
@@ -49,8 +53,12 @@ nameOfRemoved : TagToRemove -> String
 nameOfRemoved (TagToRemove { name }) = name
 
 
+lastValueOfRemoved : TagToRemove -> Maybe String
+lastValueOfRemoved (TagToRemove { lastValue }) = lastValue
+
+
 toRemoved : Tag -> TagToRemove
-toRemoved (Tag { name }) = TagToRemove { name = name }
+toRemoved (Tag { name, value }) = TagToRemove { name = name, lastValue = Just value }
 
 
 -- type alias SchrodingerTag = Either TagToRemove Tag
