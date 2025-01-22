@@ -2,6 +2,9 @@ module Main exposing (main)
 
 import Browser
 import Data
+import Set
+import Either exposing (Either(..))
+
 import Html exposing (Html)
 import Html.Attributes as Attrs
 
@@ -11,18 +14,23 @@ import UserGroup as UG
 import Json.Decode as Json
 
 import Data.Tag exposing (Tag, TagToRemove)
+import Data.Tag as Tag
 
 import Form.Error as Form
+import Form.Error as FE exposing (textOf, Field(..))
+import Form.Tags as TagsForm
 
-import Form.Tags as Tags
+import Validate exposing (Validator, Valid)
+import Validate as V
+import Validate.Extra as V
 
 ---- MODEL ----
 
 
 type alias Model =
     { userGroup : Result Json.Error UserGroup
-    , tagInProgress : Maybe Tags.TagInProgress
-    , errors : List ( Form.Field, Form.Error )
+    , tagInProgress : TagsForm.TagInProgress
+    , errors : List Form.Error
     }
 
 
@@ -30,7 +38,7 @@ init : ( Model, Cmd Msg )
 init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
-        , tagInProgress = Nothing
+        , tagInProgress = TagsForm.none
         , errors = []
         }
     , Cmd.none
@@ -43,30 +51,119 @@ init =
 
 type Msg
     = NoOp
-    | TagInProgress Tags.TagInProgress
+    | TagInProgress TagsForm.TagInProgress
     | TryCreateTag { newName : String, newValue : String }
     | TryRestoreTag TagToRemove { newValue : String }
     | TryChangeTag Tag { newValue : String }
     | TryRemoveTag Tag
 
 
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     ( case msg of
         TagInProgress inProgress ->
-            { model | tagInProgress = Just inProgress }
+            { model | tagInProgress = inProgress }
+
         TryCreateTag { newName, newValue } ->
-            { model | tagInProgress = Nothing }
+            validateAnd addTag (tagValidator { checkUnique = True }) model <| Tag.make newName newValue
+
+        TryChangeTag theTag { newValue } ->
+            validateAnd changeTag (tagValidator { checkUnique = False }) model <| Tag.setValue newValue theTag
+
         TryRestoreTag ttr { newValue } ->
-            { model | tagInProgress = Nothing }
-        TryChangeTag tag { newValue } ->
-            { model | tagInProgress = Nothing }
-        TryRemoveTag tag ->
-            { model | tagInProgress = Nothing }
-        _ -> model
+            validateAnd restoreTag (tagValidator { checkUnique = False }) model <| Tag.make (Tag.nameOfRemoved ttr) newValue
+
+        TryRemoveTag theTag ->
+
+            { model
+            | tagInProgress = TagsForm.none
+            , userGroup =
+                Result.map
+                    (\ug -> { ug | tags = removeTag theTag ug.tags })
+                    model.userGroup
+            }
+
+        NoOp -> model
+
     , Cmd.none
     )
 
+
+validateAnd : (Valid Tag -> UG.TagList -> UG.TagList) -> (UG.TagList -> Validator Form.Error Tag) -> Model -> Tag -> Model
+validateAnd fValid fValidator model theTag =
+    case Result.map .tags model.userGroup of
+        Ok currentTags ->
+            let
+                resValidTag = V.validate (fValidator currentTags) theTag
+            in
+                case resValidTag of
+                    Ok validTag ->
+                        { model
+                        | tagInProgress = TagsForm.none -- We clear the form state on any validation success. FIXME: looks like not an obvious place to do it
+                        , errors = []
+                        , userGroup =
+                            Result.map
+                                (\ug -> { ug | tags = fValid validTag ug.tags })
+                                model.userGroup
+                        }
+                    Err errors ->
+                        { model
+                        | errors = errors -- And store errors on any validation failure. FIXME: looks like not an obvious place to do it
+                        }
+        Err _ ->
+            model
+
+
+addTag : Valid Tag -> UG.TagList -> UG.TagList
+addTag validTag list =
+    -- V.fromValid >> Right >> (::) -- adds to the start of list instead of the end
+    list ++ [ Right <| V.fromValid validTag ]
+
+
+changeTag : Valid Tag -> UG.TagList -> UG.TagList
+changeTag validTag =
+    let theTag = V.fromValid validTag
+    in List.map <| Either.mapRight
+        (\otherTag ->
+            if Tag.nameOf otherTag == Tag.nameOf theTag then theTag else otherTag
+        )
+
+
+removeTag : Tag -> UG.TagList -> UG.TagList
+removeTag theTag =
+    List.map
+        <| Either.andThenRight
+            (\otherTag ->
+                if Tag.nameOf otherTag == Tag.nameOf theTag then Left <| Tag.toRemoved theTag else Right otherTag
+            )
+
+
+restoreTag : {- TagToRemove -> -} Valid Tag -> UG.TagList -> UG.TagList
+restoreTag validTag =
+    let theTag = V.fromValid validTag
+    in List.map
+        <| Either.andThenLeft
+            (\removedTag ->
+                if Tag.nameOfRemoved removedTag == Tag.nameOf theTag then Right theTag else Left removedTag
+            )
+
+
+tagValidator : { checkUnique : Bool } -> UG.TagList -> Validator Form.Error Tag
+tagValidator { checkUnique } currentTags =
+    Validate.all
+        [ V.ifLongerThan Tag.nameOf 32 <| FE.make FE.NewTagName "Tag name should not exceed 32 characters"
+        ,
+            if checkUnique then
+                let
+                    tagNames = Set.fromList <| List.map (Either.unpack Tag.nameOfRemoved Tag.nameOf) currentTags
+                in
+                    V.ifNotUnique Tag.nameOf tagNames <| FE.make FE.NewTagName "One of tags already has this name, please try another one"
+            else V.skip
+
+        , V.ifBlank Tag.nameOf <| FE.make FE.NewTagName "Tag name should not be empty"
+        , V.ifBlank Tag.valueOf <| FE.make FE.NewTagValue "Value should not be empty"
+        ]
 
 
 ---- VIEW ----
@@ -89,9 +186,9 @@ view model =
     let
         tagHandlers =
             { tryCreate  = TryCreateTag
-            , tryChange = TryChangeTag
-            , tryRestore  = TryRestoreTag
-            , tryRemove  = always NoOp
+            , tryChange  = TryChangeTag
+            , tryRestore = TryRestoreTag
+            , tryRemove  = TryRemoveTag
             , markInProgress = TagInProgress
             }
     in
@@ -104,8 +201,9 @@ view model =
             -- , header "Now turn them into form."
             -- , subheader "See README for details of the task. Good luck 🍀 "
             [ case model.userGroup of
-                Ok userGroup -> Tags.view tagHandlers model.tagInProgress userGroup.tags
+                Ok userGroup -> TagsForm.view tagHandlers model.tagInProgress userGroup.tags
                 Err error ->    Html.text <| Json.errorToString error
+            , Html.div [] <| List.map (FE.textOf >> Html.text) model.errors
             , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
             ]
         ]

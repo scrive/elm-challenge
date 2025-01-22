@@ -16,6 +16,9 @@ import Json.Decode as D
 import Json.Encode as E
 
 
+type alias TagList = List (Either TagToRemove Tag)
+
+
 type alias UserGroup =
     { id : NullableInt
     , parentId : NullableInt
@@ -23,7 +26,7 @@ type alias UserGroup =
     -- , children : List UserGroup -- TODO
     , settings : Settings
     , contactDetails : ContactDetails
-    , tags : List (Either TagToRemove Tag)
+    , tags : TagList
     }
 
 
