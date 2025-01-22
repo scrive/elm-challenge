@@ -7,12 +7,14 @@ import Either exposing (Either(..))
 
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Html.Events as Evts
 
 import Scrive.UserGroup exposing (UserGroup)
 import Scrive.UserGroup as UG
 import Scrive.Settings as RP
 
 import Json.Decode as Json
+import Json.Encode as Json
 
 import Scrive.Tag exposing (Tag, TagToRemove)
 import Scrive.Tag as Tag
@@ -34,6 +36,7 @@ type alias Model =
     { userGroup : Result Json.Error UserGroup
     , tagInProgress : TagsForm.TagInProgress
     , errors : List Form.Error
+    , viewMode : ViewJson -- TODO: remove, only for debugging
     }
 
 
@@ -43,10 +46,16 @@ init =
         { userGroup = Json.decodeString UG.decoder Data.userGroup
         , tagInProgress = TagsForm.none
         , errors = []
+        , viewMode = CurrentJson
         }
     , Cmd.none
     )
 
+
+type ViewJson
+    = NoJson
+    | OriginalJson
+    | CurrentJson
 
 
 ---- UPDATE ----
@@ -59,12 +68,14 @@ type Msg
     | TryRestoreTag TagToRemove { newValue : String }
     | TryChangeTag Tag { newValue : String }
     | TryRemoveTag Tag
+    | ToggleJsonMode ViewJson
 
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     ( case msg of
+
         TagInProgress inProgress ->
             { model | tagInProgress = inProgress }
 
@@ -86,6 +97,9 @@ update msg model =
                     (\ug -> { ug | tags = removeTag theTag ug.tags })
                     model.userGroup
             }
+
+        ToggleJsonMode jsonMode ->
+            { model | viewMode = jsonMode }
 
         NoOp -> model
 
@@ -218,7 +232,24 @@ view model =
                     [ Html.text <| Json.errorToString error ]
             ) ++
             [ Html.div [] <| List.map (FE.textOf >> Html.text) model.errors
-            , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
+            , Html.div
+                [ Attrs.class "absolute top-0 left-0" ]
+                [ Html.button [ Evts.onClick <| ToggleJsonMode NoJson ] [ Html.text "No JSON" ]
+                , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson ] [ Html.text "Original JSON" ]
+                , Html.button [ Evts.onClick <| ToggleJsonMode CurrentJson ] [ Html.text "Current JSON" ]
+                , Html.pre
+                    [ Attrs.class "my-8 py-4 px-9 text-xs bg-slate-100 font-mono shadow rounded" ]
+                    [ Html.text <|
+                        case model.viewMode of
+                            NoJson -> ""
+                            CurrentJson ->
+                                case model.userGroup of
+                                    Ok userGroup -> Json.encode 2 <| UG.encode userGroup
+                                    Err _ -> "Initial: " ++ Data.userGroup
+                            OriginalJson ->
+                                Data.userGroup
+                    ]
+                ]
             ]
         ]
 

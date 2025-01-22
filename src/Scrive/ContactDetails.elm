@@ -84,8 +84,16 @@ encodeAddress rec =
                 PC_Post  -> E.string "post"
                 PC_Phone -> E.string "phone"
                 PC_None  -> E.null
+        encodeField = Maybe.map E.string >> Maybe.withDefault E.null
     in E.object
         [ ( "preferred_contact_method", encodeContactMethod rec.preferredContactMethod )
+        , ( "email", encodeField <| Maybe.map emailToString rec.email )
+        , ( "phone", encodeField <| Maybe.map phoneToString rec.phone )
+        , ( "company_name", encodeField rec.companyName )
+        , ( "address", encodeField rec.address )
+        , ( "zip", encodeField <| Maybe.map zipCodeToString rec.zip )
+        , ( "city", encodeField rec.city )
+        , ( "country", encodeField rec.country )
         ]
 
 
