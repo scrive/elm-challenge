@@ -12,7 +12,8 @@ import Html.Events as Evts
 import Scrive.UserGroup exposing (UserGroup)
 import Scrive.UserGroup as UG
 import Scrive.ContactDetails as CD
-import Scrive.Settings as RP
+import Scrive.Address as CD
+import Scrive.RetentionPolicy as RP
 
 import Json.Decode as Json
 import Json.Encode as Json
@@ -36,7 +37,8 @@ import Validate.Extra as V
 type alias Model =
     { userGroup : Result Json.Error UserGroup
     , tagInProgress : TagsForm.TagInProgress
-    , policyInProgress : Maybe RP.DataRetentionPolicy
+    , policyToAdd : Maybe RP.DataRetentionPolicy
+    , policyInProgress : Maybe ( RP.DataRetentionPolicy, Int )
     , errors : List Form.Error
     , viewMode : ViewJson -- TODO: remove, only for debugging
     }
@@ -47,6 +49,7 @@ init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
         , tagInProgress = TagsForm.none
+        , policyToAdd = Nothing
         , policyInProgress = Nothing
         , errors = []
         , viewMode = CurrentJson
@@ -72,8 +75,11 @@ type Msg
     | TryToChangeTag Tag { newValue : String }
     | TryToRemoveTag Tag
     | TryToUpdateAddress CD.Address
+    | SelectPolicyToAdd RP.DataRetentionPolicy
+    | AddSelectedPolicy
     | StartDefiningPolicy RP.DataRetentionPolicy
     | TryToDefinePolicyTimeout RP.DataRetentionPolicy Int
+    | ApplyPolicyTimeout RP.DataRetentionPolicy
     | ClearPolicyTimeout RP.DataRetentionPolicy
     | ToggleImmediateTrash Bool
     | ToggleJsonMode ViewJson
@@ -119,13 +125,54 @@ update msg model =
         ToggleJsonMode jsonMode ->
             { model | viewMode = jsonMode }
 
-        StartDefiningPolicy policy -> model
+        SelectPolicyToAdd policy ->
+            { model
+            | policyToAdd = Just policy
+            }
 
-        TryToDefinePolicyTimeout policy timeout -> model
+        AddSelectedPolicy ->
+            { model
+            | policyToAdd = Nothing
+            , userGroup =
+                case model.policyToAdd of
+                    Just policyToAdd -> Result.map (changePolicies <| RP.setPolicyTimeout policyToAdd 0) model.userGroup
+                    Nothing -> model.userGroup
+            }
 
-        ClearPolicyTimeout policy -> model
+        StartDefiningPolicy policy ->
+            { model
+            | policyInProgress = Just ( policy, 0 )
+            }
 
-        ToggleImmediateTrash doTrash -> model
+        TryToDefinePolicyTimeout policy timeout ->
+            { model
+            | policyInProgress = Just ( policy, timeout )
+            , userGroup = Result.map (changePolicies <| RP.setPolicyTimeout policy timeout) model.userGroup
+            }
+
+        ApplyPolicyTimeout expectedPolicy ->
+            { model
+            | policyInProgress = Nothing
+            , userGroup =
+                case model.policyInProgress of
+                    Just ( policy, timeout ) ->
+                        if policy == expectedPolicy then
+                            Result.map (changePolicies <| RP.setPolicyTimeout policy timeout) model.userGroup
+                        else model.userGroup
+                    Nothing -> model.userGroup
+            }
+
+        ClearPolicyTimeout policy ->
+            { model
+            | policyInProgress = Nothing
+            , userGroup = Result.map (changePolicies <| RP.clearPolicyTimeout policy) model.userGroup
+            }
+
+        ToggleImmediateTrash doTrash ->
+            { model
+            | policyInProgress = Nothing
+            , userGroup = Result.map (changePolicies <| if doTrash then RP.setImmediateTrash else RP.clearImmediateTrash) model.userGroup
+            }
 
         NoOp -> model
 
@@ -246,6 +293,15 @@ updateAddress nextAddress ugroup =
 
 
 
+changePolicies : (RP.PolicyRec -> RP.PolicyRec) -> UG.UserGroup -> UG.UserGroup
+changePolicies fPolicyRec ugroup =
+    let
+        curSettings = ugroup.settings
+    in
+        { ugroup | settings = { curSettings | policy = fPolicyRec curSettings.policy } }
+
+
+
 ---- VIEW ----
 
 {-
@@ -273,9 +329,13 @@ view model =
             , markInProgress = TagInProgress
             }
         policyHandlers =
-            { starDefiningPolicy = StartDefiningPolicy
-            , tryDefineTimeout  = TryToDefinePolicyTimeout
+            { startDefiningPolicy = StartDefiningPolicy
+            , tryDefineTimeout = TryToDefinePolicyTimeout
+            , applyCurrentTimeout = ApplyPolicyTimeout
             , clearTimeout = ClearPolicyTimeout
+            , selectPolicyToAdd = SelectPolicyToAdd
+            , addSelectedPolicy = AddSelectedPolicy
+            , toggleImmediateTrash = ToggleImmediateTrash
             }
     in
 
@@ -294,7 +354,7 @@ view model =
                     , Html.h1 [] [ Html.text "Tags" ]
                     , TagsForm.view tagHandlers model.tagInProgress userGroup.tags
                     , Html.h1 [] [ Html.text "Settings" ]
-                    , RetentionPolicy.view policyHandlers model.policyInProgress <| RP.toList userGroup.settings.policy
+                    , RetentionPolicy.view policyHandlers (Maybe.map Tuple.first model.policyInProgress) <| RP.toList userGroup.settings.policy
                     ]
                 Err error ->
                     [ Html.text <| Json.errorToString error ]

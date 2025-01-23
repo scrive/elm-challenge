@@ -6,13 +6,18 @@ import Html
 import Html.Attributes as Attrs
 import Html.Events as Evts
 
-import Scrive.Settings exposing (DataRetentionPolicy, PolicyWithTimeout)
-import Scrive.Settings as S
+import Scrive.RetentionPolicy exposing (DataRetentionPolicy, PolicyWithTimeout)
+import Scrive.RetentionPolicy as RP
+
 
 type alias Handlers msg =
-    { starDefiningPolicy : DataRetentionPolicy -> msg
+    { startDefiningPolicy : DataRetentionPolicy -> msg
     , tryDefineTimeout : DataRetentionPolicy -> Int -> msg
+    , applyCurrentTimeout : DataRetentionPolicy -> msg
     , clearTimeout : DataRetentionPolicy -> msg
+    , selectPolicyToAdd : DataRetentionPolicy -> msg
+    , addSelectedPolicy : msg
+    , toggleImmediateTrash : Bool -> msg
     }
 
 
@@ -24,54 +29,58 @@ view handlers mbCurrentPolicy pl =
             Nothing -> False
         viewPolicy { policy, value } =
             Html.li []
-                [ Html.text <| S.retentionPolicyToString policy ++ " timeout : "
+                [ Html.text <| RP.toOption policy ++ " : "
                 , if not <| isCurrent policy
                     then
                         Html.div []
                             [ Html.text <| String.fromInt value
                             , Html.button
-                                [ Evts.onClick <| handlers.starDefiningPolicy policy
+                                [ Evts.onClick <| handlers.startDefiningPolicy policy
                                 ]
                                 [ Html.text "(Update)" ]
+                            , Html.button
+                                [ Evts.onClick <| handlers.clearTimeout policy
+                                ]
+                                [ Html.text "(Remove)" ]
                             ]
                     else
                         Html.div []
                             [ Html.input
-                                [ Attrs.type_ "number", Attrs.value "0"
+                                [ Attrs.type_ "number", Attrs.value <| String.fromInt value
                                 , Attrs.placeholder <| String.fromInt value
                                 , Evts.onInput (\str -> Maybe.withDefault (handlers.clearTimeout policy) <| Maybe.map (handlers.tryDefineTimeout policy) <| String.toInt str)
                                 ]
                                 []
-                            , Html.button [] [ Html.text "(Set)" ]
-                            ]
-                ]
-        viewLackingPolicy policy =
-            Html.li []
-                [ Html.text <| S.retentionPolicyToString policy ++ " timeout : -"
-                , if not <| isCurrent policy
-                    then
-                        Html.div []
-                            [ Html.text "-"
                             , Html.button
-                                [ Evts.onClick <| handlers.starDefiningPolicy policy
-                                ]
-                                [ Html.text "(Define)"
-                                ]
-                            ]
-                    else
-                        Html.div []
-                            [ Html.input
-                                [ Attrs.type_ "number", Attrs.value "0"
-                                , Evts.onInput (\str -> Maybe.withDefault (handlers.clearTimeout policy) <| Maybe.map (handlers.tryDefineTimeout policy) <| String.toInt str)
-                                ]
-                                []
-                            , Html.button [] [ Html.text "(Set)" ]
+                                [ Evts.onClick <| handlers.applyCurrentTimeout policy ]
+                                [ Html.text "(Set)" ]
                             ]
                 ]
+        viewLackingPolicyOption policy =
+            Html.option []
+                [ Html.text <| RP.toString policy ++ " timeout" ]
+        lacksWhichPolicies = RP.lacksWhichPolicies pl
     in
         Html.div
             []
             [ Html.ul [] <| List.map viewPolicy pl
-            , Html.ul [] <| List.map viewLackingPolicy <| S.lacksWhichPolicies pl
-            , Html.input [ Attrs.type_ "checkbox" ] [ Html.text "Immediate trash (no timeouts)" ]
+
+            , if List.length lacksWhichPolicies > 0 then
+                 Html.select
+                    [ Evts.onInput
+                        (handlers.selectPolicyToAdd << RP.fromOption)
+                    ] <| List.map viewLackingPolicyOption lacksWhichPolicies
+              else Html.text ""
+
+            , Html.button
+                [ Evts.onClick handlers.addSelectedPolicy
+                ]
+                [ Html.text "(Add)" ]
+
+            , Html.input
+                [ Attrs.type_ "checkbox"
+                , Evts.onCheck handlers.toggleImmediateTrash
+                ]
+                [ Html.text "Immediate trash (no timeouts)"
+                ]
             ]

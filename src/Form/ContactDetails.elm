@@ -9,7 +9,7 @@ import Html.Events as Evts
 import Maybe
 
 import Scrive.ContactDetails exposing (ContactDetails)
-import Scrive.ContactDetails as CD
+import Scrive.Address as CD
 
 
 view : { readOnly : Bool, toMsg : CD.Address -> msg } -> ContactDetails -> Html msg
@@ -54,7 +54,7 @@ view { readOnly, toMsg } { address } =
                 [ Html.label  [ Attrs.for "preferred-contact" ] [ Html.text "Preferred way of contact:" ]
                 , Html.select
                     [ Attrs.id "preferred-contact"
-                    , Evts.onInput <| \str -> toMsg { address | preferredContactMethod = CD.preferredContactFromString str }
+                    , Evts.onInput <| \str -> toMsg { address | preferredContactMethod = CD.preferredContactFromOption str }
                      ] <| List.map preferredContactOption CD.preferredWaysToContact
                 ]
             , inputFor "E-mail" "contact-email"
