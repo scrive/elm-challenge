@@ -16,3 +16,7 @@ ifNotUnique f inSet = V.ifTrue (f >> \v -> Set.member v inSet)
 
 skip : V.Validator error subject
 skip = V.all []
+
+
+isValidPhone : String -> Bool
+isValidPhone = always True -- FIXME

@@ -36,6 +36,7 @@ import Validate.Extra as V
 type alias Model =
     { userGroup : Result Json.Error UserGroup
     , tagInProgress : TagsForm.TagInProgress
+    , policyInProgress : Maybe RP.DataRetentionPolicy
     , errors : List Form.Error
     , viewMode : ViewJson -- TODO: remove, only for debugging
     }
@@ -46,6 +47,7 @@ init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
         , tagInProgress = TagsForm.none
+        , policyInProgress = Nothing
         , errors = []
         , viewMode = CurrentJson
         }
@@ -65,11 +67,15 @@ type ViewJson
 type Msg
     = NoOp
     | TagInProgress TagsForm.TagInProgress
-    | TryCreateTag { newName : String, newValue : String }
-    | TryRestoreTag TagToRemove { newValue : String }
-    | TryChangeTag Tag { newValue : String }
-    | TryRemoveTag Tag
-    | TryUpdateAddress CD.Address
+    | TryToCreateTag { newName : String, newValue : String }
+    | TryToRestoreTag TagToRemove { newValue : String }
+    | TryToChangeTag Tag { newValue : String }
+    | TryToRemoveTag Tag
+    | TryToUpdateAddress CD.Address
+    | StartDefiningPolicy RP.DataRetentionPolicy
+    | TryToDefinePolicyTimeout RP.DataRetentionPolicy Int
+    | ClearPolicyTimeout RP.DataRetentionPolicy
+    | ToggleImmediateTrash Bool
     | ToggleJsonMode ViewJson
 
 
@@ -81,16 +87,16 @@ update msg model =
         TagInProgress inProgress ->
             { model | tagInProgress = inProgress }
 
-        TryCreateTag { newName, newValue } ->
+        TryToCreateTag { newName, newValue } ->
             validateTagAnd addTag (tagValidator { checkUnique = True }) model <| Tag.make newName newValue
 
-        TryChangeTag theTag { newValue } ->
+        TryToChangeTag theTag { newValue } ->
             validateTagAnd changeTag (tagValidator { checkUnique = False }) model <| Tag.setValue newValue theTag
 
-        TryRestoreTag ttr { newValue } ->
+        TryToRestoreTag ttr { newValue } ->
             validateTagAnd restoreTag (tagValidator { checkUnique = False }) model <| Tag.make (Tag.nameOfRemoved ttr) newValue
 
-        TryRemoveTag theTag ->
+        TryToRemoveTag theTag ->
 
             { model
             | tagInProgress = TagsForm.none
@@ -100,7 +106,7 @@ update msg model =
                     model.userGroup
             }
 
-        TryUpdateAddress newAddress ->
+        TryToUpdateAddress newAddress ->
             let
                 resValidAddress = V.validate addressValidator newAddress
             in
@@ -113,6 +119,13 @@ update msg model =
         ToggleJsonMode jsonMode ->
             { model | viewMode = jsonMode }
 
+        StartDefiningPolicy policy -> model
+
+        TryToDefinePolicyTimeout policy timeout -> model
+
+        ClearPolicyTimeout policy -> model
+
+        ToggleImmediateTrash doTrash -> model
 
         NoOp -> model
 
@@ -197,7 +210,31 @@ tagValidator { checkUnique } currentTags =
 
 
 addressValidator : Validator Form.Error CD.Address
-addressValidator = V.skip
+addressValidator =
+    let
+        notSpecified : Maybe String -> Bool
+        notSpecified mbVal =
+            case mbVal of
+                Just str -> not <| String.length str > 0
+                Nothing -> True
+    in Validate.all
+        [ V.ifTrue
+            (\addr ->
+                addr.preferredContactMethod == CD.PC_Email && notSpecified (Maybe.map CD.emailToString <| addr.email)
+            ) <| FE.make FE.NewTagName "E-mail should be specified when preferred contact method is set to e-mail"
+        , V.ifTrue
+            (\addr ->
+                addr.preferredContactMethod == CD.PC_Post && notSpecified addr.address
+            ) <| FE.make FE.NewTagName "Street address should be specified when preferred contact method is set to post`"
+        , V.ifTrue
+            (\addr ->
+                addr.preferredContactMethod == CD.PC_Phone && notSpecified (Maybe.map CD.phoneToString <| addr.phone)
+            ) <| FE.make FE.NewTagName "Phone should be specified when preferred contact method is set to phone"
+        , V.ifTrue (.email >> Maybe.map CD.emailToString >> Maybe.map V.isValidEmail >> Maybe.withDefault True)
+            <| FE.make FE.NewTagName "Specified e-mail is  in invalid format"
+        , V.ifTrue (.phone >> Maybe.map CD.phoneToString >> Maybe.map V.isValidPhone >> Maybe.withDefault True)
+            <| FE.make FE.NewTagName "Specified phone is in invalid format"
+        ]
 
 
 updateAddress : Valid CD.Address -> UG.UserGroup -> UG.UserGroup
@@ -229,11 +266,16 @@ view : Model -> Html Msg
 view model =
     let
         tagHandlers =
-            { tryCreate  = TryCreateTag
-            , tryChange  = TryChangeTag
-            , tryRestore = TryRestoreTag
-            , tryRemove  = TryRemoveTag
+            { tryCreate  = TryToCreateTag
+            , tryChange  = TryToChangeTag
+            , tryRestore = TryToRestoreTag
+            , tryRemove  = TryToRemoveTag
             , markInProgress = TagInProgress
+            }
+        policyHandlers =
+            { starDefiningPolicy = StartDefiningPolicy
+            , tryDefineTimeout  = TryToDefinePolicyTimeout
+            , clearTimeout = ClearPolicyTimeout
             }
     in
 
@@ -248,11 +290,11 @@ view model =
             ( case model.userGroup of
                 Ok userGroup ->
                     [ Html.h1 [] [ Html.text "Contacts" ]
-                    , ContactForm.view { readOnly = False, toMsg = TryUpdateAddress } userGroup.contactDetails
+                    , ContactForm.view { readOnly = False, toMsg = TryToUpdateAddress } userGroup.contactDetails
                     , Html.h1 [] [ Html.text "Tags" ]
                     , TagsForm.view tagHandlers model.tagInProgress userGroup.tags
                     , Html.h1 [] [ Html.text "Settings" ]
-                    , RetentionPolicy.view <| RP.toList userGroup.settings.policy
+                    , RetentionPolicy.view policyHandlers model.policyInProgress <| RP.toList userGroup.settings.policy
                     ]
                 Err error ->
                     [ Html.text <| Json.errorToString error ]

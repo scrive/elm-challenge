@@ -19,7 +19,11 @@ type DataRetentionPolicy
     | Error
 
 
-type alias PolicyList = List { policy : DataRetentionPolicy, value : Int }
+possiblePolicies : List DataRetentionPolicy
+possiblePolicies = [ Preparation, Closed, Canceled, TimedOut, Rejected, Error ]
+
+
+type alias PolicyWithTimeout = { policy : DataRetentionPolicy, value : Int }
 
 
 type alias PolicyRec =
@@ -54,7 +58,7 @@ emptyRec =
     }
 
 
-fromList : PolicyList -> PolicyRec
+fromList : List PolicyWithTimeout -> PolicyRec
 fromList =
     let
         foldItem : { policy : DataRetentionPolicy, value : Int } -> PolicyRec -> PolicyRec
@@ -82,7 +86,7 @@ fromList =
     in List.foldl foldItem emptyRec
 
 
-toList : PolicyRec -> PolicyList
+toList : PolicyRec -> List PolicyWithTimeout
 toList rec =
     let
         toItem : DataRetentionPolicy -> Maybe Int -> Maybe { policy : DataRetentionPolicy, value : Int }
@@ -95,6 +99,20 @@ toList rec =
         , rec.rejected    |> toItem Rejected
         , rec.error       |> toItem Error
         ] |> List.filterMap identity
+
+
+
+lacksWhichPolicies : List PolicyWithTimeout -> List DataRetentionPolicy
+lacksWhichPolicies assignedValues =
+    let
+        keysOfAssigned =
+            List.map .policy assignedValues
+    in
+        List.foldl
+            (\policy lacks -> if List.member policy keysOfAssigned then lacks else policy :: lacks)
+            []
+            possiblePolicies
+        |> List.reverse
 
 
 
