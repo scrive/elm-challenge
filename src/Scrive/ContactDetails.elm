@@ -67,6 +67,16 @@ preferredContactToString pc =
         PC_None -> "[None]"
 
 
+-- for forms purpose : should be the exact reverse of `preferredContactToString`
+preferredContactFromString : String -> PreferredContact
+preferredContactFromString str =
+    case str of
+        "E-mail" -> PC_Email
+        "Post" -> PC_Post
+        "Phone" -> PC_Phone
+        _ -> PC_None
+
+
 addressDecoder : Decoder Address
 addressDecoder =
     let

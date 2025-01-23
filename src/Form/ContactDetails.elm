@@ -52,7 +52,10 @@ view { readOnly, toMsg } { address } =
             []
             [ Html.li []
                 [ Html.label  [ Attrs.for "preferred-contact" ] [ Html.text "Preferred way of contact:" ]
-                , Html.select [ Attrs.id "preferred-contact" ] <| List.map preferredContactOption CD.preferredWaysToContact
+                , Html.select
+                    [ Attrs.id "preferred-contact"
+                    , Evts.onInput <| \str -> toMsg { address | preferredContactMethod = CD.preferredContactFromString str }
+                     ] <| List.map preferredContactOption CD.preferredWaysToContact
                 ]
             , inputFor "E-mail" "contact-email"
                 (.email >> Maybe.map CD.emailToString >> Maybe.withDefault "")

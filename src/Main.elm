@@ -100,11 +100,19 @@ update msg model =
                     model.userGroup
             }
 
+        TryUpdateAddress newAddress ->
+            let
+                resValidAddress = V.validate addressValidator newAddress
+            in
+                case resValidAddress of
+                    Ok validAddress ->
+                        { model | userGroup = Result.map (updateAddress validAddress) model.userGroup }
+                    Err errors ->
+                        { model | errors = errors }
+
         ToggleJsonMode jsonMode ->
             { model | viewMode = jsonMode }
 
-        TryUpdateAddress newAddress ->
-            { model | userGroup = Result.map (updateAddress newAddress) model.userGroup }
 
         NoOp -> model
 
@@ -183,17 +191,22 @@ tagValidator { checkUnique } currentTags =
                     V.ifNotUnique Tag.nameOf tagNames <| FE.make FE.NewTagName "One of tags already has this name, please try another one"
             else V.skip
 
-        , V.ifBlank Tag.nameOf <| FE.make FE.NewTagName "Tag name should not be empty"
+        , V.ifBlank Tag.nameOf  <| FE.make FE.NewTagName "Tag name should not be empty"
         , V.ifBlank Tag.valueOf <| FE.make FE.NewTagValue "Value should not be empty"
         ]
 
 
-updateAddress : CD.Address -> UG.UserGroup -> UG.UserGroup
+addressValidator : Validator Form.Error CD.Address
+addressValidator = V.skip
+
+
+updateAddress : Valid CD.Address -> UG.UserGroup -> UG.UserGroup
 updateAddress nextAddress ugroup =
     let
         curDetails = ugroup.contactDetails
     in
-        { ugroup | contactDetails = { curDetails | address = nextAddress } }
+        { ugroup | contactDetails = { curDetails | address = V.fromValid nextAddress } }
+
 
 
 ---- VIEW ----
