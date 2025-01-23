@@ -11,6 +11,7 @@ import Html.Events as Evts
 
 import Scrive.UserGroup exposing (UserGroup)
 import Scrive.UserGroup as UG
+import Scrive.ContactDetails as CD
 import Scrive.Settings as RP
 
 import Json.Decode as Json
@@ -68,6 +69,7 @@ type Msg
     | TryRestoreTag TagToRemove { newValue : String }
     | TryChangeTag Tag { newValue : String }
     | TryRemoveTag Tag
+    | TryUpdateAddress CD.Address
     | ToggleJsonMode ViewJson
 
 
@@ -80,13 +82,13 @@ update msg model =
             { model | tagInProgress = inProgress }
 
         TryCreateTag { newName, newValue } ->
-            validateAnd addTag (tagValidator { checkUnique = True }) model <| Tag.make newName newValue
+            validateTagAnd addTag (tagValidator { checkUnique = True }) model <| Tag.make newName newValue
 
         TryChangeTag theTag { newValue } ->
-            validateAnd changeTag (tagValidator { checkUnique = False }) model <| Tag.setValue newValue theTag
+            validateTagAnd changeTag (tagValidator { checkUnique = False }) model <| Tag.setValue newValue theTag
 
         TryRestoreTag ttr { newValue } ->
-            validateAnd restoreTag (tagValidator { checkUnique = False }) model <| Tag.make (Tag.nameOfRemoved ttr) newValue
+            validateTagAnd restoreTag (tagValidator { checkUnique = False }) model <| Tag.make (Tag.nameOfRemoved ttr) newValue
 
         TryRemoveTag theTag ->
 
@@ -101,14 +103,17 @@ update msg model =
         ToggleJsonMode jsonMode ->
             { model | viewMode = jsonMode }
 
+        TryUpdateAddress newAddress ->
+            { model | userGroup = Result.map (updateAddress newAddress) model.userGroup }
+
         NoOp -> model
 
     , Cmd.none
     )
 
 
-validateAnd : (Valid Tag -> UG.TagList -> UG.TagList) -> (UG.TagList -> Validator Form.Error Tag) -> Model -> Tag -> Model
-validateAnd fValid fValidator model theTag =
+validateTagAnd : (Valid Tag -> UG.TagList -> UG.TagList) -> (UG.TagList -> Validator Form.Error Tag) -> Model -> Tag -> Model
+validateTagAnd fValid fValidator model theTag =
     case Result.map .tags model.userGroup of
         Ok currentTags ->
             let
@@ -183,6 +188,14 @@ tagValidator { checkUnique } currentTags =
         ]
 
 
+updateAddress : CD.Address -> UG.UserGroup -> UG.UserGroup
+updateAddress nextAddress ugroup =
+    let
+        curDetails = ugroup.contactDetails
+    in
+        { ugroup | contactDetails = { curDetails | address = nextAddress } }
+
+
 ---- VIEW ----
 
 {-
@@ -222,7 +235,7 @@ view model =
             ( case model.userGroup of
                 Ok userGroup ->
                     [ Html.h1 [] [ Html.text "Contacts" ]
-                    , ContactForm.view userGroup.contactDetails
+                    , ContactForm.view { readOnly = False, toMsg = TryUpdateAddress } userGroup.contactDetails
                     , Html.h1 [] [ Html.text "Tags" ]
                     , TagsForm.view tagHandlers model.tagInProgress userGroup.tags
                     , Html.h1 [] [ Html.text "Settings" ]

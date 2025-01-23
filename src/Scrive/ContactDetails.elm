@@ -54,6 +54,19 @@ phoneToString : Phone -> String
 phoneToString (Phone phone) = phone
 
 
+preferredWaysToContact : List PreferredContact
+preferredWaysToContact = [ PC_Email, PC_Phone, PC_Post ]
+
+
+preferredContactToString : PreferredContact -> String
+preferredContactToString pc =
+    case pc of
+        PC_Email -> "E-mail"
+        PC_Post -> "Post"
+        PC_Phone -> "Phone"
+        PC_None -> "[None]"
+
+
 addressDecoder : Decoder Address
 addressDecoder =
     let
