@@ -50,7 +50,7 @@ type EditFocus
 type alias Model =
     { userGroup : Result Json.Error UserGroup
     , editFocus : EditFocus
-    , errors : List Form.Error
+    , validationErrors : List Form.Error
     , viewMode : ViewJson -- TODO: remove, only for debugging
     }
 
@@ -60,7 +60,7 @@ init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
         , editFocus = NotEditing
-        , errors = []
+        , validationErrors = []
         , viewMode = CurrentJson
         }
     , Cmd.none
@@ -79,6 +79,7 @@ type ViewJson
 type Msg
     = NoOp
     | ClearEditFocus
+    | SetContactMethod CD.PreferredContact
     | EditContactsField ( CD.Field, String )
     | SetTagInProgress TagsForm.TagInProgress
     | TryToCreateTag { newName : String, newValue : String }
@@ -86,7 +87,7 @@ type Msg
     | TryToChangeTag Tag { newValue : String }
     | ArchiveTag Tag
     | RemoveTag SomeTag
-    | TryToUpdateAddress CD.Address
+    | TryToUpdateAddress CD.DraftAddress
     | SelectPolicyToAdd RP.DataRetentionPolicy
     | AddSelectedPolicy
     | StartDefiningPolicy RP.DataRetentionPolicy
@@ -108,6 +109,40 @@ update msg model =
         EditContactsField ( field, value ) ->
             { model | editFocus = FocusContactsEdit ( field, value ) }
 
+        SetContactMethod pmethod ->
+            { model
+            | userGroup = Result.map (updateContactMethod pmethod) model.userGroup
+            , validationErrors =
+                case model.userGroup of
+                    Ok userGroup ->
+                        let
+                            resValidDraftAddress = -- just revalidating address with new contact method
+                                CD.toDraft userGroup.contactDetails.address
+                                    |> V.validate (addressValidator pmethod)
+                        in
+                            case resValidDraftAddress of
+                                Ok _ -> []
+                                Err errors -> errors
+                    Err _ -> []
+            }
+
+        TryToUpdateAddress newDraftAddress ->
+            let
+                preferredMethod =
+                    Result.map (.contactDetails >> .address >> .preferredContactMethod) model.userGroup
+                        |> Result.withDefault CD.PC_None -- if result is erronous, we won't update anything anyway
+                resValidDraftAddress = V.validate (addressValidator preferredMethod) newDraftAddress
+            in
+                case resValidDraftAddress of
+                    Ok validDraftAddress ->
+                        { model
+                        | validationErrors = []
+                        , editFocus = NotEditing
+                        , userGroup = Result.map (updateAddress validDraftAddress) model.userGroup
+                        }
+                    Err errors ->
+                        { model | validationErrors = errors }
+
         SetTagInProgress inProgress ->
             { model | editFocus = FocusTag inProgress }
 
@@ -121,11 +156,11 @@ update msg model =
                     Ok nextUserGroup ->
                         { model
                         | editFocus = NotEditing
-                        , errors = []
+                        , validationErrors = []
                         , userGroup = Ok nextUserGroup
                         }
                     Err validationErrors ->
-                        { model | errors = validationErrors }
+                        { model | validationErrors = validationErrors }
 
         TryToChangeTag theTag { newValue } ->
             let
@@ -137,11 +172,11 @@ update msg model =
                     Ok nextUserGroup ->
                         { model
                         | editFocus = NotEditing
-                        , errors = []
+                        , validationErrors = []
                         , userGroup = Ok nextUserGroup
                         }
                     Err validationErrors ->
-                        { model | errors = validationErrors }
+                        { model | validationErrors = validationErrors }
 
         TryToRestoreTag ttr { newValue } ->
           let
@@ -153,11 +188,11 @@ update msg model =
                     Ok nextUserGroup ->
                         { model
                         | editFocus = NotEditing
-                        , errors = []
+                        , validationErrors = []
                         , userGroup = Ok nextUserGroup
                         }
                     Err validationErrors ->
-                        { model | errors = validationErrors }
+                        { model | validationErrors = validationErrors }
 
         ArchiveTag theTag ->
 
@@ -168,20 +203,6 @@ update msg model =
                     (\ug -> { ug | tags = archiveTag theTag ug.tags })
                     model.userGroup
             }
-
-        TryToUpdateAddress newAddress ->
-            let
-                resValidAddress = V.validate addressValidator newAddress
-            in
-                case resValidAddress of
-                    Ok validAddress ->
-                        { model
-                        | errors = []
-                        , editFocus = NotEditing
-                        , userGroup = Result.map (updateAddress validAddress) model.userGroup
-                        }
-                    Err errors ->
-                        { model | errors = errors }
 
         RemoveTag theTag ->
 
@@ -326,12 +347,30 @@ restoreTag validTag =
             )
 
 
-updateAddress : Valid CD.Address -> UG.UserGroup -> UG.UserGroup
-updateAddress nextAddress ugroup =
+updateAddress : Valid CD.DraftAddress -> UG.UserGroup -> UG.UserGroup
+updateAddress validDraftAddress ugroup =
     let
         curDetails = ugroup.contactDetails
     in
-        { ugroup | contactDetails = { curDetails | address = V.fromValid nextAddress } }
+        { ugroup | contactDetails =
+            { curDetails
+                | address = CD.fromDraft curDetails.address.preferredContactMethod validDraftAddress
+            }
+        }
+
+
+updateContactMethod : CD.PreferredContact -> UG.UserGroup -> UG.UserGroup
+updateContactMethod pcontact ugroup =
+    let
+        curDetails = ugroup.contactDetails
+        curAddress = curDetails.address
+    in
+        { ugroup | contactDetails =
+            { curDetails
+                | address =
+                    { curAddress | preferredContactMethod = pcontact }
+            }
+        }
 
 
 
@@ -371,6 +410,7 @@ view model =
             , remove = RemoveTag
             , setInProgress = SetTagInProgress
             }
+
         policyHandlers =
             { startDefiningPolicy = StartDefiningPolicy
             , editCurrentTimeout = EditPolicyInFocusTimeout
@@ -380,6 +420,12 @@ view model =
             , addSelectedPolicy = AddSelectedPolicy
             , clearPolicyToAdd = ClearEditFocus
             , toggleImmediateTrash = ToggleImmediateTrash
+            }
+
+        contactsHandlers =
+            { setContactMethod = SetContactMethod
+            , tryUpdate = TryToUpdateAddress
+            , editField = EditContactsField
             }
 
         mbTagInProgress =
@@ -417,21 +463,21 @@ view model =
 
                     [ Html.h1 [] [ Html.text "Contacts" ]
                     , ContactForm.view
-                        (model.errors |> FE.onlyBelongingTo BelongsTo.Contacts)
-                        { toMsg = TryToUpdateAddress, editField = EditContactsField }
+                        (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Contacts)
+                        contactsHandlers
                         { readOnly = False, currentlyEditing = mbContactsField }
                         userGroup.contactDetails
 
                     , Html.h1 [] [ Html.text "Tags" ]
                     , TagsForm.view
-                        (model.errors |> FE.onlyBelongingTo BelongsTo.Tags)
+                        (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Tags)
                         tagHandlers
                         mbTagInProgress
                         userGroup.tags
 
                     , Html.h1 [] [ Html.text "Retention Policy" ]
                     , RetentionPolicy.view
-                        (model.errors |> FE.onlyBelongingTo BelongsTo.Settings)
+                        (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Settings)
                         policyHandlers
                         { currentlyAdding = mbAddingPolicy
                         , currentlyEditing = mbEditingPolicy

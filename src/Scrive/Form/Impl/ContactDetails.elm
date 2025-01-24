@@ -19,7 +19,8 @@ import Scrive.Form.Error as Errors
 
 
 type alias Handlers msg =
-    { toMsg : CD.Address -> msg
+    { setContactMethod : CD.PreferredContact -> msg
+    , tryUpdate : CD.DraftAddress -> msg
     , editField : ( CD.Field, String ) -> msg
     }
 
@@ -29,7 +30,7 @@ type alias State =
 
 
 view : List Error -> Handlers msg -> State -> ContactDetails -> Html msg
-view errors { toMsg, editField } { readOnly, currentlyEditing } { address } =
+view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEditing } { address } =
     if readOnly then
         Html.ul
             []
@@ -45,48 +46,53 @@ view errors { toMsg, editField } { readOnly, currentlyEditing } { address } =
     else
         let
 
+            draftAddress = CD.toDraft address
+
+            qValueOf : CD.Field -> String
+            qValueOf =  Maybe.withDefault "" << CD.draftValueOf draftAddress
+
             preferredContactOption : CD.PreferredContact -> Html msg
             preferredContactOption pc =
                 Html.option
                     [ Attrs.selected <| pc == address.preferredContactMethod ]
                     [ Html.text <| CD.preferredContactToString pc ]
 
-            inputFor field inputId fGetPart fSetPart currentValue =
+            inputFor field inputId currentValue =
                 Html.li []
                         [ Html.label [ Attrs.for inputId ] [ Html.text <| CD.fieldToLabel field ++ " : " ]
                         , Html.input
                             [ Attrs.id inputId
                             , Attrs.type_ "text"
                             , Evts.onInput (\str -> editField ( field, str ))
-                            , Attrs.placeholder <| fGetPart address
+                            , Attrs.placeholder <| qValueOf field
                             , Attrs.value currentValue
                             -- , Evts.onEnter (fSetPart >> toMsg)
                             -- , Evts.onMouseOut (fSetPart >> toMsg)
                             ]
                             [ ]
                         , Html.button
-                            [ Evts.onClick (fSetPart currentValue |> toMsg) ]
+                            [ Evts.onClick (CD.setDraftValue draftAddress field currentValue |> tryUpdate) ]
                             [ Html.text "(Set)" ]
                         , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
                         ]
 
-            clickableTextFor field fGetPart =
+            clickableTextFor field =
                 Html.li
-                    [ Evts.onClick <| editField ( field, fGetPart address ) ]
-                    [ Html.text <| CD.fieldToLabel field ++ " : " ++ fGetPart address
+                    [ Evts.onClick <| editField ( field, qValueOf field ) ]
+                    [ Html.text <| CD.fieldToLabel field ++ " : " ++ qValueOf field
                     , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
                     ]
 
-            inputOrTextFor : CD.Field -> String -> (CD.Address -> String) -> (String -> CD.Address) -> Html msg
-            inputOrTextFor field inputId fGetPart fSetPart =
+            inputOrTextFor : CD.Field -> String -> Html msg
+            inputOrTextFor field inputId =
                 case currentlyEditing of
                     Just ( currentField, currentValue ) ->
                         if currentField == field then
-                            inputFor field inputId fGetPart fSetPart currentValue
+                            inputFor field inputId currentValue
                         else
-                            clickableTextFor field fGetPart
+                            clickableTextFor field
                     Nothing ->
-                        clickableTextFor field fGetPart
+                        clickableTextFor field
 
         in
         Html.ul
@@ -95,28 +101,14 @@ view errors { toMsg, editField } { readOnly, currentlyEditing } { address } =
                 [ Html.label  [ Attrs.for "preferred-contact" ] [ Html.text "Preferred way of contact:" ]
                 , Html.select
                     [ Attrs.id "preferred-contact"
-                    , Evts.onInput <| \str -> toMsg { address | preferredContactMethod = CD.preferredContactFromOption str }
+                    , Evts.onInput (setContactMethod << CD.preferredContactFromOption)
                      ] <| List.map preferredContactOption CD.preferredWaysToContact
                 ]
             , inputOrTextFor CD.F_Email "contact-email"
-                (.email >> Maybe.map CD.emailToString >> Maybe.withDefault "")
-                (\nextEmail -> { address | email = Just <| CD.Email nextEmail })
             , inputOrTextFor CD.F_Phone "contact-phone"
-                (.phone >> Maybe.map CD.phoneToString >> Maybe.withDefault "")
-                (\nextPhone -> { address | phone = Just <| CD.Phone nextPhone })
             , inputOrTextFor CD.F_CompanyName "contact-company"
-                (.companyName >> Maybe.withDefault "")
-                (\nextCompany -> { address | companyName = Just nextCompany })
             , inputOrTextFor CD.F_StreetAddress "contact-street-address"
-                (.address >> Maybe.withDefault "")
-                (\nextAddress -> { address | address = Just nextAddress })
             , inputOrTextFor CD.F_ZipCode "contact-zip-code"
-                (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
-                (\nextZip -> { address | zip = Just <| CD.ZipCode nextZip })
             , inputOrTextFor CD.F_City "contact-city"
-                (.city >> Maybe.withDefault "")
-                (\nextCity -> { address | city = Just nextCity })
             , inputOrTextFor CD.F_Country "contact-country"
-                (.country >> Maybe.withDefault "")
-                (\nextCountry -> { address | country = Just nextCountry })
             ]

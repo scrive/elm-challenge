@@ -1,9 +1,22 @@
-module Scrive.Data.Address exposing (..)
+module Scrive.Data.Address exposing
+    ( PreferredContact(..)
+    , Field(..)
+    , Address, DraftAddress
+    , encode, decoder
+    , preferredWaysToContact, allFields
+    , emailToString, phoneToString, zipCodeToString, preferredContactToString
+    , preferredContactFromOption, preferredContactToOption
+    , fieldToLabel
+    , draftValueOf, setDraftValue
+    , toDraft, fromDraft
+    )
 
 
 import Json.Decode exposing (Decoder)
 import Json.Decode as D
 import Json.Encode as E
+
+import Validate as V
 
 
 type PreferredContact
@@ -44,6 +57,17 @@ type alias Address =
     }
 
 
+type alias DraftAddress =
+    { email : Maybe String
+    , phone : Maybe String
+    , companyName : Maybe String
+    , address : Maybe String
+    , zip : Maybe String
+    , city : Maybe String
+    , country : Maybe String
+    }
+
+
 emailToString : Email -> String
 emailToString (Email email) = email
 
@@ -54,6 +78,10 @@ zipCodeToString (ZipCode zip) = zip
 
 phoneToString : Phone -> String
 phoneToString (Phone phone) = phone
+
+
+allFields : List Field
+allFields = [ F_Email, F_Phone, F_CompanyName, F_StreetAddress, F_ZipCode, F_City, F_Country ]
 
 
 preferredWaysToContact : List PreferredContact
@@ -131,6 +159,7 @@ encode rec =
         ]
 
 
+{-
 stringValueOf : Address -> Field -> Maybe String
 stringValueOf rec field =
     case field of
@@ -141,18 +170,60 @@ stringValueOf rec field =
         F_ZipCode -> Maybe.map zipCodeToString rec.zip
         F_City -> rec.city
         F_Country -> rec.country
+-}
 
 
-unsafeSet : Address -> Field -> String -> Address -- sets value without validation
-unsafeSet rec field value =
+draftValueOf : DraftAddress -> Field -> Maybe String
+draftValueOf rec field =
     case field of
-        F_Email -> { rec | email = Just <| Email value }
-        F_Phone -> { rec | phone = Just <| Phone value }
-        F_ZipCode -> { rec | zip = Just <| ZipCode value }
-        F_CompanyName -> { rec | companyName = Just value }
-        F_StreetAddress -> { rec | address = Just value }
-        F_City -> { rec | city = Just value }
-        F_Country -> { rec | country = Just value }
+        F_Email -> rec.email
+        F_Phone -> rec.phone
+        F_CompanyName -> rec.companyName
+        F_StreetAddress -> rec.address
+        F_ZipCode -> rec.zip
+        F_City -> rec.city
+        F_Country -> rec.country
+
+
+toDraft : Address -> DraftAddress
+toDraft rec =
+    { email = Maybe.map emailToString rec.email
+    , phone = Maybe.map phoneToString rec.phone
+    , companyName = rec.companyName
+    , address = rec.address
+    , zip = Maybe.map zipCodeToString rec.zip
+    , city = rec.city
+    , country = rec.country
+    }
+
+
+fromDraft : PreferredContact -> V.Valid DraftAddress -> Address
+fromDraft pcontact validDraft =
+    let
+        drec = V.fromValid validDraft
+    in
+        { preferredContactMethod = pcontact
+        , email = Maybe.map Email drec.email
+        , phone = Maybe.map Phone drec.phone
+        , companyName = drec.companyName
+        , address = drec.address
+        , zip = Maybe.map ZipCode drec.zip
+        , city = drec.city
+        , country = drec.country
+        }
+
+
+
+setDraftValue : DraftAddress -> Field -> String -> DraftAddress
+setDraftValue drec field value =
+    case field of
+        F_Email -> { drec | email = Just value }
+        F_Phone -> { drec | phone = Just value }
+        F_ZipCode -> { drec | zip = Just value }
+        F_CompanyName -> { drec | companyName = Just value }
+        F_StreetAddress -> { drec | address = Just value }
+        F_City -> { drec | city = Just value }
+        F_Country -> { drec | country = Just value }
 
 
 fieldToLabel : Field -> String

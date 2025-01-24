@@ -40,8 +40,8 @@ tagValidator { isNew, index } currentTags =
         ]
 
 
-addressValidator : Validator Form.Error CD.Address
-addressValidator =
+addressValidator : CD.PreferredContact -> Validator Form.Error CD.DraftAddress
+addressValidator preferredMethod =
     let
         notSpecified : Maybe String -> Bool
         notSpecified mbVal =
@@ -51,23 +51,23 @@ addressValidator =
     in Validate.all
         [ V.ifTrue
             (\addr ->
-                addr.preferredContactMethod == CD.PC_Email && notSpecified (Maybe.map CD.emailToString <| addr.email)
+                preferredMethod == CD.PC_Email && notSpecified addr.email
             )
             <| FE.make (Field.Address CD.F_Email) "E-mail should be specified when preferred contact method is set to \"e-mail\""
         , V.ifTrue
             (\addr ->
-                addr.preferredContactMethod == CD.PC_Post && notSpecified addr.address
+                preferredMethod == CD.PC_Post && notSpecified addr.address
             )
             <| FE.make (Field.Address CD.F_StreetAddress) "Street address should be specified when preferred contact method is set to \"post\""
         , V.ifTrue
             (\addr ->
-                addr.preferredContactMethod == CD.PC_Phone && notSpecified (Maybe.map CD.phoneToString <| addr.phone)
+                preferredMethod == CD.PC_Phone && notSpecified addr.phone
             )
             <| FE.make (Field.Address CD.F_Phone) "Phone should be specified when preferred contact method is set to \"phone\""
-        , V.ifFalse (.email >> Maybe.map CD.emailToString >> Maybe.map V.isValidEmail >> Maybe.withDefault True)
+        , V.ifFalse (.email >> Maybe.map V.isValidEmail >> Maybe.withDefault True)
             <| FE.make (Field.Address CD.F_Email) "Specified e-mail is in invalid format"
-        , V.ifFalse (.phone >> Maybe.map CD.phoneToString >> Maybe.map V.isValidPhone >> Maybe.withDefault True)
+        , V.ifFalse (.phone >> Maybe.map V.isValidPhone >> Maybe.withDefault True)
             <| FE.make (Field.Address CD.F_Phone) "Specified phone is in invalid format"
-        , V.ifNotAllCharsAre (\c -> Char.isDigit c || c == ' ') (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
+        , V.ifNotAllCharsAre (\c -> Char.isDigit c || c == ' ') (.zip >> Maybe.withDefault "")
             <| FE.make (Field.Address CD.F_ZipCode) "Specified ZIP code should contain only digits or spaces"
         ]
