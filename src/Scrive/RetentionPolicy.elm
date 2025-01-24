@@ -188,13 +188,13 @@ toOption drp =
 
 
 -- for forms purpose : should be the exact reverse of `toOption`
-fromOption : String -> DataRetentionPolicy
+fromOption : String -> Maybe DataRetentionPolicy
 fromOption str =
     case str of
-        "Preparation timeout" -> Preparation
-        "Closed timeout" -> Closed
-        "Canceled timeout" -> Canceled
-        "Timed out timeout" -> TimedOut
-        "Rejected timeout" -> Rejected
-        "Error timeout" -> Error
-        _ -> Error -- not very good to return `Error` value here, but it expected never to happen
+        "Preparation timeout" -> Just Preparation
+        "Closed timeout" -> Just Closed
+        "Canceled timeout" -> Just Canceled
+        "Timed out timeout" -> Just TimedOut
+        "Rejected timeout" -> Just Rejected
+        "Error timeout" -> Just Error
+        _ -> Nothing -- not very good to return `Error` value here, but it expected never to happen

@@ -76,9 +76,10 @@ type Msg
     | TryToRestoreTag ArchivedTag { newValue : String }
     | TryToChangeTag Tag { newValue : String }
     | TryToArchiveTag Tag
-    | RemoveTag (Either ArchivedTag Tag)
+    | RemoveTag SomeTag
     | TryToUpdateAddress CD.Address
     | SelectPolicyToAdd RP.DataRetentionPolicy
+    | ClearPolicyToAdd
     | AddSelectedPolicy
     | StartDefiningPolicy RP.DataRetentionPolicy
     | TryToDefinePolicyTimeout RP.DataRetentionPolicy Int
@@ -156,6 +157,11 @@ update msg model =
                 case model.policyToAdd of
                     Just policyToAdd -> Result.map (changePolicies <| RP.setPolicyTimeout policyToAdd 0) model.userGroup
                     Nothing -> model.userGroup
+            }
+
+        ClearPolicyToAdd ->
+            { model
+            | policyToAdd = Nothing
             }
 
         StartDefiningPolicy policy ->
@@ -248,7 +254,7 @@ archiveTag theTag =
             )
 
 
-removeTag : Either ArchivedTag Tag -> List SomeTag -> List SomeTag
+removeTag : SomeTag -> List SomeTag -> List SomeTag
 removeTag eTag =
     List.filter
         (\eOtherTag ->
@@ -321,6 +327,7 @@ view model =
             , clearTimeout = ClearPolicyTimeout
             , selectPolicyToAdd = SelectPolicyToAdd
             , addSelectedPolicy = AddSelectedPolicy
+            , clearPolicyToAdd = ClearPolicyToAdd
             , toggleImmediateTrash = ToggleImmediateTrash
             }
     in
@@ -353,7 +360,9 @@ view model =
                     , RetentionPolicy.view
                         (model.errors |> FE.onlyBelongingTo BelongsTo.Settings)
                         policyHandlers
-                        (Maybe.map Tuple.first model.policyInProgress)
+                        { adding = model.policyToAdd
+                        , editing = Maybe.map Tuple.first model.policyInProgress
+                        }
                         <| RP.toList userGroup.settings.policy
 
                     ]

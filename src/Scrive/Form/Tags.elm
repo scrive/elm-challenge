@@ -69,7 +69,7 @@ view errors handlers tagInProgress items =
         addTagButton =
             Html.button
                 [ Evt.onClick <| handlers.markInProgress <| Creating { newName = "", newValue = "" } ]
-                [ Html.text "Add" ]
+                [ Html.text "(Add)" ]
 
     in Html.div
         []
