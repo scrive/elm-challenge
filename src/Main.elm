@@ -90,8 +90,7 @@ type Msg
     | TryToUpdateAddress CD.DraftAddress
     | SelectPolicyToAdd RP.DataRetentionPolicy
     | AddSelectedPolicy
-    | StartDefiningPolicy RP.DataRetentionPolicy
-    | EditPolicyInFocusTimeout RP.DataRetentionPolicy Int
+    | EditPolicyTimeout RP.DataRetentionPolicy Int
     | ApplyPolicyTimeout RP.DataRetentionPolicy
     | ClearPolicyTimeout RP.DataRetentionPolicy
     | ToggleImmediateTrash Bool
@@ -231,12 +230,7 @@ update msg model =
                     _ -> model.userGroup
             }
 
-        StartDefiningPolicy policy ->
-            { model
-            | editFocus = FocusPolicyEdit ( policy, 0 )
-            }
-
-        EditPolicyInFocusTimeout policy timeout ->
+        EditPolicyTimeout policy timeout ->
             { model
             | editFocus = FocusPolicyEdit ( policy, timeout )
             }
@@ -412,8 +406,7 @@ view model =
             }
 
         policyHandlers =
-            { startDefiningPolicy = StartDefiningPolicy
-            , editCurrentTimeout = EditPolicyInFocusTimeout
+            { editCurrentTimeout = EditPolicyTimeout
             , applyCurrentTimeout = ApplyPolicyTimeout
             , clearTimeout = ClearPolicyTimeout
             , selectPolicyToAdd = SelectPolicyToAdd

@@ -14,8 +14,7 @@ import Scrive.Form.Error as Errors
 
 
 type alias Handlers msg =
-    { startDefiningPolicy : DataRetentionPolicy -> msg
-    , editCurrentTimeout : DataRetentionPolicy -> Int -> msg
+    { editCurrentTimeout : DataRetentionPolicy -> Int -> msg
     , applyCurrentTimeout : DataRetentionPolicy -> msg
     , clearTimeout : DataRetentionPolicy -> msg
     , selectPolicyToAdd : DataRetentionPolicy -> msg
@@ -54,7 +53,7 @@ view errors handlers state pl =
                         Html.div []
                             [ Html.text <| String.fromInt value
                             , Html.button
-                                [ Evts.onClick <| handlers.startDefiningPolicy policy
+                                [ Evts.onClick <| handlers.editCurrentTimeout policy value
                                 ]
                                 [ Html.text "(Update)" ]
                             , Html.button
@@ -70,8 +69,8 @@ view errors handlers state pl =
                                 , Attrs.placeholder <| String.fromInt value
                                 , Evts.onInput
                                     ( String.toInt
-                                        >> Maybe.map (handlers.editCurrentTimeout policy)
-                                        >> Maybe.withDefault (handlers.clearTimeout policy)
+                                        >> Maybe.withDefault 0
+                                        >> handlers.editCurrentTimeout policy
                                     )
                                 ]
                                 []
