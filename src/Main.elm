@@ -34,6 +34,7 @@ import Scrive.Form.Validator exposing (tagValidator, addressValidator)
 import Validate exposing (Validator, Valid)
 import Validate as V
 import Validate.Extra as V
+import Scrive.Form.Impl.Tags as Tags
 
 ---- MODEL ----
 
@@ -42,12 +43,12 @@ type EditFocus
     = FocusTag TagsForm.TagInProgress
     | FocusPolicyAdd RP.DataRetentionPolicy
     | FocusPolicyEdit ( RP.DataRetentionPolicy, Int )
+    | FocusContactsEdit ( CD.Field, String )
     | NotEditing
 
 
 type alias Model =
     { userGroup : Result Json.Error UserGroup
-    , selectedField : Maybe Form.Field
     , editFocus : EditFocus
     , errors : List Form.Error
     , viewMode : ViewJson -- TODO: remove, only for debugging
@@ -58,7 +59,6 @@ init : ( Model, Cmd Msg )
 init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
-        , selectedField = Nothing
         , editFocus = NotEditing
         , errors = []
         , viewMode = CurrentJson
@@ -78,8 +78,8 @@ type ViewJson
 
 type Msg
     = NoOp
-    | SelectField Form.Field
-    | ClearSelectedField
+    | ClearEditFocus
+    | EditContactsField ( CD.Field, String )
     | SetTagInProgress TagsForm.TagInProgress
     | TryToCreateTag { newName : String, newValue : String }
     | TryToRestoreTag ArchivedTag { newValue : String }
@@ -88,7 +88,6 @@ type Msg
     | RemoveTag SomeTag
     | TryToUpdateAddress CD.Address
     | SelectPolicyToAdd RP.DataRetentionPolicy
-    | ClearPolicyToAdd
     | AddSelectedPolicy
     | StartDefiningPolicy RP.DataRetentionPolicy
     | EditPolicyInFocusTimeout RP.DataRetentionPolicy Int
@@ -103,11 +102,11 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     ( case msg of
 
-        SelectField field ->
-            { model | selectedField = Just field }
+        ClearEditFocus ->
+            { model | editFocus = NotEditing }
 
-        ClearSelectedField ->
-            { model | selectedField = Nothing }
+        EditContactsField ( field, value ) ->
+            { model | editFocus = FocusContactsEdit ( field, value ) }
 
         SetTagInProgress inProgress ->
             { model | editFocus = FocusTag inProgress }
@@ -115,7 +114,7 @@ update msg model =
         TryToCreateTag { newName, newValue } ->
             let
                 resNextUserGroup =
-                    validateTagAnd addTag (tagValidator { isNew = True, index = Nothing}) model
+                    validateTagAnd addTag (tagValidator { isNew = True, index = Nothing }) model
                         <| Tag.make newName newValue
             in
                 case resNextUserGroup of
@@ -131,7 +130,7 @@ update msg model =
         TryToChangeTag theTag { newValue } ->
             let
                 resNextUserGroup =
-                    validateTagAnd changeTag (tagValidator { isNew = True, index = Nothing}) model
+                    validateTagAnd changeTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
                         <| Tag.setValue newValue theTag
             in
                 case resNextUserGroup of
@@ -147,7 +146,7 @@ update msg model =
         TryToRestoreTag ttr { newValue } ->
           let
                 resNextUserGroup =
-                    validateTagAnd restoreTag (tagValidator { isNew = True, index = Nothing}) model
+                    validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
                         <| Tag.make (Tag.nameOfArchived ttr) newValue
             in
                 case resNextUserGroup of
@@ -178,6 +177,7 @@ update msg model =
                     Ok validAddress ->
                         { model
                         | errors = []
+                        , editFocus = NotEditing
                         , userGroup = Result.map (updateAddress validAddress) model.userGroup
                         }
                     Err errors ->
@@ -208,11 +208,6 @@ update msg model =
                 case model.editFocus of
                     FocusPolicyAdd policyToAdd -> Result.map (changePolicies <| RP.setPolicyTimeout policyToAdd 0) model.userGroup
                     _ -> model.userGroup
-            }
-
-        ClearPolicyToAdd ->
-            { model
-            | editFocus = NotEditing
             }
 
         StartDefiningPolicy policy ->
@@ -253,6 +248,7 @@ update msg model =
 
     , Cmd.none
     )
+
 
 
 indexOfTagInProgress : Model -> Maybe Int
@@ -382,7 +378,7 @@ view model =
             , clearTimeout = ClearPolicyTimeout
             , selectPolicyToAdd = SelectPolicyToAdd
             , addSelectedPolicy = AddSelectedPolicy
-            , clearPolicyToAdd = ClearPolicyToAdd
+            , clearPolicyToAdd = ClearEditFocus
             , toggleImmediateTrash = ToggleImmediateTrash
             }
 
@@ -401,6 +397,11 @@ view model =
                 FocusPolicyEdit ( policy, pvalue ) -> Just ( policy, pvalue )
                 _ -> Nothing
 
+        mbContactsField =
+            case model.editFocus of
+                FocusContactsEdit ( field, fvalue ) -> Just ( field, fvalue )
+                _ -> Nothing
+
     in
 
     Html.div
@@ -417,8 +418,8 @@ view model =
                     [ Html.h1 [] [ Html.text "Contacts" ]
                     , ContactForm.view
                         (model.errors |> FE.onlyBelongingTo BelongsTo.Contacts)
-                        { toMsg = TryToUpdateAddress, selectField = SelectField }
-                        { readOnly = False, selectedField = model.selectedField }
+                        { toMsg = TryToUpdateAddress, editField = EditContactsField }
+                        { readOnly = False, currentlyEditing = mbContactsField }
                         userGroup.contactDetails
 
                     , Html.h1 [] [ Html.text "Tags" ]
@@ -432,8 +433,8 @@ view model =
                     , RetentionPolicy.view
                         (model.errors |> FE.onlyBelongingTo BelongsTo.Settings)
                         policyHandlers
-                        { adding = mbAddingPolicy
-                        , editing = mbEditingPolicy
+                        { currentlyAdding = mbAddingPolicy
+                        , currentlyEditing = mbEditingPolicy
                         }
                         <| RP.toList userGroup.settings.policy
 
@@ -444,9 +445,12 @@ view model =
             [ Html.div -- temporary div with current JSON
                 [ Attrs.class "absolute top-0 left-0" ]
                 [ Html.text
-                    <| case model.selectedField of
-                        Just field -> Field.toString field
-                        Nothing -> "Nothing selected"
+                    <| case model.editFocus of
+                        FocusTag tip -> "Tag : " ++ Tags.tagInProgressToString tip
+                        FocusPolicyAdd policy -> "Policy add : " ++ RP.toString policy
+                        FocusPolicyEdit ( policy, intVal ) -> "Policy edit : " ++ RP.toString policy ++ " (" ++ String.fromInt intVal ++ ")"
+                        FocusContactsEdit ( cdField, value ) -> "Contacts edit : " ++ CD.fieldToLabel cdField ++ " (" ++ value ++ ")"
+                        NotEditing -> "Not editing"
                 , Html.hr [] []
                 , Html.button [ Evts.onClick <| ToggleJsonMode NoJson ] [ Html.text "No JSON" ]
                 , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson ] [ Html.text "Original JSON" ]

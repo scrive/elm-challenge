@@ -20,16 +20,16 @@ import Scrive.Form.Error as Errors
 
 type alias Handlers msg =
     { toMsg : CD.Address -> msg
-    , selectField : Field -> msg
+    , editField : ( CD.Field, String ) -> msg
     }
 
 
 type alias State =
-    { readOnly : Bool, selectedField : Maybe Field }
+    { readOnly : Bool, currentlyEditing : Maybe ( CD.Field, String ) }
 
 
 view : List Error -> Handlers msg -> State -> ContactDetails -> Html msg
-view errors { toMsg, selectField } { readOnly, selectedField } { address } =
+view errors { toMsg, editField } { readOnly, currentlyEditing } { address } =
     if readOnly then
         Html.ul
             []
@@ -51,28 +51,43 @@ view errors { toMsg, selectField } { readOnly, selectedField } { address } =
                     [ Attrs.selected <| pc == address.preferredContactMethod ]
                     [ Html.text <| CD.preferredContactToString pc ]
 
-            inputFor : Field -> String -> String -> (CD.Address -> String) -> (String -> CD.Address) -> Html msg
-            inputFor field labelText inputId fGetPart fSetPart =
-                if selectedField == Just field && not readOnly then
-                    Html.li []
-                        [ Html.label [ Attrs.for inputId ] [ Html.text <| labelText ++ " : " ]
+            inputFor field inputId fGetPart fSetPart currentValue =
+                Html.li []
+                        [ Html.label [ Attrs.for inputId ] [ Html.text <| CD.fieldToLabel field ++ " : " ]
                         , Html.input
                             [ Attrs.id inputId
                             , Attrs.type_ "text"
-                            , Evts.onInput (fSetPart >> toMsg)
+                            , Evts.onInput (\str -> editField ( field, str ))
                             , Attrs.placeholder <| fGetPart address
+                            , Attrs.value currentValue
                             -- , Evts.onEnter (fSetPart >> toMsg)
                             -- , Evts.onMouseOut (fSetPart >> toMsg)
                             ]
                             [ ]
-                        , Errors.viewMany <| Errors.extractOnlyAt field errors
+                        , Html.button
+                            [ Evts.onClick (fSetPart currentValue |> toMsg) ]
+                            [ Html.text "(Set)" ]
+                        , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
                         ]
-                else
-                    Html.li
-                        [ Evts.onClick <| selectField field ]
-                        [ Html.text <| labelText ++ " : " ++ fGetPart address
-                        , Errors.viewMany <| Errors.extractOnlyAt field errors
-                        ]
+
+            clickableTextFor field fGetPart =
+                Html.li
+                    [ Evts.onClick <| editField ( field, fGetPart address ) ]
+                    [ Html.text <| CD.fieldToLabel field ++ " : " ++ fGetPart address
+                    , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
+                    ]
+
+            inputOrTextFor : CD.Field -> String -> (CD.Address -> String) -> (String -> CD.Address) -> Html msg
+            inputOrTextFor field inputId fGetPart fSetPart =
+                case currentlyEditing of
+                    Just ( currentField, currentValue ) ->
+                        if currentField == field then
+                            inputFor field inputId fGetPart fSetPart currentValue
+                        else
+                            clickableTextFor field fGetPart
+                    Nothing ->
+                        clickableTextFor field fGetPart
+
         in
         Html.ul
             []
@@ -83,25 +98,25 @@ view errors { toMsg, selectField } { readOnly, selectedField } { address } =
                     , Evts.onInput <| \str -> toMsg { address | preferredContactMethod = CD.preferredContactFromOption str }
                      ] <| List.map preferredContactOption CD.preferredWaysToContact
                 ]
-            , inputFor Field.AddressEmail "E-mail" "contact-email"
+            , inputOrTextFor CD.F_Email "contact-email"
                 (.email >> Maybe.map CD.emailToString >> Maybe.withDefault "")
                 (\nextEmail -> { address | email = Just <| CD.Email nextEmail })
-            , inputFor Field.AddressPhone "Phone" "contact-phone"
+            , inputOrTextFor CD.F_Phone "contact-phone"
                 (.phone >> Maybe.map CD.phoneToString >> Maybe.withDefault "")
                 (\nextPhone -> { address | phone = Just <| CD.Phone nextPhone })
-            , inputFor Field.AddressCompanyName "Company name" "contact-company"
+            , inputOrTextFor CD.F_CompanyName "contact-company"
                 (.companyName >> Maybe.withDefault "")
                 (\nextCompany -> { address | companyName = Just nextCompany })
-            , inputFor Field.AddressStreet "Street address" "contact-street-address"
+            , inputOrTextFor CD.F_StreetAddress "contact-street-address"
                 (.address >> Maybe.withDefault "")
                 (\nextAddress -> { address | address = Just nextAddress })
-            , inputFor Field.AddressZip "ZIP Code" "contact-zip-code"
+            , inputOrTextFor CD.F_ZipCode "contact-zip-code"
                 (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
                 (\nextZip -> { address | zip = Just <| CD.ZipCode nextZip })
-            , inputFor Field.AddressCity "City" "contact-city"
+            , inputOrTextFor CD.F_City "contact-city"
                 (.city >> Maybe.withDefault "")
                 (\nextCity -> { address | city = Just nextCity })
-            , inputFor Field.AddressCountry "Country" "contact-country"
+            , inputOrTextFor CD.F_Country "contact-country"
                 (.country >> Maybe.withDefault "")
                 (\nextCountry -> { address | country = Just nextCountry })
             ]

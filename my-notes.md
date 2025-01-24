@@ -69,20 +69,23 @@ I will try these steps:
   * [X] Contact Details
   * [X] Settings / Retention Policy
 * If rendering forms turns out to be hard, use either `elm-form` from `etaque` (if it's not too outdated) or `elm-form` from `dillonkearns`
-  * But try not to use any more
+  * But try not to use any
 * [ ] Fix issues in UX / Logic:
   * [X] Show validation errors where they belong
   * [X] If value in select box (such as Add Timeout by type select) is not changed, no event is fired when user presses Enter
     * Usually it is fixed with additional item in select box, but it sounds cheaty
   * [X] Only one input should be triggered active in Contacts form
+  * [X] Updating values of existing tags stopped to work
+    * It was copy-paste issue introduced recently
+  * [ ] When updating timeout value there is 0 in the input instead of current value
   * [ ] Erasing value text in timeout input removes the input box and the timeout itself
+  * [X] It's improper to update model values while user types in the values, we should commit changes only after editing
+    * [X] All fields in contacts view
+    * [X] Timeouts in retention policy
   * [ ] Sometimes editing tag's value allows it to be empty on Submit but keeps the old value instead
-  * [X] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
-  * [ ] It's improper to update model values while user types in the values, we should commit changes only after editing
-    * [ ] All fields in contacts view
-    * [ ] Timeouts in retention policy
-  * [X] Validate phone & zip code (current validators are stubs)
   * [ ] Pressing Enter in text fields should trigger submit
+  * [X] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
+  * [X] Validate phone & zip code (current validators are stubs)
   * [ ] No way to cancel editing, especially when an error happened in the form
   * [ ] Read-only modes for all the forms:
     * [ ] Tags

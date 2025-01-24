@@ -1,4 +1,4 @@
-module Scrive.Form.Impl.Tags exposing (TagInProgress, view, indexOfTagInProgress)
+module Scrive.Form.Impl.Tags exposing (TagInProgress, view, indexOfTagInProgress, tagInProgressToString)
 
 import Either exposing (Either(..))
 import Either as Either
@@ -32,7 +32,6 @@ type alias Handlers msg =
     , remove : SomeTag -> msg
     , setInProgress : TagInProgress -> msg
     }
-
 
 view : List Error -> Handlers msg -> Maybe TagInProgress -> List SomeTag -> Html msg
 view errors handlers tagInProgress items =
@@ -217,3 +216,11 @@ indexOfTagInProgress tip =
         Changing n _ -> Just n
         Restoring n _ -> Just n
         Creating _ -> Nothing
+
+
+tagInProgressToString : TagInProgress -> String
+tagInProgressToString tip =
+    case tip of
+        Changing n { newValue } -> "Changing tag #" ++ String.fromInt n ++ " (" ++ newValue ++ ")"
+        Restoring n { newValue }  -> "Restoring tag #" ++ String.fromInt n ++ " (" ++ newValue ++ ")"
+        Creating { newName, newValue } -> "Creating tag " ++ " (" ++ newName ++ " : " ++ newValue ++ ")"

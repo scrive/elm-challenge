@@ -7,6 +7,7 @@ module Scrive.Form.Field exposing
 
 
 import Scrive.Data.RetentionPolicy exposing (DataRetentionPolicy)
+import Scrive.Data.Address as A
 
 
 type Field
@@ -14,13 +15,7 @@ type Field
     | NewTagValue
     | NameOfTag Int
     | ValueOfTag Int
-    | AddressEmail
-    | AddressPhone
-    | AddressCompanyName
-    | AddressStreet
-    | AddressZip
-    | AddressCity
-    | AddressCountry
+    | Address A.Field
 
 
 type BelongsTo
@@ -36,13 +31,7 @@ belongsTo field =
         NewTagValue -> Tags
         NameOfTag _ -> Tags
         ValueOfTag _ -> Tags
-        AddressEmail -> Contacts
-        AddressPhone -> Contacts
-        AddressZip -> Contacts
-        AddressStreet -> Contacts
-        AddressCity -> Contacts
-        AddressCountry -> Contacts
-        AddressCompanyName -> Contacts
+        Address _ -> Contacts
 
 
 toString : Field -> String
@@ -52,10 +41,10 @@ toString f =
         NewTagValue -> "Value of the new tag"
         NameOfTag n -> "Name of tag #" ++ String.fromInt n
         ValueOfTag n -> "Value of tag #" ++ String.fromInt n
-        AddressEmail -> "Contacts : E-mail"
-        AddressPhone -> "Contacts : Phone"
-        AddressCompanyName -> "Contacts : Company Name"
-        AddressStreet -> "Contacts : Street Address"
-        AddressZip -> "Contacts : ZIP Code"
-        AddressCity -> "Contacts : City"
-        AddressCountry -> "Contacts : Country"
+        Address A.F_Email -> "Contacts : E-mail"
+        Address A.F_Phone -> "Contacts : Phone"
+        Address A.F_CompanyName -> "Contacts : Company Name"
+        Address A.F_StreetAddress -> "Contacts : Street Address"
+        Address A.F_ZipCode -> "Contacts : ZIP Code"
+        Address A.F_City -> "Contacts : City"
+        Address A.F_Country -> "Contacts : Country"

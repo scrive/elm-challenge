@@ -26,8 +26,8 @@ type alias Handlers msg =
 
 
 type alias State =
-    { editing : Maybe ( DataRetentionPolicy, Int )
-    , adding : Maybe DataRetentionPolicy
+    { currentlyEditing : Maybe ( DataRetentionPolicy, Int )
+    , currentlyAdding : Maybe DataRetentionPolicy
     }
 
 
@@ -36,19 +36,20 @@ view errors handlers state pl =
     let
         lacksWhichPolicies = RP.lacksWhichPolicies pl
 
-        currentlyEditing policy =
-            state.editing
+        mbCurrentlyEdited policy =
+            state.currentlyEditing
                 |> Maybe.andThen
                     (\( currentPolicy, currentVal ) ->
                         if currentPolicy == policy then
-                            Just (currentPolicy, currentVal )
+                            -- only returns `Just` when the same policy as in argument is being edited
+                            Just ( currentPolicy, currentVal )
                         else Nothing
                     )
 
         viewPolicy { policy, value } =
             Html.li []
                 [ Html.text <| RP.toOption policy ++ " : "
-                , case currentlyEditing policy of
+                , case mbCurrentlyEdited policy of
                     Nothing ->
                         Html.div []
                             [ Html.text <| String.fromInt value
@@ -122,7 +123,7 @@ viewAddPolicySelect handlers state lacksWhichPolicies =
                         Nothing -> handlers.clearPolicyToAdd)
             ]
             ( Html.option
-                [ Attrs.selected <| case state.adding of
+                [ Attrs.selected <| case state.currentlyAdding of
                     Nothing -> True
                     Just _ -> False
                 ]
@@ -130,7 +131,7 @@ viewAddPolicySelect handlers state lacksWhichPolicies =
             :: List.map viewLackingPolicyOption lacksWhichPolicies
             )
         , Html.button
-            [ Attrs.disabled <| case state.adding of
+            [ Attrs.disabled <| case state.currentlyAdding of
                 Nothing -> True
                 Just policy -> not <| List.member policy lacksWhichPolicies
             , Evts.onClick handlers.addSelectedPolicy

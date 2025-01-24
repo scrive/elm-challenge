@@ -53,21 +53,21 @@ addressValidator =
             (\addr ->
                 addr.preferredContactMethod == CD.PC_Email && notSpecified (Maybe.map CD.emailToString <| addr.email)
             )
-            <| FE.make Field.AddressEmail "E-mail should be specified when preferred contact method is set to \"e-mail\""
+            <| FE.make (Field.Address CD.F_Email) "E-mail should be specified when preferred contact method is set to \"e-mail\""
         , V.ifTrue
             (\addr ->
                 addr.preferredContactMethod == CD.PC_Post && notSpecified addr.address
             )
-            <| FE.make Field.AddressStreet "Street address should be specified when preferred contact method is set to \"post\""
+            <| FE.make (Field.Address CD.F_StreetAddress) "Street address should be specified when preferred contact method is set to \"post\""
         , V.ifTrue
             (\addr ->
                 addr.preferredContactMethod == CD.PC_Phone && notSpecified (Maybe.map CD.phoneToString <| addr.phone)
             )
-            <| FE.make Field.AddressPhone "Phone should be specified when preferred contact method is set to \"phone\""
+            <| FE.make (Field.Address CD.F_Phone) "Phone should be specified when preferred contact method is set to \"phone\""
         , V.ifFalse (.email >> Maybe.map CD.emailToString >> Maybe.map V.isValidEmail >> Maybe.withDefault True)
-            <| FE.make Field.AddressEmail "Specified e-mail is in invalid format"
+            <| FE.make (Field.Address CD.F_Email) "Specified e-mail is in invalid format"
         , V.ifFalse (.phone >> Maybe.map CD.phoneToString >> Maybe.map V.isValidPhone >> Maybe.withDefault True)
-            <| FE.make Field.AddressPhone "Specified phone is in invalid format"
+            <| FE.make (Field.Address CD.F_Phone) "Specified phone is in invalid format"
         , V.ifNotAllCharsAre (\c -> Char.isDigit c || c == ' ') (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
-            <| FE.make Field.AddressZip "Specified ZIP code should contain only digits or spaces"
+            <| FE.make (Field.Address CD.F_ZipCode) "Specified ZIP code should contain only digits or spaces"
         ]

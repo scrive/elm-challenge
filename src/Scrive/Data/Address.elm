@@ -13,6 +13,16 @@ type PreferredContact
     | PC_None
 
 
+type Field
+    = F_Email
+    | F_Phone
+    | F_CompanyName
+    | F_StreetAddress
+    | F_ZipCode
+    | F_City
+    | F_Country
+
+
 type Email = Email String
 
 
@@ -119,3 +129,39 @@ encode rec =
         , ( "city", encodeField rec.city )
         , ( "country", encodeField rec.country )
         ]
+
+
+stringValueOf : Address -> Field -> Maybe String
+stringValueOf rec field =
+    case field of
+        F_Email -> Maybe.map emailToString rec.email
+        F_Phone -> Maybe.map phoneToString rec.phone
+        F_CompanyName -> rec.companyName
+        F_StreetAddress -> rec.address
+        F_ZipCode -> Maybe.map zipCodeToString rec.zip
+        F_City -> rec.city
+        F_Country -> rec.country
+
+
+unsafeSet : Address -> Field -> String -> Address -- sets value without validation
+unsafeSet rec field value =
+    case field of
+        F_Email -> { rec | email = Just <| Email value }
+        F_Phone -> { rec | phone = Just <| Phone value }
+        F_ZipCode -> { rec | zip = Just <| ZipCode value }
+        F_CompanyName -> { rec | companyName = Just value }
+        F_StreetAddress -> { rec | address = Just value }
+        F_City -> { rec | city = Just value }
+        F_Country -> { rec | country = Just value }
+
+
+fieldToLabel : Field -> String
+fieldToLabel f =
+    case f of
+        F_Email -> "E-mail"
+        F_Phone -> "Phone"
+        F_CompanyName -> "Company Name"
+        F_StreetAddress -> "Street Address"
+        F_ZipCode -> "ZIP Code"
+        F_City -> "City"
+        F_Country -> "Country"
