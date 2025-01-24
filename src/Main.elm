@@ -21,11 +21,12 @@ import Json.Encode as Json
 import Scrive.Tag exposing (Tag, TagToRemove)
 import Scrive.Tag as Tag
 
-import Form.Error as Form
-import Form.Error as FE exposing (textOf, Field(..))
-import Form.Tags as TagsForm
-import Form.ContactDetails as ContactForm
-import Form.RetentionPolicy as RetentionPolicy
+import Scrive.Form.Error as Form
+import Scrive.Form.Error as FE
+import Scrive.Form.Tags as TagsForm
+import Scrive.Form.ContactDetails as ContactForm
+import Scrive.Form.RetentionPolicy as RetentionPolicy
+import Scrive.Form.Validator exposing (tagValidator, addressValidator)
 
 import Validate exposing (Validator, Valid)
 import Validate as V
@@ -94,13 +95,16 @@ update msg model =
             { model | tagInProgress = inProgress }
 
         TryToCreateTag { newName, newValue } ->
-            validateTagAnd addTag (tagValidator { checkUnique = True }) model <| Tag.make newName newValue
+            validateTagAnd addTag (tagValidator { isNew = True, nameId = newName }) model
+                <| Tag.make newName newValue
 
         TryToChangeTag theTag { newValue } ->
-            validateTagAnd changeTag (tagValidator { checkUnique = False }) model <| Tag.setValue newValue theTag
+            validateTagAnd changeTag (tagValidator { isNew = False, nameId = Tag.nameOf theTag }) model
+                <| Tag.setValue newValue theTag
 
         TryToRestoreTag ttr { newValue } ->
-            validateTagAnd restoreTag (tagValidator { checkUnique = False }) model <| Tag.make (Tag.nameOfRemoved ttr) newValue
+            validateTagAnd restoreTag (tagValidator { isNew = False, nameId = Tag.nameOfRemoved ttr }) model
+                <| Tag.make (Tag.nameOfRemoved ttr) newValue
 
         TryToRemoveTag theTag ->
 
@@ -118,7 +122,10 @@ update msg model =
             in
                 case resValidAddress of
                     Ok validAddress ->
-                        { model | userGroup = Result.map (updateAddress validAddress) model.userGroup }
+                        { model
+                        | errors = []
+                        , userGroup = Result.map (updateAddress validAddress) model.userGroup
+                        }
                     Err errors ->
                         { model | errors = errors }
 
@@ -239,51 +246,6 @@ restoreTag validTag =
             )
 
 
-tagValidator : { checkUnique : Bool } -> UG.TagList -> Validator Form.Error Tag
-tagValidator { checkUnique } currentTags =
-    Validate.all
-        [ V.ifLongerThan Tag.nameOf 32 <| FE.make FE.NewTagName "Tag name should not exceed 32 characters"
-        ,
-            if checkUnique then
-                let
-                    tagNames = Set.fromList <| List.map (Either.unpack Tag.nameOfRemoved Tag.nameOf) currentTags
-                in
-                    V.ifNotUnique Tag.nameOf tagNames <| FE.make FE.NewTagName "One of tags already has this name, please try another one"
-            else V.skip
-
-        , V.ifBlank Tag.nameOf  <| FE.make FE.NewTagName "Tag name should not be empty"
-        , V.ifBlank Tag.valueOf <| FE.make FE.NewTagValue "Value should not be empty"
-        ]
-
-
-addressValidator : Validator Form.Error CD.Address
-addressValidator =
-    let
-        notSpecified : Maybe String -> Bool
-        notSpecified mbVal =
-            case mbVal of
-                Just str -> not <| String.length str > 0
-                Nothing -> True
-    in Validate.all
-        [ V.ifTrue
-            (\addr ->
-                addr.preferredContactMethod == CD.PC_Email && notSpecified (Maybe.map CD.emailToString <| addr.email)
-            ) <| FE.make FE.NewTagName "E-mail should be specified when preferred contact method is set to e-mail"
-        , V.ifTrue
-            (\addr ->
-                addr.preferredContactMethod == CD.PC_Post && notSpecified addr.address
-            ) <| FE.make FE.NewTagName "Street address should be specified when preferred contact method is set to post`"
-        , V.ifTrue
-            (\addr ->
-                addr.preferredContactMethod == CD.PC_Phone && notSpecified (Maybe.map CD.phoneToString <| addr.phone)
-            ) <| FE.make FE.NewTagName "Phone should be specified when preferred contact method is set to phone"
-        , V.ifTrue (.email >> Maybe.map CD.emailToString >> Maybe.map V.isValidEmail >> Maybe.withDefault True)
-            <| FE.make FE.NewTagName "Specified e-mail is  in invalid format"
-        , V.ifTrue (.phone >> Maybe.map CD.phoneToString >> Maybe.map V.isValidPhone >> Maybe.withDefault True)
-            <| FE.make FE.NewTagName "Specified phone is in invalid format"
-        ]
-
-
 updateAddress : Valid CD.Address -> UG.UserGroup -> UG.UserGroup
 updateAddress nextAddress ugroup =
     let
@@ -349,18 +311,32 @@ view model =
             <|
             ( case model.userGroup of
                 Ok userGroup ->
+
                     [ Html.h1 [] [ Html.text "Contacts" ]
-                    , ContactForm.view { readOnly = False, toMsg = TryToUpdateAddress } userGroup.contactDetails
+                    , ContactForm.view
+                        (model.errors |> FE.onlyBelongingTo FE.Contacts)
+                        { readOnly = False, toMsg = TryToUpdateAddress }
+                        userGroup.contactDetails
+
                     , Html.h1 [] [ Html.text "Tags" ]
-                    , TagsForm.view tagHandlers model.tagInProgress userGroup.tags
+                    , TagsForm.view
+                        (model.errors |> FE.onlyBelongingTo FE.Tags)
+                        tagHandlers
+                        model.tagInProgress
+                        userGroup.tags
+
                     , Html.h1 [] [ Html.text "Settings" ]
-                    , RetentionPolicy.view policyHandlers (Maybe.map Tuple.first model.policyInProgress) <| RP.toList userGroup.settings.policy
+                    , RetentionPolicy.view
+                        (model.errors |> FE.onlyBelongingTo FE.Settings)
+                        policyHandlers
+                        (Maybe.map Tuple.first model.policyInProgress)
+                        <| RP.toList userGroup.settings.policy
+
                     ]
                 Err error ->
                     [ Html.text <| Json.errorToString error ]
             ) ++
-            [ Html.div [] <| List.map (FE.textOf >> Html.text) model.errors
-            , Html.div
+            [ Html.div
                 [ Attrs.class "absolute top-0 left-0" ]
                 [ Html.button [ Evts.onClick <| ToggleJsonMode NoJson ] [ Html.text "No JSON" ]
                 , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson ] [ Html.text "Original JSON" ]

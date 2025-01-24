@@ -1,13 +1,16 @@
-module Form.RetentionPolicy exposing (..)
+module Scrive.Form.RetentionPolicy exposing (..)
 
 
 import Html exposing (Html)
 import Html
+import Html.Extra as Html
 import Html.Attributes as Attrs
 import Html.Events as Evts
 
 import Scrive.RetentionPolicy exposing (DataRetentionPolicy, PolicyWithTimeout)
 import Scrive.RetentionPolicy as RP
+import Scrive.Form.Error exposing (Error)
+import Scrive.Form.Error as Errors
 
 
 type alias Handlers msg =
@@ -21,8 +24,8 @@ type alias Handlers msg =
     }
 
 
-view : Handlers msg -> Maybe DataRetentionPolicy -> List PolicyWithTimeout -> Html msg
-view handlers mbCurrentPolicy pl =
+view : List Error -> Handlers msg -> Maybe DataRetentionPolicy -> List PolicyWithTimeout -> Html msg
+view errors handlers mbCurrentPolicy pl =
     let
         isCurrent policy = case mbCurrentPolicy of
             Just currentPolicy -> currentPolicy == policy
@@ -70,7 +73,7 @@ view handlers mbCurrentPolicy pl =
                     [ Evts.onInput
                         (handlers.selectPolicyToAdd << RP.fromOption)
                     ] <| List.map viewLackingPolicyOption lacksWhichPolicies
-              else Html.text ""
+              else Html.nothing
 
             , Html.button
                 [ Evts.onClick handlers.addSelectedPolicy

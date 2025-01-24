@@ -1,17 +1,20 @@
-module Form.Tags exposing (TagInProgress, view, none)
+module Scrive.Form.Tags exposing (TagInProgress, view, none)
 
 import Either exposing (Either(..))
 import Either as Either
-
-import Scrive.Tag exposing (Tag, TagToRemove)
-import Scrive.Tag as Tag
 
 import Html exposing (Html)
 import Html as Html
 import Html.Attributes as Attrs
 import Html.Events as Evt
 
+import Scrive.Tag exposing (Tag, TagToRemove)
+import Scrive.Tag as Tag
 import Scrive.UserGroup as UG
+
+import Scrive.Form.Error exposing (Error, Field(..))
+import Scrive.Form.Error as Errors
+
 
 type TagInProgress -- constructors are not exposed, except `None`
     = Changing Int { newValue : String }
@@ -33,8 +36,8 @@ none : TagInProgress
 none = None
 
 
-view : Handlers msg -> TagInProgress -> UG.TagList -> Html msg
-view handlers tagInProgress items =
+view : List Error -> Handlers msg -> TagInProgress -> UG.TagList -> Html msg
+view errors handlers tagInProgress items =
     let
 
         viewListItem idx =
@@ -44,7 +47,7 @@ view handlers tagInProgress items =
                 (case tagInProgress of
                     Restoring otherIdx { newValue } ->
                         if (otherIdx == idx)
-                            then viewWhileRestoringTag handlers idx newValue
+                            then viewWhileRestoringTag errors handlers idx newValue
                             else viewRemovedTag handlers idx
                     _ ->
                         viewRemovedTag handlers idx
@@ -54,7 +57,7 @@ view handlers tagInProgress items =
                 (case tagInProgress of
                     Changing otherIdx { newValue } ->
                         if (otherIdx == idx)
-                            then viewWhileChangingTag handlers idx newValue
+                            then viewWhileChangingTag errors handlers idx newValue
                             else viewTag handlers idx
                     _ ->
                         viewTag handlers idx
@@ -72,7 +75,7 @@ view handlers tagInProgress items =
             ::
             case tagInProgress of
                 Creating newData ->
-                    [ viewWhileCreatingTag handlers newData ]
+                    [ viewWhileCreatingTag errors handlers newData ]
                 Restoring _ _ ->
                     [ ]
                 Changing _ _ ->
@@ -118,26 +121,31 @@ viewRemovedTag handlers idx ttr =
 
 
 viewWhileCreatingTag :
+    List Error ->
     { r
         | markInProgress : TagInProgress -> msg
         , tryCreate : { newName : String, newValue : String } -> msg
     }
     -> { newName : String, newValue : String } -> Html msg
-viewWhileCreatingTag handlers { newName, newValue } =
+viewWhileCreatingTag errors handlers { newName, newValue } =
     Html.li
         []
         [ Html.input
-            [ Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = str, newValue = newValue }
-            , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
+            [ Attrs.type_ "text"
             , Attrs.class "border-black border-solid border-2"
+            , Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = str, newValue = newValue }
+            , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
             [ Html.text newName ]
+        , Errors.viewMany <| Errors.extractOnlyAt NewTagName errors
         , Html.input
-            [ Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = newName, newValue = str }
-            , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
+            [ Attrs.type_ "text"
             , Attrs.class "border-black border-solid border-2"
+            , Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = newName, newValue = str }
+            , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
             [ Html.text newValue ]
+        , Errors.viewMany <| Errors.extractOnlyAt NewTagValue errors
         , Html.button
             [ Evt.onClick <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
@@ -146,22 +154,24 @@ viewWhileCreatingTag handlers { newName, newValue } =
 
 
 viewWhileChangingTag :
+    List Error ->
     { r
         | markInProgress : TagInProgress -> msg
         , tryChange : Tag -> { newValue : String } -> msg
     }
     -> Int -> String -> Tag -> Html msg
-viewWhileChangingTag handlers idx newValue tag =
+viewWhileChangingTag errors handlers idx newValue tag =
     Html.li
         []
         [ Html.text <| Tag.nameOf tag
         , Html.input
-            [ Evt.onInput <| \str -> handlers.markInProgress <| Changing idx { newValue = str }
-            , Evt.onSubmit <| handlers.tryChange tag { newValue = newValue }
-            , Attrs.class "border-black border-solid border-2"
+            [ Attrs.class "border-black border-solid border-2"
             , Attrs.placeholder <| Tag.valueOf tag
+            , Evt.onInput <| \str -> handlers.markInProgress <| Changing idx { newValue = str }
+            , Evt.onSubmit <| handlers.tryChange tag { newValue = newValue }
             ]
             [ Html.text newValue ]
+        , Errors.viewMany <| Errors.extractOnlyAt (ValueOfTagWith { name = Tag.nameOf tag }) errors
         , Html.button
             [ Evt.onClick <| handlers.tryChange tag { newValue = newValue } ]
             [ Html.text "(Update)" ]
@@ -169,24 +179,26 @@ viewWhileChangingTag handlers idx newValue tag =
 
 
 viewWhileRestoringTag :
+    List Error ->
     { r
         | markInProgress : TagInProgress -> msg
         , tryRestore : TagToRemove -> { newValue : String } -> msg
     }
     -> Int -> String -> TagToRemove -> Html msg
-viewWhileRestoringTag handlers idx newValue ttr =
+viewWhileRestoringTag errors handlers idx newValue ttr =
     Html.li
         []
         [ Html.text <| Tag.nameOfRemoved ttr
         , Html.input
-            [ Evt.onInput <| \str -> handlers.markInProgress <| Restoring idx { newValue = str }
-            , Evt.onSubmit <| handlers.tryRestore ttr { newValue = newValue }
-            , Attrs.placeholder <| case Tag.lastValueOfRemoved ttr of
+            [ Attrs.placeholder <| case Tag.lastValueOfRemoved ttr of
                 Just lastValue -> lastValue
                 Nothing -> ""
             , Attrs.class "border-black border-solid border-2"
+            , Evt.onInput <| \str -> handlers.markInProgress <| Restoring idx { newValue = str }
+            , Evt.onSubmit <| handlers.tryRestore ttr { newValue = newValue }
             ]
             [ Html.text newValue ]
+        , Errors.viewMany <| Errors.extractOnlyAt (ValueOfTagWith { name = Tag.nameOfRemoved ttr }) errors
         , Html.button
             [ Evt.onClick <| handlers.tryRestore ttr { newValue = newValue } ]
             [ Html.text "(Set)" ]

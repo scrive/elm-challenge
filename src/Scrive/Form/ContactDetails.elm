@@ -1,19 +1,23 @@
-module Form.ContactDetails exposing (..)
+module Scrive.Form.ContactDetails exposing (..)
 
 
 import Html exposing (Html)
 import Html
+import Html.Extra as Html
 import Html.Attributes as Attrs
 import Html.Events as Evts
+import Html.Events.Extra as Evts
 
 import Maybe
 
 import Scrive.ContactDetails exposing (ContactDetails)
 import Scrive.Address as CD
+import Scrive.Form.Error exposing (Error, Field(..))
+import Scrive.Form.Error as Errors
 
 
-view : { readOnly : Bool, toMsg : CD.Address -> msg } -> ContactDetails -> Html msg
-view { readOnly, toMsg } { address } =
+view : List Error -> { readOnly : Bool, toMsg : CD.Address -> msg } -> ContactDetails -> Html msg
+view errors { readOnly, toMsg } { address } =
     if readOnly then
         Html.ul
             []
@@ -35,17 +39,20 @@ view { readOnly, toMsg } { address } =
                     [ Attrs.selected <| pc == address.preferredContactMethod ]
                     [ Html.text <| CD.preferredContactToString pc ]
 
-            inputFor : String -> String -> (CD.Address -> String) -> (String -> CD.Address) -> Html msg
-            inputFor labelText inputId fGetPart fSetPart =
+            inputFor : Field -> String -> String -> (CD.Address -> String) -> (String -> CD.Address) -> Html msg
+            inputFor field labelText inputId fGetPart fSetPart =
                 Html.li []
                     [ Html.label [ Attrs.for inputId ] [ Html.text <| labelText ++ " : " ]
                     , Html.input
                         [ Attrs.id inputId
+                        , Attrs.type_ "text"
                         , Evts.onInput (fSetPart >> toMsg)
-                        {- , Attrs.placeholder <| fGetPart address -}
-                        , Attrs.value <| fGetPart address
+                        , Attrs.placeholder <| fGetPart address
+                        -- , Evts.onEnter (fSetPart >> toMsg)
+                        -- , Evts.onMouseOut (fSetPart >> toMsg)
                         ]
                         [ ]
+                    , Errors.viewMany <| Errors.extractOnlyAt field errors
                     ]
         in
         Html.ul
@@ -57,25 +64,25 @@ view { readOnly, toMsg } { address } =
                     , Evts.onInput <| \str -> toMsg { address | preferredContactMethod = CD.preferredContactFromOption str }
                      ] <| List.map preferredContactOption CD.preferredWaysToContact
                 ]
-            , inputFor "E-mail" "contact-email"
+            , inputFor AddressEmail "E-mail" "contact-email"
                 (.email >> Maybe.map CD.emailToString >> Maybe.withDefault "")
                 (\nextEmail -> { address | email = Just <| CD.Email nextEmail })
-            , inputFor "Phone" "contact-phone"
+            , inputFor AddressPhone "Phone" "contact-phone"
                 (.phone >> Maybe.map CD.phoneToString >> Maybe.withDefault "")
                 (\nextPhone -> { address | phone = Just <| CD.Phone nextPhone })
-            , inputFor "Company name" "contact-company"
+            , inputFor AddressCompanyName "Company name" "contact-company"
                 (.companyName >> Maybe.withDefault "")
                 (\nextCompany -> { address | companyName = Just nextCompany })
-            , inputFor "Street address" "contact-street-address"
+            , inputFor AddressStreet "Street address" "contact-street-address"
                 (.address >> Maybe.withDefault "")
                 (\nextAddress -> { address | address = Just nextAddress })
-            , inputFor "ZIP Code" "contact-zip-code"
+            , inputFor AddressZip "ZIP Code" "contact-zip-code"
                 (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
                 (\nextZip -> { address | zip = Just <| CD.ZipCode nextZip })
-            , inputFor "City" "contact-city"
+            , inputFor AddressCity "City" "contact-city"
                 (.city >> Maybe.withDefault "")
                 (\nextCity -> { address | city = Just nextCity })
-            , inputFor "Country" "contact-country"
+            , inputFor AddressCountry "Country" "contact-country"
                 (.country >> Maybe.withDefault "")
                 (\nextCountry -> { address | city = Just nextCountry })
             ]

@@ -60,18 +60,40 @@
 
 I will try these steps:
 
-* [X] Define form(s) as records at first
+* [X] Define form(s) data as records at first
   * May be some fields are not needed for the logic, we'll see it in the process: look in the API
 * [X] Be able to parse them from JSON using native API
 * [X] Try to use `elm-validate` from `rtfeldman` or `elm-form-decoder` from `arowM`
-* [ ] Implement forms logic w/o any styling:
+* [X] Implement forms logic w/o any styling:
   * [X] Tags
-  * [ ] Contact Details
-  * [ ] Settings / Retention Policy
+  * [X] Contact Details
+  * [X] Settings / Retention Policy
 * If rendering forms turns out to be hard, use either `elm-form` from `etaque` (if it's not too outdated) or `elm-form` from `dillonkearns`
   * But try not to use any more
+* [ ] Fix issues in UX / Logic:
+  * [X] Show validation errors where they belong
+  * [ ] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
+  * [ ] It's improper to update model values while user types in the values, we should commit changes only after editing
+    * E-mail and such in contacts view
+    * Timeouts in retention policy
+  * [ ] Only one input should be triggered active in Contacts form
+  * [ ] Validate phone & zip code (current validators are stubs)
+  * [ ] If value in select box (such as Add Timeout by type select) is not changed, no event is fired when user presses Enter
+    * Usually it is fixed with additional item in select box, but it sounds cheaty
+  * [ ] Pressing Enter in text fields should trigger submit
+  * [ ] Erasing value in timeout input removes the input box
+  * [ ] No way to cancel editing, especially when an error happened in the form
+  * [ ] Read-only modes for all the forms:
+    * [ ] Tags
+    * [ ] Contact details
+    * [ ] Retention Policy
+  * [ ] Clear only errors that belong to current form when validation repeats succesfully
+  * [ ] Wouldn't it is be nice if clicking mouse outside of text field would also submit?
+  * [ ] Immediate Trash of Retention Timeouts should disable all of timeouts?
+  * [ ] Example validator that rejects huge timeouts
 * [ ] Style forms / UX / Design
-* [ ] Add tests for decoding / encoding : [fuzzy](https://package.elm-lang.org/packages/elm-explorations/test/latest/Fuzz)
+* [ ] Format code
+* [ ] Optionally, Add tests for decoding / encoding : [fuzzy](https://package.elm-lang.org/packages/elm-explorations/test/latest/Fuzz)
 * [ ] Optionally, fake sending data from the model
 
 ## Questions
@@ -79,6 +101,6 @@ I will try these steps:
 * Some IDs are strings in the API / data, but they are numerals, so I had to encode them back to strings for a proper JSON
 * I show removed tags in the tag list anyway (and allow to restore them back with specifying value), and they are checked for unique name when creating new tag, only when trying it in action I realized that it could be an overcomplication
   * But it helps to quickly restore tag that was removed by accident, I also prefill the last known value for it (if it happend in current session)
-* I don't get exactly what `immediate_trash` for `retention_policy` means, so I decided that it means removing all the policy values
+* I don't get exactly what `immediate_trash` for `retention_policy` means, at first I decided that it means removing all the policy values but after a second thought I got that it is a flag to remove the document right away, but then it should override all other timeouts anyway;
 * Could values for timeouts in `ContactDetails` be not Integers, but something else?
 * I have added `none` preferred contact method (to `email`, `post`, `phone`) to handle cases when the string in the JSON doesn't match any sample, so that it wouldn't set something undesired by accident. But may be there exist a default value I could always set in case of mismatch?
