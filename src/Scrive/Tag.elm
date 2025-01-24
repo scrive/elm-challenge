@@ -1,8 +1,8 @@
 module Scrive.Tag exposing
-    ( Tag, TagToRemove
-    , make, toRemove
-    , setValue, toRemoved
-    , nameOf, valueOf, nameOfRemoved, lastValueOfRemoved
+    ( Tag, ArchivedTag, SomeTag
+    , make
+    , setValue, toArchived
+    , nameOf, valueOf, nameOfArchived, lastValueOfArchived
     , decoder, encode
     )
 
@@ -22,19 +22,23 @@ type Tag =
         }
 
 
-type TagToRemove =
-    TagToRemove
+type ArchivedTag =
+    ArchivedTag
         { name : String
         , lastValue : Maybe String
         }
+
+
+type alias SomeTag =
+    Either ArchivedTag Tag
 
 
 make : String -> String -> Tag
 make name value = Tag { name = name, value = value }
 
 
-toRemove : String -> TagToRemove
-toRemove which = TagToRemove { name = which, lastValue = Nothing }
+archiveAs : String -> ArchivedTag
+archiveAs which = ArchivedTag { name = which, lastValue = Nothing }
 
 
 setValue : String -> Tag -> Tag
@@ -49,35 +53,35 @@ valueOf : Tag -> String
 valueOf (Tag { value }) = value
 
 
-nameOfRemoved : TagToRemove -> String
-nameOfRemoved (TagToRemove { name }) = name
+nameOfArchived : ArchivedTag -> String
+nameOfArchived (ArchivedTag { name }) = name
 
 
-lastValueOfRemoved : TagToRemove -> Maybe String
-lastValueOfRemoved (TagToRemove { lastValue }) = lastValue
+lastValueOfArchived : ArchivedTag -> Maybe String
+lastValueOfArchived (ArchivedTag { lastValue }) = lastValue
 
 
-toRemoved : Tag -> TagToRemove
-toRemoved (Tag { name, value }) = TagToRemove { name = name, lastValue = Just value }
+toArchived : Tag -> ArchivedTag
+toArchived (Tag { name, value }) = ArchivedTag { name = name, lastValue = Just value }
 
 
 -- type alias SchrodingerTag = Either TagToRemove Tag
 
 
-decoder : Decoder (Either TagToRemove Tag)
+decoder : Decoder SomeTag
 decoder =
     D.map2
         (\name mbValue ->
             case mbValue of
                 Just value -> Right <| make name value
-                Nothing    -> Left  <| toRemove name
+                Nothing    -> Left  <| archiveAs name
         )
         (D.field "name" D.string)
         (D.maybe <| D.field "value" D.string)
 
 
-encode : Either TagToRemove Tag -> E.Value
+encode : SomeTag -> E.Value
 encode eTag =
     case eTag of
         Right ( Tag { name, value} )   -> E.object [ ( "name", E.string name ), ( "value", E.string value ) ]
-        Left  ( TagToRemove { name } ) -> E.object [ ( "name", E.string name ) ]
+        Left  ( ArchivedTag { name } ) -> E.object [ ( "name", E.string name ) ]

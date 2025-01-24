@@ -8,11 +8,13 @@ import Html as Html
 import Html.Attributes as Attrs
 import Html.Events as Evt
 
-import Scrive.Tag exposing (Tag, TagToRemove)
+import Scrive.Tag exposing (Tag, ArchivedTag, SomeTag)
 import Scrive.Tag as Tag
 import Scrive.UserGroup as UG
+import Scrive.Form.Field exposing (Field)
+import Scrive.Form.Field as Field
 
-import Scrive.Form.Error exposing (Error, Field(..))
+import Scrive.Form.Error exposing (Error)
 import Scrive.Form.Error as Errors
 
 
@@ -24,10 +26,11 @@ type TagInProgress -- constructors are not exposed, except `None`
 
 
 type alias Handlers msg =
-    { tryRemove : Tag -> msg
+    { tryArchive : Tag -> msg
     , tryChange : Tag -> { newValue : String } -> msg
-    , tryRestore : TagToRemove -> { newValue : String } -> msg
+    , tryRestore : ArchivedTag -> { newValue : String } -> msg
     , tryCreate : { newName : String, newValue : String } -> msg
+    , remove : SomeTag -> msg
     , markInProgress : TagInProgress -> msg
     }
 
@@ -36,7 +39,7 @@ none : TagInProgress
 none = None
 
 
-view : List Error -> Handlers msg -> TagInProgress -> UG.TagList -> Html msg
+view : List Error -> Handlers msg -> TagInProgress -> List SomeTag -> Html msg
 view errors handlers tagInProgress items =
     let
 
@@ -48,9 +51,9 @@ view errors handlers tagInProgress items =
                     Restoring otherIdx { newValue } ->
                         if (otherIdx == idx)
                             then viewWhileRestoringTag errors handlers idx newValue
-                            else viewRemovedTag handlers idx
+                            else viewArchivedTag handlers idx
                     _ ->
-                        viewRemovedTag handlers idx
+                        viewArchivedTag handlers idx
                 )
 
                 -- if it's a "normal" tag, we could either updating its value or just viewing it
@@ -88,7 +91,8 @@ view errors handlers tagInProgress items =
 viewTag :
     { r
         | markInProgress : TagInProgress -> msg
-        , tryRemove : Tag -> msg
+        , tryArchive : Tag -> msg
+        , remove : SomeTag -> msg
     }
     -> Int -> Tag -> Html msg
 viewTag handlers idx tag =
@@ -100,23 +104,30 @@ viewTag handlers idx tag =
             ]
             [ Html.text "(Update value)" ]
         , Html.button
-            [ Evt.onClick <| handlers.tryRemove tag ]
+            [ Evt.onClick <| handlers.tryArchive tag ]
+            [ Html.text "(Archive)" ]
+        , Html.button
+            [ Evt.onClick <| handlers.remove <| Right tag ]
             [ Html.text "(Remove)" ]
         ]
 
 
-viewRemovedTag :
+viewArchivedTag :
     { r
         | markInProgress : TagInProgress -> msg
+        , remove : SomeTag -> msg
     }
-    -> Int -> TagToRemove -> Html msg
-viewRemovedTag handlers idx ttr =
+    -> Int -> ArchivedTag -> Html msg
+viewArchivedTag handlers idx ttr =
     Html.li
         []
-        [ Html.text <| Tag.nameOfRemoved ttr
+        [ Html.text <| Tag.nameOfArchived ttr
         , Html.button
             [ Evt.onClick <| handlers.markInProgress <| Restoring idx { newValue = "" } ]
             [ Html.text "(Restore)" ]
+        , Html.button
+            [ Evt.onClick <| handlers.remove <| Left ttr ]
+            [ Html.text "(Remove)" ]
         ]
 
 
@@ -137,7 +148,7 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
             , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
             [ Html.text newName ]
-        , Errors.viewMany <| Errors.extractOnlyAt NewTagName errors
+        , Errors.viewMany <| Errors.extractOnlyAt Field.NewTagName errors
         , Html.input
             [ Attrs.type_ "text"
             , Attrs.class "border-black border-solid border-2"
@@ -145,11 +156,11 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
             , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
             [ Html.text newValue ]
-        , Errors.viewMany <| Errors.extractOnlyAt NewTagValue errors
+        , Errors.viewMany <| Errors.extractOnlyAt Field.NewTagValue errors
         , Html.button
             [ Evt.onClick <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
-            [ Html.text "Submit" ]
+            [ Html.text "(Submit)" ]
         ]
 
 
@@ -171,7 +182,7 @@ viewWhileChangingTag errors handlers idx newValue tag =
             , Evt.onSubmit <| handlers.tryChange tag { newValue = newValue }
             ]
             [ Html.text newValue ]
-        , Errors.viewMany <| Errors.extractOnlyAt (ValueOfTagWith { name = Tag.nameOf tag }) errors
+        , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTagWith { name = Tag.nameOf tag }) errors
         , Html.button
             [ Evt.onClick <| handlers.tryChange tag { newValue = newValue } ]
             [ Html.text "(Update)" ]
@@ -182,15 +193,15 @@ viewWhileRestoringTag :
     List Error ->
     { r
         | markInProgress : TagInProgress -> msg
-        , tryRestore : TagToRemove -> { newValue : String } -> msg
+        , tryRestore : ArchivedTag -> { newValue : String } -> msg
     }
-    -> Int -> String -> TagToRemove -> Html msg
+    -> Int -> String -> ArchivedTag -> Html msg
 viewWhileRestoringTag errors handlers idx newValue ttr =
     Html.li
         []
-        [ Html.text <| Tag.nameOfRemoved ttr
+        [ Html.text <| Tag.nameOfArchived ttr
         , Html.input
-            [ Attrs.placeholder <| case Tag.lastValueOfRemoved ttr of
+            [ Attrs.placeholder <| case Tag.lastValueOfArchived ttr of
                 Just lastValue -> lastValue
                 Nothing -> ""
             , Attrs.class "border-black border-solid border-2"
@@ -198,7 +209,7 @@ viewWhileRestoringTag errors handlers idx newValue ttr =
             , Evt.onSubmit <| handlers.tryRestore ttr { newValue = newValue }
             ]
             [ Html.text newValue ]
-        , Errors.viewMany <| Errors.extractOnlyAt (ValueOfTagWith { name = Tag.nameOfRemoved ttr }) errors
+        , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTagWith { name = Tag.nameOfArchived ttr }) errors
         , Html.button
             [ Evt.onClick <| handlers.tryRestore ttr { newValue = newValue } ]
             [ Html.text "(Set)" ]

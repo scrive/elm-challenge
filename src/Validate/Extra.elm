@@ -35,7 +35,10 @@ isValidPhone = Regex.contains validPhone
 
 validPhone : Regex
 validPhone =
-    -- /^\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/
+    -- original: /^\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/
     "^\\+?\\d{1,4}?[-.\\s]?\\(?\\d{1,3}?\\)?[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,9}$"
         |> Regex.fromStringWith { caseInsensitive = True, multiline = False }
         |> Maybe.withDefault Regex.never
+
+
+-- Zip Codes format from all over the world: https://gist.github.com/jamesbar2/1c677c22df8f21e869cca7e439fc3f5b

@@ -6,7 +6,7 @@ import Scrive.Settings exposing (Settings)
 import Scrive.Settings as Settings
 import Scrive.ContactDetails exposing (ContactDetails)
 import Scrive.ContactDetails as ContactDetails
-import Scrive.Tag exposing (Tag, TagToRemove)
+import Scrive.Tag exposing (Tag, ArchivedTag, SomeTag)
 import Scrive.Tag as Tag
 import Scrive.NullableInt exposing (NullableInt)
 import Scrive.NullableInt as NI
@@ -14,9 +14,6 @@ import Scrive.NullableInt as NI
 import Json.Decode exposing (Decoder)
 import Json.Decode as D
 import Json.Encode as E
-
-
-type alias TagList = List (Either TagToRemove Tag)
 
 
 type alias UserGroupRef = { id : NullableInt, name : String }
@@ -29,7 +26,7 @@ type alias UserGroup =
     , children : List UserGroupRef
     , settings : Settings
     , contactDetails : ContactDetails
-    , tags : TagList
+    , tags : List SomeTag
     }
 
 

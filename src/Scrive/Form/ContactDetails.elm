@@ -12,7 +12,9 @@ import Maybe
 
 import Scrive.ContactDetails exposing (ContactDetails)
 import Scrive.Address as CD
-import Scrive.Form.Error exposing (Error, Field(..))
+import Scrive.Form.Field exposing (Field)
+import Scrive.Form.Field as Field
+import Scrive.Form.Error exposing (Error)
 import Scrive.Form.Error as Errors
 
 
@@ -64,25 +66,25 @@ view errors { readOnly, toMsg } { address } =
                     , Evts.onInput <| \str -> toMsg { address | preferredContactMethod = CD.preferredContactFromOption str }
                      ] <| List.map preferredContactOption CD.preferredWaysToContact
                 ]
-            , inputFor AddressEmail "E-mail" "contact-email"
+            , inputFor Field.AddressEmail "E-mail" "contact-email"
                 (.email >> Maybe.map CD.emailToString >> Maybe.withDefault "")
                 (\nextEmail -> { address | email = Just <| CD.Email nextEmail })
-            , inputFor AddressPhone "Phone" "contact-phone"
+            , inputFor Field.AddressPhone "Phone" "contact-phone"
                 (.phone >> Maybe.map CD.phoneToString >> Maybe.withDefault "")
                 (\nextPhone -> { address | phone = Just <| CD.Phone nextPhone })
-            , inputFor AddressCompanyName "Company name" "contact-company"
+            , inputFor Field.AddressCompanyName "Company name" "contact-company"
                 (.companyName >> Maybe.withDefault "")
                 (\nextCompany -> { address | companyName = Just nextCompany })
-            , inputFor AddressStreet "Street address" "contact-street-address"
+            , inputFor Field.AddressStreet "Street address" "contact-street-address"
                 (.address >> Maybe.withDefault "")
                 (\nextAddress -> { address | address = Just nextAddress })
-            , inputFor AddressZip "ZIP Code" "contact-zip-code"
+            , inputFor Field.AddressZip "ZIP Code" "contact-zip-code"
                 (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
                 (\nextZip -> { address | zip = Just <| CD.ZipCode nextZip })
-            , inputFor AddressCity "City" "contact-city"
+            , inputFor Field.AddressCity "City" "contact-city"
                 (.city >> Maybe.withDefault "")
                 (\nextCity -> { address | city = Just nextCity })
-            , inputFor AddressCountry "Country" "contact-country"
+            , inputFor Field.AddressCountry "Country" "contact-country"
                 (.country >> Maybe.withDefault "")
                 (\nextCountry -> { address | city = Just nextCountry })
             ]

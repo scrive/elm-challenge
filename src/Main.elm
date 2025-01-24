@@ -18,10 +18,11 @@ import Scrive.RetentionPolicy as RP
 import Json.Decode as Json
 import Json.Encode as Json
 
-import Scrive.Tag exposing (Tag, TagToRemove)
+import Scrive.Tag exposing (Tag, ArchivedTag, SomeTag)
 import Scrive.Tag as Tag
 
-import Scrive.Form.Error as Form
+import Scrive.Form.Field as BelongsTo exposing (BelongsTo(..))
+import Scrive.Form.Error as Form exposing (Error)
 import Scrive.Form.Error as FE
 import Scrive.Form.Tags as TagsForm
 import Scrive.Form.ContactDetails as ContactForm
@@ -72,9 +73,10 @@ type Msg
     = NoOp
     | TagInProgress TagsForm.TagInProgress
     | TryToCreateTag { newName : String, newValue : String }
-    | TryToRestoreTag TagToRemove { newValue : String }
+    | TryToRestoreTag ArchivedTag { newValue : String }
     | TryToChangeTag Tag { newValue : String }
-    | TryToRemoveTag Tag
+    | TryToArchiveTag Tag
+    | RemoveTag (Either ArchivedTag Tag)
     | TryToUpdateAddress CD.Address
     | SelectPolicyToAdd RP.DataRetentionPolicy
     | AddSelectedPolicy
@@ -103,16 +105,16 @@ update msg model =
                 <| Tag.setValue newValue theTag
 
         TryToRestoreTag ttr { newValue } ->
-            validateTagAnd restoreTag (tagValidator { isNew = False, nameId = Tag.nameOfRemoved ttr }) model
-                <| Tag.make (Tag.nameOfRemoved ttr) newValue
+            validateTagAnd restoreTag (tagValidator { isNew = False, nameId = Tag.nameOfArchived ttr }) model
+                <| Tag.make (Tag.nameOfArchived ttr) newValue
 
-        TryToRemoveTag theTag ->
+        TryToArchiveTag theTag ->
 
             { model
             | tagInProgress = TagsForm.none
             , userGroup =
                 Result.map
-                    (\ug -> { ug | tags = removeTag theTag ug.tags })
+                    (\ug -> { ug | tags = archiveTag theTag ug.tags })
                     model.userGroup
             }
 
@@ -128,6 +130,16 @@ update msg model =
                         }
                     Err errors ->
                         { model | errors = errors }
+
+        RemoveTag theTag ->
+
+            { model
+            | tagInProgress = TagsForm.none
+            , userGroup =
+                Result.map
+                    (\ug -> { ug | tags = removeTag theTag ug.tags })
+                    model.userGroup
+            }
 
         ToggleJsonMode jsonMode ->
             { model | viewMode = jsonMode }
@@ -187,7 +199,7 @@ update msg model =
     )
 
 
-validateTagAnd : (Valid Tag -> UG.TagList -> UG.TagList) -> (UG.TagList -> Validator Form.Error Tag) -> Model -> Tag -> Model
+validateTagAnd : (Valid Tag -> List SomeTag -> List SomeTag) -> (List SomeTag -> Validator Form.Error Tag) -> Model -> Tag -> Model
 validateTagAnd fValid fValidator model theTag =
     case Result.map .tags model.userGroup of
         Ok currentTags ->
@@ -212,13 +224,13 @@ validateTagAnd fValid fValidator model theTag =
             model
 
 
-addTag : Valid Tag -> UG.TagList -> UG.TagList
+addTag : Valid Tag -> List SomeTag -> List SomeTag
 addTag validTag list =
     -- V.fromValid >> Right >> (::) -- adds to the start of list instead of the end
     list ++ [ Right <| V.fromValid validTag ]
 
 
-changeTag : Valid Tag -> UG.TagList -> UG.TagList
+changeTag : Valid Tag -> List SomeTag -> List SomeTag
 changeTag validTag =
     let theTag = V.fromValid validTag
     in List.map <| Either.mapRight
@@ -227,22 +239,33 @@ changeTag validTag =
         )
 
 
-removeTag : Tag -> UG.TagList -> UG.TagList
-removeTag theTag =
+archiveTag : Tag -> List SomeTag -> List SomeTag
+archiveTag theTag =
     List.map
         <| Either.andThenRight
             (\otherTag ->
-                if Tag.nameOf otherTag == Tag.nameOf theTag then Left <| Tag.toRemoved theTag else Right otherTag
+                if Tag.nameOf otherTag == Tag.nameOf theTag then Left <| Tag.toArchived theTag else Right otherTag
             )
 
 
-restoreTag : {- TagToRemove -> -} Valid Tag -> UG.TagList -> UG.TagList
+removeTag : Either ArchivedTag Tag -> List SomeTag -> List SomeTag
+removeTag eTag =
+    List.filter
+        (\eOtherTag ->
+            case ( eTag, eOtherTag ) of
+                ( Right theTag, Right otherTag ) -> Tag.nameOf otherTag /= Tag.nameOf theTag
+                ( Left theArchivedTag, Left otherArchivedTag )  -> Tag.nameOfArchived theArchivedTag /= Tag.nameOfArchived otherArchivedTag
+                _ -> True
+        )
+
+
+restoreTag : {- TagToRemove -> -} Valid Tag -> List SomeTag -> List SomeTag
 restoreTag validTag =
     let theTag = V.fromValid validTag
     in List.map
         <| Either.andThenLeft
-            (\removedTag ->
-                if Tag.nameOfRemoved removedTag == Tag.nameOf theTag then Right theTag else Left removedTag
+            (\archivedTag ->
+                if Tag.nameOfArchived archivedTag == Tag.nameOf theTag then Right theTag else Left archivedTag
             )
 
 
@@ -287,7 +310,8 @@ view model =
             { tryCreate  = TryToCreateTag
             , tryChange  = TryToChangeTag
             , tryRestore = TryToRestoreTag
-            , tryRemove  = TryToRemoveTag
+            , tryArchive = TryToArchiveTag
+            , remove = RemoveTag
             , markInProgress = TagInProgress
             }
         policyHandlers =
@@ -314,20 +338,20 @@ view model =
 
                     [ Html.h1 [] [ Html.text "Contacts" ]
                     , ContactForm.view
-                        (model.errors |> FE.onlyBelongingTo FE.Contacts)
+                        (model.errors |> FE.onlyBelongingTo BelongsTo.Contacts)
                         { readOnly = False, toMsg = TryToUpdateAddress }
                         userGroup.contactDetails
 
                     , Html.h1 [] [ Html.text "Tags" ]
                     , TagsForm.view
-                        (model.errors |> FE.onlyBelongingTo FE.Tags)
+                        (model.errors |> FE.onlyBelongingTo BelongsTo.Tags)
                         tagHandlers
                         model.tagInProgress
                         userGroup.tags
 
                     , Html.h1 [] [ Html.text "Settings" ]
                     , RetentionPolicy.view
-                        (model.errors |> FE.onlyBelongingTo FE.Settings)
+                        (model.errors |> FE.onlyBelongingTo BelongsTo.Settings)
                         policyHandlers
                         (Maybe.map Tuple.first model.policyInProgress)
                         <| RP.toList userGroup.settings.policy

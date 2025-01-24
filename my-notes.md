@@ -72,14 +72,14 @@ I will try these steps:
   * But try not to use any more
 * [ ] Fix issues in UX / Logic:
   * [X] Show validation errors where they belong
-  * [ ] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
+  * [ ] If value in select box (such as Add Timeout by type select) is not changed, no event is fired when user presses Enter
+    * Usually it is fixed with additional item in select box, but it sounds cheaty
+  * [ ] Only one input should be triggered active in Contacts form
+  * [X] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
   * [ ] It's improper to update model values while user types in the values, we should commit changes only after editing
     * E-mail and such in contacts view
     * Timeouts in retention policy
-  * [ ] Only one input should be triggered active in Contacts form
-  * [ ] Validate phone & zip code (current validators are stubs)
-  * [ ] If value in select box (such as Add Timeout by type select) is not changed, no event is fired when user presses Enter
-    * Usually it is fixed with additional item in select box, but it sounds cheaty
+  * [X] Validate phone & zip code (current validators are stubs)
   * [ ] Pressing Enter in text fields should trigger submit
   * [ ] Erasing value in timeout input removes the input box
   * [ ] No way to cancel editing, especially when an error happened in the form
