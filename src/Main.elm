@@ -91,7 +91,7 @@ type Msg
     | ClearPolicyToAdd
     | AddSelectedPolicy
     | StartDefiningPolicy RP.DataRetentionPolicy
-    | TryToDefinePolicyTimeout RP.DataRetentionPolicy Int
+    | EditPolicyInFocusTimeout RP.DataRetentionPolicy Int
     | ApplyPolicyTimeout RP.DataRetentionPolicy
     | ClearPolicyTimeout RP.DataRetentionPolicy
     | ToggleImmediateTrash Bool
@@ -220,10 +220,9 @@ update msg model =
             | editFocus = FocusPolicyEdit ( policy, 0 )
             }
 
-        TryToDefinePolicyTimeout policy timeout ->
+        EditPolicyInFocusTimeout policy timeout ->
             { model
             | editFocus = FocusPolicyEdit ( policy, timeout )
-            , userGroup = Result.map (changePolicies <| RP.setPolicyTimeout policy timeout) model.userGroup
             }
 
         ApplyPolicyTimeout expectedPolicy ->
@@ -378,7 +377,7 @@ view model =
             }
         policyHandlers =
             { startDefiningPolicy = StartDefiningPolicy
-            , tryDefineTimeout = TryToDefinePolicyTimeout
+            , editCurrentTimeout = EditPolicyInFocusTimeout
             , applyCurrentTimeout = ApplyPolicyTimeout
             , clearTimeout = ClearPolicyTimeout
             , selectPolicyToAdd = SelectPolicyToAdd
@@ -399,7 +398,7 @@ view model =
 
         mbEditingPolicy =
             case model.editFocus of
-                FocusPolicyEdit ( policy, _ ) -> Just policy
+                FocusPolicyEdit ( policy, pvalue ) -> Just ( policy, pvalue )
                 _ -> Nothing
 
     in

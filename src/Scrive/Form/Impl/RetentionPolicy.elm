@@ -15,7 +15,7 @@ import Scrive.Form.Error as Errors
 
 type alias Handlers msg =
     { startDefiningPolicy : DataRetentionPolicy -> msg
-    , tryDefineTimeout : DataRetentionPolicy -> Int -> msg
+    , editCurrentTimeout : DataRetentionPolicy -> Int -> msg
     , applyCurrentTimeout : DataRetentionPolicy -> msg
     , clearTimeout : DataRetentionPolicy -> msg
     , selectPolicyToAdd : DataRetentionPolicy -> msg
@@ -26,7 +26,7 @@ type alias Handlers msg =
 
 
 type alias State =
-    { editing : Maybe DataRetentionPolicy
+    { editing : Maybe ( DataRetentionPolicy, Int )
     , adding : Maybe DataRetentionPolicy
     }
 
@@ -36,15 +36,20 @@ view errors handlers state pl =
     let
         lacksWhichPolicies = RP.lacksWhichPolicies pl
 
-        isCurrent policy = case state.editing of
-            Just currentPolicy -> currentPolicy == policy
-            Nothing -> False
+        currentlyEditing policy =
+            state.editing
+                |> Maybe.andThen
+                    (\( currentPolicy, currentVal ) ->
+                        if currentPolicy == policy then
+                            Just (currentPolicy, currentVal )
+                        else Nothing
+                    )
 
         viewPolicy { policy, value } =
             Html.li []
                 [ Html.text <| RP.toOption policy ++ " : "
-                , if not <| isCurrent policy
-                    then
+                , case currentlyEditing policy of
+                    Nothing ->
                         Html.div []
                             [ Html.text <| String.fromInt value
                             , Html.button
@@ -56,14 +61,15 @@ view errors handlers state pl =
                                 ]
                                 [ Html.text "(Remove)" ]
                             ]
-                    else
+                    Just ( _, currentValue ) ->
                         Html.div []
                             [ Html.input
-                                [ Attrs.type_ "number", Attrs.value <| String.fromInt value
+                                [ Attrs.type_ "number"
+                                , Attrs.value <| String.fromInt currentValue
                                 , Attrs.placeholder <| String.fromInt value
                                 , Evts.onInput
                                     ( String.toInt
-                                        >> Maybe.map (handlers.tryDefineTimeout policy)
+                                        >> Maybe.map (handlers.editCurrentTimeout policy)
                                         >> Maybe.withDefault (handlers.clearTimeout policy)
                                     )
                                 ]
