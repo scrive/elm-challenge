@@ -35,7 +35,7 @@ tagValidator { isNew, index } currentTags =
             else V.skip
 
         , V.ifBlank Tag.nameOf <| FE.make nameField "Tag name should not be empty"
-        , V.ifNotAllAlphaNum Tag.nameOf <| FE.make nameField "Tag name should consist of only letters or numbers"
+        , V.ifNotAllCharsAre (\c -> Char.isAlphaNum c || c == ' ') Tag.nameOf <| FE.make nameField "Tag name should consist of only letters, numbers or spaces"
         , V.ifBlank Tag.valueOf <| FE.make valueField "Value of the tag should not be empty"
         ]
 
@@ -64,10 +64,10 @@ addressValidator preferredMethod =
                 preferredMethod == CD.PC_Phone && notSpecified addr.phone
             )
             <| FE.make (Field.Address CD.F_Phone) "Phone should be specified when preferred contact method is set to \"phone\""
-        , V.ifFalse (.email >> Maybe.map V.isValidEmail >> Maybe.withDefault True)
-            <| FE.make (Field.Address CD.F_Email) "Specified e-mail is in invalid format"
-        , V.ifFalse (.phone >> Maybe.map V.isValidPhone >> Maybe.withDefault True)
-            <| FE.make (Field.Address CD.F_Phone) "Specified phone is in invalid format"
+        , V.ifFalse (.email >> Maybe.map (\e -> V.isValidEmail e || String.isEmpty e) >> Maybe.withDefault True)
+            <| FE.make (Field.Address CD.F_Email) "Specified e-mail has invalid format"
+        , V.ifFalse (.phone >> Maybe.map (\p -> V.isValidPhone p || String.isEmpty p) >> Maybe.withDefault True)
+            <| FE.make (Field.Address CD.F_Phone) "Specified phone has invalid format"
         , V.ifNotAllCharsAre (\c -> Char.isDigit c || c == ' ') (.zip >> Maybe.withDefault "")
-            <| FE.make (Field.Address CD.F_ZipCode) "Specified ZIP code should contain only digits or spaces"
+            <| FE.make (Field.Address CD.F_ZipCode) "ZIP code should contain only digits or spaces"
         ]

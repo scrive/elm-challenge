@@ -6,6 +6,9 @@ import Html
 import Html.Extra as Html
 import Html.Attributes as Attrs
 import Html.Events as Evts
+import Html.Events.Extra as Evts
+
+import Style as Style
 
 import Scrive.Data.RetentionPolicy exposing (DataRetentionPolicy, PolicyWithTimeout)
 import Scrive.Data.RetentionPolicy as RP
@@ -65,6 +68,7 @@ view errors handlers state pl =
                         Html.div []
                             [ Html.input
                                 [ Attrs.type_ "number"
+                                , Attrs.class Style.textInputClasses
                                 , Attrs.value <| String.fromInt currentValue
                                 , Attrs.placeholder <| String.fromInt value
                                 , Evts.onInput
@@ -72,6 +76,7 @@ view errors handlers state pl =
                                         >> Maybe.withDefault 0
                                         >> handlers.editCurrentTimeout policy
                                     )
+                                , Evts.onEnter <| handlers.applyCurrentTimeout policy
                                 ]
                                 []
                             , Html.button

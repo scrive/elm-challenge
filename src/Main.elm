@@ -34,7 +34,9 @@ import Scrive.Form.Validator exposing (tagValidator, addressValidator)
 import Validate exposing (Validator, Valid)
 import Validate as V
 import Validate.Extra as V
-import Scrive.Form.Impl.Tags as Tags
+
+import Style as Style
+
 
 ---- MODEL ----
 
@@ -177,11 +179,11 @@ update msg model =
                     Err validationErrors ->
                         { model | validationErrors = validationErrors }
 
-        TryToRestoreTag ttr { newValue } ->
+        TryToRestoreTag archivedTag { newValue } ->
           let
                 resNextUserGroup =
                     validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
-                        <| Tag.make (Tag.nameOfArchived ttr) newValue
+                        <| Tag.make (Tag.nameOfArchived archivedTag) newValue
             in
                 case resNextUserGroup of
                     Ok nextUserGroup ->
@@ -379,19 +381,6 @@ changePolicies fPolicyRec ugroup =
 
 ---- VIEW ----
 
-{-
-header : String -> Html msg
-header text =
-    Html.span [ Attrs.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
-        [ Html.text text ]
-
-
-subheader : String -> Html msg
-subheader text =
-    Html.span [ Attrs.class "p-2 text-2xl font-extrabold text-slate-800" ]
-        [ Html.text text ]
--}
-
 
 view : Model -> Html Msg
 view model =
@@ -445,11 +434,7 @@ view model =
 
     Html.div
         [ ]
-        [ Html.div [ Attrs.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-            -- [ header "Let's start your task"
-            -- , subheader "Here are your data:"
-            -- , header "Now turn them into form."
-            -- , subheader "See README for details of the task. Good luck 🍀 "
+        [ Html.div [ Attrs.class Style.mainContainer ]
             <|
             ( case model.userGroup of
                 Ok userGroup ->
@@ -485,7 +470,7 @@ view model =
                 [ Attrs.class "absolute top-0 left-0" ]
                 [ Html.text
                     <| case model.editFocus of
-                        FocusTag tip -> "Tag : " ++ Tags.tagInProgressToString tip
+                        FocusTag tip -> "Tag : " ++ TagsForm.tagInProgressToString tip
                         FocusPolicyAdd policy -> "Policy add : " ++ RP.toString policy
                         FocusPolicyEdit ( policy, intVal ) -> "Policy edit : " ++ RP.toString policy ++ " (" ++ String.fromInt intVal ++ ")"
                         FocusContactsEdit ( cdField, value ) -> "Contacts edit : " ++ CD.fieldToLabel cdField ++ " (" ++ value ++ ")"

@@ -4,7 +4,7 @@ module Scrive.Data.RetentionPolicy exposing
     , PolicyRec
     , possiblePolicies, lacksWhichPolicies
     , setPolicyTimeout, clearPolicyTimeout
-    , setImmediateTrash, clearImmediateTrash
+    , setImmediateTrash, clearImmediateTrash, clearAllTimeouts
     , emptyRec
     , fromList, toList
     , decoder, encode
@@ -129,8 +129,23 @@ clearPolicyTimeout : DataRetentionPolicy -> PolicyRec -> PolicyRec
 clearPolicyTimeout policy = changePolicyMbTimeout policy Nothing
 
 
+clearAllTimeouts : PolicyRec -> PolicyRec
+clearAllTimeouts rec =
+    { rec
+    | closed = Nothing
+    , canceled = Nothing
+    , timedout = Nothing
+    , rejected = Nothing
+    , error = Nothing
+    }
+
+
 setImmediateTrash : PolicyRec -> PolicyRec
-setImmediateTrash rec = { rec | trash = Just ImmediateTrash }
+setImmediateTrash rec =
+    -- clearAllTimeouts <|
+    { rec
+    | trash = Just ImmediateTrash
+    }
 
 
 clearImmediateTrash : PolicyRec -> PolicyRec

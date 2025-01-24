@@ -77,26 +77,28 @@ I will try these steps:
   * [X] Only one input should be triggered active in Contacts form
   * [X] Updating values of existing tags stopped to work
     * It was copy-paste issue introduced recently
-  * [ ] When updating timeout value there is 0 in the input instead of current value
-  * [ ] Erasing value text in timeout input removes the input box and the timeout itself
+  * [X] When updating timeout value there is 0 in the input instead of current value
+  * [X] Erasing value text in timeout input removes the input box and the timeout itself
   * [X] It's improper to update model values while user types in the values, we should commit changes only after editing
     * [X] All fields in contacts view
     * [X] Timeouts in retention policy
   * [ ] Sometimes editing tag's value allows it to be empty on Submit but keeps the old value instead
-  * [ ] Pressing Enter in text fields should trigger submit
+  * [X] Pressing Enter in text fields should trigger submit
   * [X] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
   * [X] Validate phone & zip code (current validators are stubs)
   * [ ] No way to cancel editing, especially when an error happened in the form
+  * [ ] `2FA enabled` tag couldn't be "restored"
+    * Turned out it is because its name contains digit, we don't allow it currently, and we assume existing tags names' are already valid
   * [ ] Read-only modes for all the forms:
     * [ ] Tags
     * [ ] Contact details
     * [ ] Retention Policy
-  * [ ] Update selected field in the model in all possible cases (track it visually)
+  * [X] Update selected field in the model in all possible cases (track it visually)
   * [ ] Clear only errors that belong to current form when validation repeats succesfully
   * [ ] Wouldn't it is be nice if clicking mouse outside of text field would also submit?
   * [ ] Immediate Trash of Retention Timeouts should disable all of timeouts?
-  * [ ] `validateTagAnd` could return `Result` instead and we could change it through a chain of actions
-  * [ ] Additional validator that rejects huge timeouts
+  * [X] `validateTagAnd` could return `Result` instead and we could change it through a chain of actions
+  * [ ] Additional validator as an example, that rejects huge timeouts
 * [ ] Style forms / UX / Design
 * [ ] Format code
 * [ ] Optionally, validate while typing

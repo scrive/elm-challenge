@@ -10,6 +10,8 @@ import Html.Events.Extra as Evts
 
 import Maybe
 
+import Style as Style
+
 import Scrive.Data.ContactDetails exposing (ContactDetails)
 import Scrive.Data.Address as CD
 import Scrive.Form.Field exposing (Field)
@@ -32,24 +34,26 @@ type alias State =
 view : List Error -> Handlers msg -> State -> ContactDetails -> Html msg
 view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEditing } { address } =
     if readOnly then
+        let
+            draftAddress = CD.toDraft address
+            textFor field =
+                Html.li [] [ Html.text <| CD.fieldToLabel field ++ " : " ++ (Maybe.withDefault "-" <| CD.draftValueOf draftAddress field) ]
+        in
         Html.ul
             []
-            [ Html.li [] [ Html.text <| "Preferred way of contact :" ++ CD.preferredContactToString address.preferredContactMethod ]
-            , Html.li [] [ Html.text <| "E-mail : " ++ (Maybe.withDefault "-" <| Maybe.map CD.emailToString address.email) ]
-            , Html.li [] [ Html.text <| "Phone : " ++ (Maybe.withDefault "-" <| Maybe.map CD.phoneToString address.phone) ]
-            , Html.li [] [ Html.text <| "Company name : " ++ (Maybe.withDefault "-" address.companyName) ]
-            , Html.li [] [ Html.text <| "Steet address : " ++ (Maybe.withDefault "-" address.address) ]
-            , Html.li [] [ Html.text <| "ZIP Code : " ++ (Maybe.withDefault "-" <| Maybe.map CD.zipCodeToString address.zip) ]
-            , Html.li [] [ Html.text <| "City : " ++ (Maybe.withDefault "-" address.city) ]
-            , Html.li [] [ Html.text <| "Country : " ++ (Maybe.withDefault "-" address.country) ]
-            ]
+            ( Html.li [] [ Html.text <| "Preferred way of contact :" ++ CD.preferredContactToString address.preferredContactMethod ]
+            :: (List.map textFor <| CD.allFields)
+            )
     else
         let
 
             draftAddress = CD.toDraft address
 
             qValueOf : CD.Field -> String
-            qValueOf =  Maybe.withDefault "" << CD.draftValueOf draftAddress
+            qValueOf = Maybe.withDefault "" << CD.draftValueOf draftAddress
+
+            qSubmitValue : CD.Field -> String -> msg
+            qSubmitValue field currentValue = CD.setDraftValue draftAddress field currentValue |> tryUpdate
 
             preferredContactOption : CD.PreferredContact -> Html msg
             preferredContactOption pc =
@@ -59,22 +63,22 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
 
             inputFor field inputId currentValue =
                 Html.li []
-                        [ Html.label [ Attrs.for inputId ] [ Html.text <| CD.fieldToLabel field ++ " : " ]
-                        , Html.input
-                            [ Attrs.id inputId
-                            , Attrs.type_ "text"
-                            , Evts.onInput (\str -> editField ( field, str ))
-                            , Attrs.placeholder <| qValueOf field
-                            , Attrs.value currentValue
-                            -- , Evts.onEnter (fSetPart >> toMsg)
-                            -- , Evts.onMouseOut (fSetPart >> toMsg)
-                            ]
-                            [ ]
-                        , Html.button
-                            [ Evts.onClick (CD.setDraftValue draftAddress field currentValue |> tryUpdate) ]
-                            [ Html.text "(Set)" ]
-                        , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
+                    [ Html.label [ Attrs.for inputId ] [ Html.text <| CD.fieldToLabel field ++ " : " ]
+                    , Html.input
+                        [ Attrs.id inputId
+                        , Attrs.type_ "text"
+                        , Attrs.class Style.textInputClasses
+                        , Evts.onInput (\str -> editField ( field, str ))
+                        , Attrs.placeholder <| qValueOf field
+                        , Attrs.value currentValue
+                        , Evts.onEnter <| qSubmitValue field currentValue
                         ]
+                        [ ]
+                    , Html.button
+                        [ Evts.onClick <| qSubmitValue field currentValue ]
+                        [ Html.text "(Set)" ]
+                    , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
+                    ]
 
             clickableTextFor field =
                 Html.li
