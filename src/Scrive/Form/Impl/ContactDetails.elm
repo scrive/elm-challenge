@@ -103,5 +103,5 @@ view errors { toMsg, selectField } { readOnly, selectedField } { address } =
                 (\nextCity -> { address | city = Just nextCity })
             , inputFor Field.AddressCountry "Country" "contact-country"
                 (.country >> Maybe.withDefault "")
-                (\nextCountry -> { address | city = Just nextCountry })
+                (\nextCountry -> { address | country = Just nextCountry })
             ]

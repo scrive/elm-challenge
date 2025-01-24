@@ -22,6 +22,7 @@ import Scrive.Data.Tag exposing (Tag, ArchivedTag, SomeTag)
 import Scrive.Data.Tag as Tag
 
 import Scrive.Form.Field as Form
+import Scrive.Form.Field as Field
 import Scrive.Form.Field as BelongsTo exposing (BelongsTo(..))
 import Scrive.Form.Error as Form
 import Scrive.Form.Error as FE
@@ -37,12 +38,17 @@ import Validate.Extra as V
 ---- MODEL ----
 
 
+type EditFocus
+    = FocusTag TagsForm.TagInProgress
+    | FocusPolicyAdd RP.DataRetentionPolicy
+    | FocusPolicyEdit ( RP.DataRetentionPolicy, Int )
+    | NotEditing
+
+
 type alias Model =
     { userGroup : Result Json.Error UserGroup
     , selectedField : Maybe Form.Field
-    , policyToAdd : Maybe RP.DataRetentionPolicy
-    , policyInProgress : Maybe ( RP.DataRetentionPolicy, Int )
-    , tagInProgress : Maybe TagsForm.TagInProgress
+    , editFocus : EditFocus
     , errors : List Form.Error
     , viewMode : ViewJson -- TODO: remove, only for debugging
     }
@@ -52,10 +58,8 @@ init : ( Model, Cmd Msg )
 init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
-        , tagInProgress = Nothing
         , selectedField = Nothing
-        , policyToAdd = Nothing
-        , policyInProgress = Nothing
+        , editFocus = NotEditing
         , errors = []
         , viewMode = CurrentJson
         }
@@ -106,24 +110,60 @@ update msg model =
             { model | selectedField = Nothing }
 
         SetTagInProgress inProgress ->
-            { model | tagInProgress = Just inProgress }
+            { model | editFocus = FocusTag inProgress }
 
         TryToCreateTag { newName, newValue } ->
-            validateTagAnd addTag (tagValidator { isNew = True, index = Nothing}) model
-                <| Tag.make newName newValue
+            let
+                resNextUserGroup =
+                    validateTagAnd addTag (tagValidator { isNew = True, index = Nothing}) model
+                        <| Tag.make newName newValue
+            in
+                case resNextUserGroup of
+                    Ok nextUserGroup ->
+                        { model
+                        | editFocus = NotEditing
+                        , errors = []
+                        , userGroup = Ok nextUserGroup
+                        }
+                    Err validationErrors ->
+                        { model | errors = validationErrors }
 
         TryToChangeTag theTag { newValue } ->
-            validateTagAnd changeTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
-                <| Tag.setValue newValue theTag
+            let
+                resNextUserGroup =
+                    validateTagAnd changeTag (tagValidator { isNew = True, index = Nothing}) model
+                        <| Tag.setValue newValue theTag
+            in
+                case resNextUserGroup of
+                    Ok nextUserGroup ->
+                        { model
+                        | editFocus = NotEditing
+                        , errors = []
+                        , userGroup = Ok nextUserGroup
+                        }
+                    Err validationErrors ->
+                        { model | errors = validationErrors }
 
         TryToRestoreTag ttr { newValue } ->
-            validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
-                <| Tag.make (Tag.nameOfArchived ttr) newValue
+          let
+                resNextUserGroup =
+                    validateTagAnd restoreTag (tagValidator { isNew = True, index = Nothing}) model
+                        <| Tag.make (Tag.nameOfArchived ttr) newValue
+            in
+                case resNextUserGroup of
+                    Ok nextUserGroup ->
+                        { model
+                        | editFocus = NotEditing
+                        , errors = []
+                        , userGroup = Ok nextUserGroup
+                        }
+                    Err validationErrors ->
+                        { model | errors = validationErrors }
 
         ArchiveTag theTag ->
 
             { model
-            | tagInProgress = Nothing
+            | editFocus = NotEditing
             , userGroup =
                 Result.map
                     (\ug -> { ug | tags = archiveTag theTag ug.tags })
@@ -146,7 +186,7 @@ update msg model =
         RemoveTag theTag ->
 
             { model
-            | tagInProgress = Nothing
+            | editFocus = NotEditing
             , userGroup =
                 Result.map
                     (\ug -> { ug | tags = removeTag theTag ug.tags })
@@ -158,55 +198,55 @@ update msg model =
 
         SelectPolicyToAdd policy ->
             { model
-            | policyToAdd = Just policy
+            | editFocus = FocusPolicyAdd policy
             }
 
         AddSelectedPolicy ->
             { model
-            | policyToAdd = Nothing
+            | editFocus = NotEditing
             , userGroup =
-                case model.policyToAdd of
-                    Just policyToAdd -> Result.map (changePolicies <| RP.setPolicyTimeout policyToAdd 0) model.userGroup
-                    Nothing -> model.userGroup
+                case model.editFocus of
+                    FocusPolicyAdd policyToAdd -> Result.map (changePolicies <| RP.setPolicyTimeout policyToAdd 0) model.userGroup
+                    _ -> model.userGroup
             }
 
         ClearPolicyToAdd ->
             { model
-            | policyToAdd = Nothing
+            | editFocus = NotEditing
             }
 
         StartDefiningPolicy policy ->
             { model
-            | policyInProgress = Just ( policy, 0 )
+            | editFocus = FocusPolicyEdit ( policy, 0 )
             }
 
         TryToDefinePolicyTimeout policy timeout ->
             { model
-            | policyInProgress = Just ( policy, timeout )
+            | editFocus = FocusPolicyEdit ( policy, timeout )
             , userGroup = Result.map (changePolicies <| RP.setPolicyTimeout policy timeout) model.userGroup
             }
 
         ApplyPolicyTimeout expectedPolicy ->
             { model
-            | policyInProgress = Nothing
+            | editFocus = NotEditing
             , userGroup =
-                case model.policyInProgress of
-                    Just ( policy, timeout ) ->
+                case model.editFocus of
+                    FocusPolicyEdit ( policy, timeout ) ->
                         if policy == expectedPolicy then
                             Result.map (changePolicies <| RP.setPolicyTimeout policy timeout) model.userGroup
                         else model.userGroup
-                    Nothing -> model.userGroup
+                    _ -> model.userGroup
             }
 
         ClearPolicyTimeout policy ->
             { model
-            | policyInProgress = Nothing
+            | editFocus = NotEditing
             , userGroup = Result.map (changePolicies <| RP.clearPolicyTimeout policy) model.userGroup
             }
 
         ToggleImmediateTrash doTrash ->
             { model
-            | policyInProgress = Nothing
+            | editFocus = NotEditing
             , userGroup = Result.map (changePolicies <| if doTrash then RP.setImmediateTrash else RP.clearImmediateTrash) model.userGroup
             }
 
@@ -217,10 +257,18 @@ update msg model =
 
 
 indexOfTagInProgress : Model -> Maybe Int
-indexOfTagInProgress = .tagInProgress >> Maybe.andThen TagsForm.indexOfTagInProgress
+indexOfTagInProgress model =
+    case model.editFocus of
+        FocusTag tip -> TagsForm.indexOfTagInProgress tip
+        _ -> Nothing
 
 
-validateTagAnd : (Valid Tag -> List SomeTag -> List SomeTag) -> (List SomeTag -> Validator Form.Error Tag) -> Model -> Tag -> Model
+validateTagAnd
+    :  (Valid Tag -> List SomeTag -> List SomeTag)
+    -> (List SomeTag -> Validator Form.Error Tag)
+    -> Model
+    -> Tag
+    -> Result (List Form.Error) UserGroup
 validateTagAnd fValid fValidator model theTag =
     case Result.map .tags model.userGroup of
         Ok currentTags ->
@@ -229,20 +277,13 @@ validateTagAnd fValid fValidator model theTag =
             in
                 case resValidTag of
                     Ok validTag ->
-                        { model
-                        | tagInProgress = Nothing -- We clear the form state on any validation success. FIXME: looks like not an obvious place to do it
-                        , errors = []
-                        , userGroup =
-                            Result.map
-                                (\ug -> { ug | tags = fValid validTag ug.tags })
-                                model.userGroup
-                        }
-                    Err errors ->
-                        { model
-                        | errors = errors -- And store errors on any validation failure. FIXME: looks like not an obvious place to do it
-                        }
+                        Result.map
+                            (\ug -> { ug | tags = fValid validTag ug.tags })
+                            model.userGroup
+                        |> Result.mapError (always [])
+                    Err errors -> Err errors
         Err _ ->
-            model
+            Err []
 
 
 addTag : Valid Tag -> List SomeTag -> List SomeTag
@@ -345,6 +386,22 @@ view model =
             , clearPolicyToAdd = ClearPolicyToAdd
             , toggleImmediateTrash = ToggleImmediateTrash
             }
+
+        mbTagInProgress =
+            case model.editFocus of
+                FocusTag tip -> Just tip
+                _ -> Nothing
+
+        mbAddingPolicy =
+            case model.editFocus of
+                FocusPolicyAdd policy -> Just policy
+                _ -> Nothing
+
+        mbEditingPolicy =
+            case model.editFocus of
+                FocusPolicyEdit ( policy, _ ) -> Just policy
+                _ -> Nothing
+
     in
 
     Html.div
@@ -369,15 +426,15 @@ view model =
                     , TagsForm.view
                         (model.errors |> FE.onlyBelongingTo BelongsTo.Tags)
                         tagHandlers
-                        model.tagInProgress
+                        mbTagInProgress
                         userGroup.tags
 
                     , Html.h1 [] [ Html.text "Retention Policy" ]
                     , RetentionPolicy.view
                         (model.errors |> FE.onlyBelongingTo BelongsTo.Settings)
                         policyHandlers
-                        { adding = model.policyToAdd
-                        , editing = Maybe.map Tuple.first model.policyInProgress
+                        { adding = mbAddingPolicy
+                        , editing = mbEditingPolicy
                         }
                         <| RP.toList userGroup.settings.policy
 
@@ -385,9 +442,14 @@ view model =
                 Err error ->
                     [ Html.text <| Json.errorToString error ]
             ) ++
-            [ Html.div
+            [ Html.div -- temporary div with current JSON
                 [ Attrs.class "absolute top-0 left-0" ]
-                [ Html.button [ Evts.onClick <| ToggleJsonMode NoJson ] [ Html.text "No JSON" ]
+                [ Html.text
+                    <| case model.selectedField of
+                        Just field -> Field.toString field
+                        Nothing -> "Nothing selected"
+                , Html.hr [] []
+                , Html.button [ Evts.onClick <| ToggleJsonMode NoJson ] [ Html.text "No JSON" ]
                 , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson ] [ Html.text "Original JSON" ]
                 , Html.button [ Evts.onClick <| ToggleJsonMode CurrentJson ] [ Html.text "Current JSON" ]
                 , Html.pre

@@ -75,14 +75,14 @@ I will try these steps:
   * [X] If value in select box (such as Add Timeout by type select) is not changed, no event is fired when user presses Enter
     * Usually it is fixed with additional item in select box, but it sounds cheaty
   * [X] Only one input should be triggered active in Contacts form
-  * [ ] Sometimes editing tag's value allows it to be empty on Submit but keeps the old values
+  * [ ] Erasing value text in timeout input removes the input box and the timeout itself
+  * [ ] Sometimes editing tag's value allows it to be empty on Submit but keeps the old value instead
   * [X] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
   * [ ] It's improper to update model values while user types in the values, we should commit changes only after editing
-    * E-mail and such in contacts view
-    * Timeouts in retention policy
+    * [ ] All fields in contacts view
+    * [ ] Timeouts in retention policy
   * [X] Validate phone & zip code (current validators are stubs)
   * [ ] Pressing Enter in text fields should trigger submit
-  * [ ] Erasing value text in timeout input removes the input box and the timeout itself
   * [ ] No way to cancel editing, especially when an error happened in the form
   * [ ] Read-only modes for all the forms:
     * [ ] Tags
@@ -92,9 +92,11 @@ I will try these steps:
   * [ ] Clear only errors that belong to current form when validation repeats succesfully
   * [ ] Wouldn't it is be nice if clicking mouse outside of text field would also submit?
   * [ ] Immediate Trash of Retention Timeouts should disable all of timeouts?
-  * [ ] Example validator that rejects huge timeouts
+  * [ ] `validateTagAnd` could return `Result` instead and we could change it through a chain of actions
+  * [ ] Additional validator that rejects huge timeouts
 * [ ] Style forms / UX / Design
 * [ ] Format code
+* [ ] Optionally, validate while typing
 * [ ] Optionally, Add tests for decoding / encoding : [fuzzy](https://package.elm-lang.org/packages/elm-explorations/test/latest/Fuzz)
 * [ ] Optionally, fake sending data from the model
 
