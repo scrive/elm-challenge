@@ -8,8 +8,8 @@ module Scrive.Form.Field exposing
 type Field
     = NewTagName
     | NewTagValue
-    | NameOfTagWith { name : String }
-    | ValueOfTagWith { name : String }
+    | NameOfTag Int
+    | ValueOfTag Int
     | AddressEmail
     | AddressPhone
     | AddressCompanyName
@@ -30,8 +30,8 @@ belongsTo field =
     case field of
         NewTagName -> Tags
         NewTagValue -> Tags
-        NameOfTagWith _ -> Tags
-        ValueOfTagWith _ -> Tags
+        NameOfTag _ -> Tags
+        ValueOfTag _ -> Tags
         AddressEmail -> Contacts
         AddressPhone -> Contacts
         AddressZip -> Contacts

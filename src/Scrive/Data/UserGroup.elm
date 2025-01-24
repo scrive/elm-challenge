@@ -1,15 +1,15 @@
-module Scrive.UserGroup exposing (..)
+module Scrive.Data.UserGroup exposing (..)
 
 import Either exposing (Either)
 
-import Scrive.Settings exposing (Settings)
-import Scrive.Settings as Settings
-import Scrive.ContactDetails exposing (ContactDetails)
-import Scrive.ContactDetails as ContactDetails
-import Scrive.Tag exposing (Tag, ArchivedTag, SomeTag)
-import Scrive.Tag as Tag
-import Scrive.NullableInt exposing (NullableInt)
-import Scrive.NullableInt as NI
+import Scrive.Data.Settings exposing (Settings)
+import Scrive.Data.Settings as Settings
+import Scrive.Data.ContactDetails exposing (ContactDetails)
+import Scrive.Data.ContactDetails as ContactDetails
+import Scrive.Data.Tag exposing (Tag, ArchivedTag, SomeTag)
+import Scrive.Data.Tag as Tag
+import Scrive.Data.NullableInt exposing (NullableInt)
+import Scrive.Data.NullableInt as NI
 
 import Json.Decode exposing (Decoder)
 import Json.Decode as D

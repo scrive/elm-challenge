@@ -1,13 +1,13 @@
-module Scrive.ContactDetails exposing (..)
+module Scrive.Data.ContactDetails exposing (..)
 
 import Json.Decode exposing (Decoder)
 import Json.Decode as D
 import Json.Encode as E
 
-import Scrive.NullableInt exposing (NullableInt)
-import Scrive.NullableInt as NI
-import Scrive.Address exposing (Address)
-import Scrive.Address as Address
+import Scrive.Data.NullableInt exposing (NullableInt)
+import Scrive.Data.NullableInt as NI
+import Scrive.Data.Address exposing (Address)
+import Scrive.Data.Address as Address
 
 
 type alias ContactDetails =

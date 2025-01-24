@@ -1,4 +1,4 @@
-module Scrive.RetentionPolicy exposing
+module Scrive.Data.RetentionPolicy exposing
     ( DataRetentionPolicy
     , PolicyWithTimeout
     , PolicyRec

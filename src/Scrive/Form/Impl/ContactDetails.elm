@@ -1,4 +1,4 @@
-module Scrive.Form.ContactDetails exposing (..)
+module Scrive.Form.Impl.ContactDetails exposing (..)
 
 
 import Html exposing (Html)
@@ -10,8 +10,8 @@ import Html.Events.Extra as Evts
 
 import Maybe
 
-import Scrive.ContactDetails exposing (ContactDetails)
-import Scrive.Address as CD
+import Scrive.Data.ContactDetails exposing (ContactDetails)
+import Scrive.Data.Address as CD
 import Scrive.Form.Field exposing (Field)
 import Scrive.Form.Field as Field
 import Scrive.Form.Error exposing (Error)

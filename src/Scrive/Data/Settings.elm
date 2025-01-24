@@ -1,4 +1,4 @@
-module Scrive.Settings exposing (..)
+module Scrive.Data.Settings exposing (..)
 
 
 import Json.Decode exposing (Decoder)
@@ -6,10 +6,10 @@ import Json.Decode as D
 import Json.Encode as E
 
 
-import Scrive.NullableInt exposing (NullableInt)
-import Scrive.NullableInt as NI
-import Scrive.RetentionPolicy exposing (PolicyRec)
-import Scrive.RetentionPolicy as RetentionPolicy
+import Scrive.Data.NullableInt exposing (NullableInt)
+import Scrive.Data.NullableInt as NI
+import Scrive.Data.RetentionPolicy exposing (PolicyRec)
+import Scrive.Data.RetentionPolicy as RetentionPolicy
 
 
 type alias Settings =

@@ -3,12 +3,12 @@ module Scrive.Form.Validator exposing (..)
 import Set
 import Either exposing (Either(..))
 
-import Scrive.UserGroup as UG
-import Scrive.ContactDetails as CD
-import Scrive.Address as CD
+import Scrive.Data.UserGroup as UG
+import Scrive.Data.ContactDetails as CD
+import Scrive.Data.Address as CD
 
-import Scrive.Tag exposing (Tag, SomeTag)
-import Scrive.Tag as Tag
+import Scrive.Data.Tag exposing (Tag, SomeTag)
+import Scrive.Data.Tag as Tag
 
 import Scrive.Form.Field as Field
 import Scrive.Form.Error as Form exposing (Error)
@@ -19,11 +19,11 @@ import Validate as V
 import Validate.Extra as V
 
 
-tagValidator : { isNew : Bool, nameId : String } -> List SomeTag -> Validator Form.Error Tag
-tagValidator { isNew, nameId } currentTags =
+tagValidator : { isNew : Bool, index : Maybe Int } -> List SomeTag -> Validator Form.Error Tag
+tagValidator { isNew, index } currentTags =
     let
-        nameField  = if isNew then Field.NewTagName  else Field.NameOfTagWith  { name = nameId }
-        valueField = if isNew then Field.NewTagValue else Field.ValueOfTagWith { name = nameId }
+        nameField  = if isNew then Field.NewTagName  else Field.NameOfTag <| Maybe.withDefault -1 index
+        valueField = if isNew then Field.NewTagValue else Field.ValueOfTag <| Maybe.withDefault -1 index
     in Validate.all
         [ V.ifLongerThan Tag.nameOf 32 <| FE.make nameField "Tag name should not exceed 32 characters"
         ,

@@ -9,24 +9,25 @@ import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Evts
 
-import Scrive.UserGroup exposing (UserGroup)
-import Scrive.UserGroup as UG
-import Scrive.ContactDetails as CD
-import Scrive.Address as CD
-import Scrive.RetentionPolicy as RP
+import Scrive.Data.UserGroup exposing (UserGroup)
+import Scrive.Data.UserGroup as UG
+import Scrive.Data.ContactDetails as CD
+import Scrive.Data.Address as CD
+import Scrive.Data.RetentionPolicy as RP
 
 import Json.Decode as Json
 import Json.Encode as Json
 
-import Scrive.Tag exposing (Tag, ArchivedTag, SomeTag)
-import Scrive.Tag as Tag
+import Scrive.Data.Tag exposing (Tag, ArchivedTag, SomeTag)
+import Scrive.Data.Tag as Tag
 
+import Scrive.Form.Field as Form
 import Scrive.Form.Field as BelongsTo exposing (BelongsTo(..))
-import Scrive.Form.Error as Form exposing (Error)
+import Scrive.Form.Error as Form
 import Scrive.Form.Error as FE
-import Scrive.Form.Tags as TagsForm
-import Scrive.Form.ContactDetails as ContactForm
-import Scrive.Form.RetentionPolicy as RetentionPolicy
+import Scrive.Form.Impl.Tags as TagsForm
+import Scrive.Form.Impl.ContactDetails as ContactForm
+import Scrive.Form.Impl.RetentionPolicy as RetentionPolicy
 import Scrive.Form.Validator exposing (tagValidator, addressValidator)
 
 import Validate exposing (Validator, Valid)
@@ -38,9 +39,10 @@ import Validate.Extra as V
 
 type alias Model =
     { userGroup : Result Json.Error UserGroup
-    , tagInProgress : TagsForm.TagInProgress
+    , selectedField : Maybe Form.Field
     , policyToAdd : Maybe RP.DataRetentionPolicy
     , policyInProgress : Maybe ( RP.DataRetentionPolicy, Int )
+    , tagInProgress : Maybe TagsForm.TagInProgress
     , errors : List Form.Error
     , viewMode : ViewJson -- TODO: remove, only for debugging
     }
@@ -50,7 +52,8 @@ init : ( Model, Cmd Msg )
 init =
     (
         { userGroup = Json.decodeString UG.decoder Data.userGroup
-        , tagInProgress = TagsForm.none
+        , tagInProgress = Nothing
+        , selectedField = Nothing
         , policyToAdd = Nothing
         , policyInProgress = Nothing
         , errors = []
@@ -95,24 +98,24 @@ update msg model =
     ( case msg of
 
         TagInProgress inProgress ->
-            { model | tagInProgress = inProgress }
+            { model | tagInProgress = Just inProgress }
 
         TryToCreateTag { newName, newValue } ->
-            validateTagAnd addTag (tagValidator { isNew = True, nameId = newName }) model
+            validateTagAnd addTag (tagValidator { isNew = True, index = Nothing}) model
                 <| Tag.make newName newValue
 
         TryToChangeTag theTag { newValue } ->
-            validateTagAnd changeTag (tagValidator { isNew = False, nameId = Tag.nameOf theTag }) model
+            validateTagAnd changeTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
                 <| Tag.setValue newValue theTag
 
         TryToRestoreTag ttr { newValue } ->
-            validateTagAnd restoreTag (tagValidator { isNew = False, nameId = Tag.nameOfArchived ttr }) model
+            validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
                 <| Tag.make (Tag.nameOfArchived ttr) newValue
 
         TryToArchiveTag theTag ->
 
             { model
-            | tagInProgress = TagsForm.none
+            | tagInProgress = Nothing
             , userGroup =
                 Result.map
                     (\ug -> { ug | tags = archiveTag theTag ug.tags })
@@ -135,7 +138,7 @@ update msg model =
         RemoveTag theTag ->
 
             { model
-            | tagInProgress = TagsForm.none
+            | tagInProgress = Nothing
             , userGroup =
                 Result.map
                     (\ug -> { ug | tags = removeTag theTag ug.tags })
@@ -205,6 +208,10 @@ update msg model =
     )
 
 
+indexOfTagInProgress : Model -> Maybe Int
+indexOfTagInProgress = .tagInProgress >> Maybe.andThen TagsForm.indexOfTagInProgress
+
+
 validateTagAnd : (Valid Tag -> List SomeTag -> List SomeTag) -> (List SomeTag -> Validator Form.Error Tag) -> Model -> Tag -> Model
 validateTagAnd fValid fValidator model theTag =
     case Result.map .tags model.userGroup of
@@ -215,7 +222,7 @@ validateTagAnd fValid fValidator model theTag =
                 case resValidTag of
                     Ok validTag ->
                         { model
-                        | tagInProgress = TagsForm.none -- We clear the form state on any validation success. FIXME: looks like not an obvious place to do it
+                        | tagInProgress = Nothing -- We clear the form state on any validation success. FIXME: looks like not an obvious place to do it
                         , errors = []
                         , userGroup =
                             Result.map
@@ -356,7 +363,7 @@ view model =
                         model.tagInProgress
                         userGroup.tags
 
-                    , Html.h1 [] [ Html.text "Settings" ]
+                    , Html.h1 [] [ Html.text "Retention Policy" ]
                     , RetentionPolicy.view
                         (model.errors |> FE.onlyBelongingTo BelongsTo.Settings)
                         policyHandlers

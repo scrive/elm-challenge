@@ -1,4 +1,4 @@
-module Scrive.Form.RetentionPolicy exposing (..)
+module Scrive.Form.Impl.RetentionPolicy exposing (..)
 
 
 import Html exposing (Html)
@@ -7,8 +7,8 @@ import Html.Extra as Html
 import Html.Attributes as Attrs
 import Html.Events as Evts
 
-import Scrive.RetentionPolicy exposing (DataRetentionPolicy, PolicyWithTimeout)
-import Scrive.RetentionPolicy as RP
+import Scrive.Data.RetentionPolicy exposing (DataRetentionPolicy, PolicyWithTimeout)
+import Scrive.Data.RetentionPolicy as RP
 import Scrive.Form.Error exposing (Error)
 import Scrive.Form.Error as Errors
 

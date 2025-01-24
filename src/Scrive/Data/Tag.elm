@@ -1,4 +1,4 @@
-module Scrive.Tag exposing
+module Scrive.Data.Tag exposing
     ( Tag, ArchivedTag, SomeTag
     , make
     , setValue, toArchived

@@ -1,4 +1,4 @@
-module Scrive.NullableInt exposing (NullableInt, encode, decode)
+module Scrive.Data.NullableInt exposing (NullableInt, encode, decode)
 
 
 import Json.Decode as D

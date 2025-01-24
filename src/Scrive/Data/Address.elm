@@ -1,4 +1,4 @@
-module Scrive.Address exposing (..)
+module Scrive.Data.Address exposing (..)
 
 
 import Json.Decode exposing (Decoder)

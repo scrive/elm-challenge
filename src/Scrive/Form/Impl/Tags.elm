@@ -1,4 +1,4 @@
-module Scrive.Form.Tags exposing (TagInProgress, view, none)
+module Scrive.Form.Impl.Tags exposing (TagInProgress, view, indexOfTagInProgress)
 
 import Either exposing (Either(..))
 import Either as Either
@@ -8,9 +8,9 @@ import Html as Html
 import Html.Attributes as Attrs
 import Html.Events as Evt
 
-import Scrive.Tag exposing (Tag, ArchivedTag, SomeTag)
-import Scrive.Tag as Tag
-import Scrive.UserGroup as UG
+import Scrive.Data.Tag exposing (Tag, ArchivedTag, SomeTag)
+import Scrive.Data.Tag as Tag
+import Scrive.Data.UserGroup as UG
 import Scrive.Form.Field exposing (Field)
 import Scrive.Form.Field as Field
 
@@ -18,11 +18,10 @@ import Scrive.Form.Error exposing (Error)
 import Scrive.Form.Error as Errors
 
 
-type TagInProgress -- constructors are not exposed, except `None`
+type TagInProgress
     = Changing Int { newValue : String }
     | Restoring Int { newValue : String }
     | Creating { newName : String, newValue : String }
-    | None
 
 
 type alias Handlers msg =
@@ -35,11 +34,7 @@ type alias Handlers msg =
     }
 
 
-none : TagInProgress
-none = None
-
-
-view : List Error -> Handlers msg -> TagInProgress -> List SomeTag -> Html msg
+view : List Error -> Handlers msg -> Maybe TagInProgress -> List SomeTag -> Html msg
 view errors handlers tagInProgress items =
     let
 
@@ -48,7 +43,7 @@ view errors handlers tagInProgress items =
 
                 -- if it's a removed tag, we could either restoring it or just viewing it
                 (case tagInProgress of
-                    Restoring otherIdx { newValue } ->
+                    Just (Restoring otherIdx { newValue }) ->
                         if (otherIdx == idx)
                             then viewWhileRestoringTag errors handlers idx newValue
                             else viewArchivedTag handlers idx
@@ -58,7 +53,7 @@ view errors handlers tagInProgress items =
 
                 -- if it's a "normal" tag, we could either updating its value or just viewing it
                 (case tagInProgress of
-                    Changing otherIdx { newValue } ->
+                    Just (Changing otherIdx { newValue }) ->
                         if (otherIdx == idx)
                             then viewWhileChangingTag errors handlers idx newValue
                             else viewTag handlers idx
@@ -77,13 +72,13 @@ view errors handlers tagInProgress items =
             ( Html.ul [ ] <| List.indexedMap viewListItem items )
             ::
             case tagInProgress of
-                Creating newData ->
+                Just (Creating newData) ->
                     [ viewWhileCreatingTag errors handlers newData ]
-                Restoring _ _ ->
+                Just (Restoring _ _ )->
                     [ ]
-                Changing _ _ ->
+                Just (Changing _ _) ->
                     [ ]
-                None ->
+                Nothing ->
                     [ addTagButton ]
 
 
@@ -182,7 +177,7 @@ viewWhileChangingTag errors handlers idx newValue tag =
             , Evt.onSubmit <| handlers.tryChange tag { newValue = newValue }
             ]
             [ Html.text newValue ]
-        , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTagWith { name = Tag.nameOf tag }) errors
+        , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTag idx) errors
         , Html.button
             [ Evt.onClick <| handlers.tryChange tag { newValue = newValue } ]
             [ Html.text "(Update)" ]
@@ -209,8 +204,16 @@ viewWhileRestoringTag errors handlers idx newValue ttr =
             , Evt.onSubmit <| handlers.tryRestore ttr { newValue = newValue }
             ]
             [ Html.text newValue ]
-        , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTagWith { name = Tag.nameOfArchived ttr }) errors
+        , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTag idx) errors
         , Html.button
             [ Evt.onClick <| handlers.tryRestore ttr { newValue = newValue } ]
             [ Html.text "(Set)" ]
         ]
+
+
+indexOfTagInProgress : TagInProgress -> Maybe Int
+indexOfTagInProgress tip =
+    case tip of
+        Changing n _ -> Just n
+        Restoring n _ -> Just n
+        Creating _ -> Nothing
