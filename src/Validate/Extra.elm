@@ -17,12 +17,16 @@ ifNotUnique : (subject -> comparable) -> Set comparable -> error -> V.Validator 
 ifNotUnique f inSet = V.ifTrue (f >> \v -> Set.member v inSet)
 
 
-ifNotAllDigits : (subject -> String) -> error ->  V.Validator error subject
-ifNotAllDigits f = V.ifFalse (f >> String.all Char.isDigit)
+ifNotAllCharsAre : (Char -> Bool) -> (subject -> String) -> error -> V.Validator error subject
+ifNotAllCharsAre checkChar f = V.ifFalse (f >> String.all checkChar)
 
 
-ifNotAllAlphaNum : (subject -> String) -> error ->  V.Validator error subject
-ifNotAllAlphaNum f = V.ifFalse (f >> String.all Char.isAlphaNum)
+ifNotAllDigits : (subject -> String) -> error -> V.Validator error subject
+ifNotAllDigits = ifNotAllCharsAre Char.isDigit
+
+
+ifNotAllAlphaNum : (subject -> String) -> error -> V.Validator error subject
+ifNotAllAlphaNum = ifNotAllCharsAre Char.isAlphaNum
 
 
 skip : V.Validator error subject

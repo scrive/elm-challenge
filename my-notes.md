@@ -74,7 +74,7 @@ I will try these steps:
   * [X] Show validation errors where they belong
   * [X] If value in select box (such as Add Timeout by type select) is not changed, no event is fired when user presses Enter
     * Usually it is fixed with additional item in select box, but it sounds cheaty
-  * [ ] Only one input should be triggered active in Contacts form
+  * [X] Only one input should be triggered active in Contacts form
   * [ ] Sometimes editing tag's value allows it to be empty on Submit but keeps the old values
   * [X] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
   * [ ] It's improper to update model values while user types in the values, we should commit changes only after editing
@@ -88,6 +88,7 @@ I will try these steps:
     * [ ] Tags
     * [ ] Contact details
     * [ ] Retention Policy
+  * [ ] Update selected field in the model in all possible cases (track it visually)
   * [ ] Clear only errors that belong to current form when validation repeats succesfully
   * [ ] Wouldn't it is be nice if clicking mouse outside of text field would also submit?
   * [ ] Immediate Trash of Retention Timeouts should disable all of timeouts?

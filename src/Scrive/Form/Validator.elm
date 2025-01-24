@@ -68,6 +68,6 @@ addressValidator =
             <| FE.make Field.AddressEmail "Specified e-mail is in invalid format"
         , V.ifFalse (.phone >> Maybe.map CD.phoneToString >> Maybe.map V.isValidPhone >> Maybe.withDefault True)
             <| FE.make Field.AddressPhone "Specified phone is in invalid format"
-        , V.ifNotAllDigits (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
-            <| FE.make Field.AddressPhone "Specified ZIP code should contain only digits"
+        , V.ifNotAllCharsAre (\c -> Char.isDigit c || c == ' ') (.zip >> Maybe.map CD.zipCodeToString >> Maybe.withDefault "")
+            <| FE.make Field.AddressZip "Specified ZIP code should contain only digits or spaces"
         ]

@@ -18,12 +18,22 @@ import Scrive.Form.Error exposing (Error)
 import Scrive.Form.Error as Errors
 
 
-view : List Error -> { readOnly : Bool, toMsg : CD.Address -> msg } -> ContactDetails -> Html msg
-view errors { readOnly, toMsg } { address } =
+type alias Handlers msg =
+    { toMsg : CD.Address -> msg
+    , selectField : Field -> msg
+    }
+
+
+type alias State =
+    { readOnly : Bool, selectedField : Maybe Field }
+
+
+view : List Error -> Handlers msg -> State -> ContactDetails -> Html msg
+view errors { toMsg, selectField } { readOnly, selectedField } { address } =
     if readOnly then
         Html.ul
             []
-            [ Html.li [] [ Html.text <| "Preferred way of contact:" ++ CD.preferredContactToString address.preferredContactMethod ]
+            [ Html.li [] [ Html.text <| "Preferred way of contact :" ++ CD.preferredContactToString address.preferredContactMethod ]
             , Html.li [] [ Html.text <| "E-mail : " ++ (Maybe.withDefault "-" <| Maybe.map CD.emailToString address.email) ]
             , Html.li [] [ Html.text <| "Phone : " ++ (Maybe.withDefault "-" <| Maybe.map CD.phoneToString address.phone) ]
             , Html.li [] [ Html.text <| "Company name : " ++ (Maybe.withDefault "-" address.companyName) ]
@@ -43,19 +53,26 @@ view errors { readOnly, toMsg } { address } =
 
             inputFor : Field -> String -> String -> (CD.Address -> String) -> (String -> CD.Address) -> Html msg
             inputFor field labelText inputId fGetPart fSetPart =
-                Html.li []
-                    [ Html.label [ Attrs.for inputId ] [ Html.text <| labelText ++ " : " ]
-                    , Html.input
-                        [ Attrs.id inputId
-                        , Attrs.type_ "text"
-                        , Evts.onInput (fSetPart >> toMsg)
-                        , Attrs.placeholder <| fGetPart address
-                        -- , Evts.onEnter (fSetPart >> toMsg)
-                        -- , Evts.onMouseOut (fSetPart >> toMsg)
+                if selectedField == Just field && not readOnly then
+                    Html.li []
+                        [ Html.label [ Attrs.for inputId ] [ Html.text <| labelText ++ " : " ]
+                        , Html.input
+                            [ Attrs.id inputId
+                            , Attrs.type_ "text"
+                            , Evts.onInput (fSetPart >> toMsg)
+                            , Attrs.placeholder <| fGetPart address
+                            -- , Evts.onEnter (fSetPart >> toMsg)
+                            -- , Evts.onMouseOut (fSetPart >> toMsg)
+                            ]
+                            [ ]
+                        , Errors.viewMany <| Errors.extractOnlyAt field errors
                         ]
-                        [ ]
-                    , Errors.viewMany <| Errors.extractOnlyAt field errors
-                    ]
+                else
+                    Html.li
+                        [ Evts.onClick <| selectField field ]
+                        [ Html.text <| labelText ++ " : " ++ fGetPart address
+                        , Errors.viewMany <| Errors.extractOnlyAt field errors
+                        ]
         in
         Html.ul
             []

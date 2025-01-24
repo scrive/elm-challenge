@@ -25,12 +25,12 @@ type TagInProgress
 
 
 type alias Handlers msg =
-    { tryArchive : Tag -> msg
+    { archive : Tag -> msg
     , tryChange : Tag -> { newValue : String } -> msg
     , tryRestore : ArchivedTag -> { newValue : String } -> msg
     , tryCreate : { newName : String, newValue : String } -> msg
     , remove : SomeTag -> msg
-    , markInProgress : TagInProgress -> msg
+    , setInProgress : TagInProgress -> msg
     }
 
 
@@ -63,7 +63,7 @@ view errors handlers tagInProgress items =
 
         addTagButton =
             Html.button
-                [ Evt.onClick <| handlers.markInProgress <| Creating { newName = "", newValue = "" } ]
+                [ Evt.onClick <| handlers.setInProgress <| Creating { newName = "", newValue = "" } ]
                 [ Html.text "(Add)" ]
 
     in Html.div
@@ -85,8 +85,8 @@ view errors handlers tagInProgress items =
 
 viewTag :
     { r
-        | markInProgress : TagInProgress -> msg
-        , tryArchive : Tag -> msg
+        | setInProgress : TagInProgress -> msg
+        , archive : Tag -> msg
         , remove : SomeTag -> msg
     }
     -> Int -> Tag -> Html msg
@@ -95,11 +95,11 @@ viewTag handlers idx tag =
         []
         [ Html.text <| Tag.nameOf tag ++ " : " ++ Tag.valueOf tag
         , Html.button
-            [ Evt.onClick <| handlers.markInProgress <| Changing idx { newValue = Tag.valueOf tag }
+            [ Evt.onClick <| handlers.setInProgress <| Changing idx { newValue = Tag.valueOf tag }
             ]
             [ Html.text "(Update value)" ]
         , Html.button
-            [ Evt.onClick <| handlers.tryArchive tag ]
+            [ Evt.onClick <| handlers.archive tag ]
             [ Html.text "(Archive)" ]
         , Html.button
             [ Evt.onClick <| handlers.remove <| Right tag ]
@@ -109,7 +109,7 @@ viewTag handlers idx tag =
 
 viewArchivedTag :
     { r
-        | markInProgress : TagInProgress -> msg
+        | setInProgress : TagInProgress -> msg
         , remove : SomeTag -> msg
     }
     -> Int -> ArchivedTag -> Html msg
@@ -118,7 +118,7 @@ viewArchivedTag handlers idx ttr =
         []
         [ Html.text <| Tag.nameOfArchived ttr
         , Html.button
-            [ Evt.onClick <| handlers.markInProgress <| Restoring idx { newValue = "" } ]
+            [ Evt.onClick <| handlers.setInProgress <| Restoring idx { newValue = "" } ]
             [ Html.text "(Restore)" ]
         , Html.button
             [ Evt.onClick <| handlers.remove <| Left ttr ]
@@ -129,7 +129,7 @@ viewArchivedTag handlers idx ttr =
 viewWhileCreatingTag :
     List Error ->
     { r
-        | markInProgress : TagInProgress -> msg
+        | setInProgress : TagInProgress -> msg
         , tryCreate : { newName : String, newValue : String } -> msg
     }
     -> { newName : String, newValue : String } -> Html msg
@@ -139,7 +139,7 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
         [ Html.input
             [ Attrs.type_ "text"
             , Attrs.class "border-black border-solid border-2"
-            , Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = str, newValue = newValue }
+            , Evt.onInput <| \str -> handlers.setInProgress <| Creating { newName = str, newValue = newValue }
             , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
             [ Html.text newName ]
@@ -147,7 +147,7 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
         , Html.input
             [ Attrs.type_ "text"
             , Attrs.class "border-black border-solid border-2"
-            , Evt.onInput <| \str -> handlers.markInProgress <| Creating { newName = newName, newValue = str }
+            , Evt.onInput <| \str -> handlers.setInProgress <| Creating { newName = newName, newValue = str }
             , Evt.onSubmit <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
             [ Html.text newValue ]
@@ -162,7 +162,7 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
 viewWhileChangingTag :
     List Error ->
     { r
-        | markInProgress : TagInProgress -> msg
+        | setInProgress : TagInProgress -> msg
         , tryChange : Tag -> { newValue : String } -> msg
     }
     -> Int -> String -> Tag -> Html msg
@@ -173,7 +173,7 @@ viewWhileChangingTag errors handlers idx newValue tag =
         , Html.input
             [ Attrs.class "border-black border-solid border-2"
             , Attrs.placeholder <| Tag.valueOf tag
-            , Evt.onInput <| \str -> handlers.markInProgress <| Changing idx { newValue = str }
+            , Evt.onInput <| \str -> handlers.setInProgress <| Changing idx { newValue = str }
             , Evt.onSubmit <| handlers.tryChange tag { newValue = newValue }
             ]
             [ Html.text newValue ]
@@ -187,7 +187,7 @@ viewWhileChangingTag errors handlers idx newValue tag =
 viewWhileRestoringTag :
     List Error ->
     { r
-        | markInProgress : TagInProgress -> msg
+        | setInProgress : TagInProgress -> msg
         , tryRestore : ArchivedTag -> { newValue : String } -> msg
     }
     -> Int -> String -> ArchivedTag -> Html msg
@@ -200,7 +200,7 @@ viewWhileRestoringTag errors handlers idx newValue ttr =
                 Just lastValue -> lastValue
                 Nothing -> ""
             , Attrs.class "border-black border-solid border-2"
-            , Evt.onInput <| \str -> handlers.markInProgress <| Restoring idx { newValue = str }
+            , Evt.onInput <| \str -> handlers.setInProgress <| Restoring idx { newValue = str }
             , Evt.onSubmit <| handlers.tryRestore ttr { newValue = newValue }
             ]
             [ Html.text newValue ]

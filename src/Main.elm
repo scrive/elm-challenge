@@ -74,11 +74,13 @@ type ViewJson
 
 type Msg
     = NoOp
-    | TagInProgress TagsForm.TagInProgress
+    | SelectField Form.Field
+    | ClearSelectedField
+    | SetTagInProgress TagsForm.TagInProgress
     | TryToCreateTag { newName : String, newValue : String }
     | TryToRestoreTag ArchivedTag { newValue : String }
     | TryToChangeTag Tag { newValue : String }
-    | TryToArchiveTag Tag
+    | ArchiveTag Tag
     | RemoveTag SomeTag
     | TryToUpdateAddress CD.Address
     | SelectPolicyToAdd RP.DataRetentionPolicy
@@ -97,7 +99,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     ( case msg of
 
-        TagInProgress inProgress ->
+        SelectField field ->
+            { model | selectedField = Just field }
+
+        ClearSelectedField ->
+            { model | selectedField = Nothing }
+
+        SetTagInProgress inProgress ->
             { model | tagInProgress = Just inProgress }
 
         TryToCreateTag { newName, newValue } ->
@@ -112,7 +120,7 @@ update msg model =
             validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model
                 <| Tag.make (Tag.nameOfArchived ttr) newValue
 
-        TryToArchiveTag theTag ->
+        ArchiveTag theTag ->
 
             { model
             | tagInProgress = Nothing
@@ -323,9 +331,9 @@ view model =
             { tryCreate  = TryToCreateTag
             , tryChange  = TryToChangeTag
             , tryRestore = TryToRestoreTag
-            , tryArchive = TryToArchiveTag
+            , archive = ArchiveTag
             , remove = RemoveTag
-            , markInProgress = TagInProgress
+            , setInProgress = SetTagInProgress
             }
         policyHandlers =
             { startDefiningPolicy = StartDefiningPolicy
@@ -353,7 +361,8 @@ view model =
                     [ Html.h1 [] [ Html.text "Contacts" ]
                     , ContactForm.view
                         (model.errors |> FE.onlyBelongingTo BelongsTo.Contacts)
-                        { readOnly = False, toMsg = TryToUpdateAddress }
+                        { toMsg = TryToUpdateAddress, selectField = SelectField }
+                        { readOnly = False, selectedField = model.selectedField }
                         userGroup.contactDetails
 
                     , Html.h1 [] [ Html.text "Tags" ]
