@@ -14,6 +14,8 @@ import Html.Attributes as Attrs
 import Scrive.Form.Field exposing (Field)
 import Scrive.Form.Field as Field
 
+import Style as Style
+
 type Error = Error ( Field, String )
 
 
@@ -46,5 +48,5 @@ viewMany errors =
     case errors of
         [] -> Html.nothing
         _ -> let
-                errorItem error = Html.li [] [ view error ]
-            in Html.ul [] <| List.map errorItem errors
+                errorItem error = Html.li [ Attrs.class Style.errorItem ] [ view error ]
+            in Html.ul [ Attrs.class Style.errorsList ] <| List.map errorItem errors

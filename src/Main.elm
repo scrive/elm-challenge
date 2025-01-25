@@ -430,6 +430,9 @@ view model =
                 FocusContactsEdit ( field, fvalue ) -> Just ( field, fvalue )
                 _ -> Nothing
 
+        formHeader title =
+            Html.h1 [ Attrs.class Style.formHeader ] [ Html.text title ]
+
     in
 
     Html.div
@@ -439,21 +442,21 @@ view model =
             ( case model.userGroup of
                 Ok userGroup ->
 
-                    [ Html.h1 [] [ Html.text "Contacts" ]
+                    [ formHeader "Contacts"
                     , ContactForm.view
                         (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Contacts)
                         contactsHandlers
                         { readOnly = False, currentlyEditing = mbContactsField }
                         userGroup.contactDetails
 
-                    , Html.h1 [] [ Html.text "Tags" ]
+                    , formHeader "Tags"
                     , TagsForm.view
                         (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Tags)
                         tagHandlers
                         mbTagInProgress
                         userGroup.tags
 
-                    , Html.h1 [] [ Html.text "Retention Policy" ]
+                    , formHeader "Retention Policy"
                     , RetentionPolicy.view
                         (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Settings)
                         policyHandlers
@@ -466,7 +469,7 @@ view model =
                 Err error ->
                     [ Html.text <| Json.errorToString error ]
             ) ++
-            [ Html.div -- temporary div with current JSON
+            [ Html.div -- temporary div with current Debug info
                 [ Attrs.class "absolute top-0 left-0" ]
                 [ Html.text
                     <| case model.editFocus of
@@ -476,9 +479,9 @@ view model =
                         FocusContactsEdit ( cdField, value ) -> "Contacts edit : " ++ CD.fieldToLabel cdField ++ " (" ++ value ++ ")"
                         NotEditing -> "Not editing"
                 , Html.hr [] []
-                , Html.button [ Evts.onClick <| ToggleJsonMode NoJson ] [ Html.text "No JSON" ]
-                , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson ] [ Html.text "Original JSON" ]
-                , Html.button [ Evts.onClick <| ToggleJsonMode CurrentJson ] [ Html.text "Current JSON" ]
+                , Html.button [ Evts.onClick <| ToggleJsonMode NoJson, Attrs.class Style.button ] [ Html.text "No JSON" ]
+                , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson, Attrs.class Style.button ] [ Html.text "Original JSON" ]
+                , Html.button [ Evts.onClick <| ToggleJsonMode CurrentJson, Attrs.class Style.button ] [ Html.text "Current JSON" ]
                 , Html.pre
                     [ Attrs.class "my-8 py-4 px-9 text-xs bg-slate-100 font-mono shadow rounded" ]
                     [ Html.text <|

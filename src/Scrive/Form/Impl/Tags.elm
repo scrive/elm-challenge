@@ -65,13 +65,15 @@ view errors handlers tagInProgress items =
 
         addTagButton =
             Html.button
-                [ Evts.onClick <| handlers.setInProgress <| Creating { newName = "", newValue = "" } ]
-                [ Html.text "(Add)" ]
+                [ Evts.onClick <| handlers.setInProgress <| Creating { newName = "", newValue = "" }
+                , Attrs.class Style.button
+                ]
+                [ Html.text <| Style.buttonLabel Style.AddNewTag ]
 
     in Html.div
         []
         <|
-            ( Html.ul [ ] <| List.indexedMap viewListItem items )
+            ( Html.ul [ Attrs.class Style.tagList ] <| List.indexedMap viewListItem items )
             ::
             case tagInProgress of
                 Just (Creating newData) ->
@@ -94,18 +96,24 @@ viewTag :
     -> Int -> Tag -> Html msg
 viewTag handlers idx tag =
     Html.li
-        []
-        [ Html.text <| Tag.nameOf tag ++ " : " ++ Tag.valueOf tag
+        [ Attrs.class Style.tagItem ]
+        [ Html.span [ Attrs.class Style.tagName ] [ Html.text <| Tag.nameOf tag ]
+        , Html.span [ Attrs.class Style.tagValue ] [ Html.text <| Tag.valueOf tag ]
         , Html.button
             [ Evts.onClick <| handlers.setInProgress <| Changing idx { newValue = Tag.valueOf tag }
+            , Attrs.class Style.button
             ]
-            [ Html.text "(Update value)" ]
+            [ Html.text <| Style.buttonLabel Style.UpdateTagValue ]
         , Html.button
-            [ Evts.onClick <| handlers.archive tag ]
-            [ Html.text "(Archive)" ]
+            [ Evts.onClick <| handlers.archive tag
+            , Attrs.class Style.button
+            ]
+            [ Html.text <| Style.buttonLabel Style.ArchiveTag ]
         , Html.button
-            [ Evts.onClick <| handlers.remove <| Right tag ]
-            [ Html.text "(Remove)" ]
+            [ Evts.onClick <| handlers.remove <| Right tag
+            , Attrs.class Style.button
+            ]
+            [ Html.text <| Style.buttonLabel Style.RemoveTag ]
         ]
 
 
@@ -117,14 +125,16 @@ viewArchivedTag :
     -> Int -> ArchivedTag -> Html msg
 viewArchivedTag handlers idx archivedTag =
     Html.li
-        []
-        [ Html.text <| Tag.nameOfArchived archivedTag
+        [ Attrs.class Style.archivedTagItem ]
+        [ Html.span [ Attrs.class Style.tagName ] [ Html.text <| Tag.nameOfArchived archivedTag ]
         , Html.button
-            [ Evts.onClick <| handlers.setInProgress <| Restoring idx { newValue = "" } ]
-            [ Html.text "(Restore)" ]
+            [ Evts.onClick <| handlers.setInProgress <| Restoring idx { newValue = "" }
+            , Attrs.class Style.button
+            ]
+            [ Html.text <| Style.buttonLabel Style.RestoreTag ]
         , Html.button
             [ Evts.onClick <| handlers.remove <| Left archivedTag ]
-            [ Html.text "(Remove)" ]
+            [ Html.text <| Style.buttonLabel Style.RemoveTag ]
         ]
 
 
@@ -137,10 +147,10 @@ viewWhileCreatingTag :
     -> { newName : String, newValue : String } -> Html msg
 viewWhileCreatingTag errors handlers { newName, newValue } =
     Html.li
-        []
+        [ Attrs.class Style.editingTagItem ]
         [ Html.input
             [ Attrs.type_ "text"
-            , Attrs.class Style.textInputClasses
+            , Attrs.class Style.textInput
             , Evts.onInput <| \str -> handlers.setInProgress <| Creating { newName = str, newValue = newValue }
             , Evts.onEnter <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
@@ -148,7 +158,7 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
         , Errors.viewMany <| Errors.extractOnlyAt Field.NewTagName errors
         , Html.input
             [ Attrs.type_ "text"
-            , Attrs.class Style.textInputClasses
+            , Attrs.class Style.textInput
             , Evts.onInput <| \str -> handlers.setInProgress <| Creating { newName = newName, newValue = str }
             , Evts.onEnter <| handlers.tryCreate { newName = newName, newValue = newValue }
             ]
@@ -156,8 +166,9 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
         , Errors.viewMany <| Errors.extractOnlyAt Field.NewTagValue errors
         , Html.button
             [ Evts.onClick <| handlers.tryCreate { newName = newName, newValue = newValue }
+            , Attrs.class Style.button
             ]
-            [ Html.text "(Submit)" ]
+            [ Html.text <| Style.buttonLabel Style.SubmitNewTag ]
         ]
 
 
@@ -170,11 +181,11 @@ viewWhileChangingTag :
     -> Int -> String -> Tag -> Html msg
 viewWhileChangingTag errors handlers idx newValue tag =
     Html.li
-        []
-        [ Html.text <| Tag.nameOf tag
+        [ Attrs.class Style.editingTagItem ]
+        [ Html.span [ Attrs.class Style.tagName ] [ Html.text <| Tag.nameOf tag ]
         , Errors.viewMany <| Errors.extractOnlyAt (Field.NameOfTag idx) errors
         , Html.input
-            [ Attrs.class Style.textInputClasses
+            [ Attrs.class Style.textInput
             , Attrs.placeholder <| Tag.valueOf tag
             , Evts.onInput <| \str -> handlers.setInProgress <| Changing idx { newValue = str }
             , Evts.onEnter <| handlers.tryChange tag { newValue = newValue }
@@ -182,8 +193,10 @@ viewWhileChangingTag errors handlers idx newValue tag =
             [ Html.text newValue ]
         , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTag idx) errors
         , Html.button
-            [ Evts.onClick <| handlers.tryChange tag { newValue = newValue } ]
-            [ Html.text "(Update)" ]
+            [ Evts.onClick <| handlers.tryChange tag { newValue = newValue }
+            , Attrs.class Style.button
+            ]
+            [ Html.text <| Style.buttonLabel Style.UpdateTagValue ]
         ]
 
 
@@ -196,11 +209,11 @@ viewWhileRestoringTag :
     -> Int -> String -> ArchivedTag -> Html msg
 viewWhileRestoringTag errors handlers idx newValue archivedTag =
     Html.li
-        []
-        [ Html.text <| Tag.nameOfArchived archivedTag
+        [ Attrs.class Style.editingTagItem ]
+        [ Html.span [ Attrs.class Style.archivedTagName ] [ Html.text <| Tag.nameOfArchived archivedTag ]
         , Errors.viewMany <| Errors.extractOnlyAt (Field.NameOfTag idx) errors
         , Html.input
-            [ Attrs.class Style.textInputClasses
+            [ Attrs.class Style.textInput
             , Attrs.placeholder <| case Tag.lastValueOfArchived archivedTag of
                 Just lastValue -> lastValue
                 Nothing -> ""
@@ -210,8 +223,10 @@ viewWhileRestoringTag errors handlers idx newValue archivedTag =
             [ Html.text newValue ]
         , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTag idx) errors
         , Html.button
-            [ Evts.onClick <| handlers.tryRestore archivedTag{ newValue = newValue } ]
-            [ Html.text "(Set)" ]
+            [ Evts.onClick <| handlers.tryRestore archivedTag{ newValue = newValue }
+            , Attrs.class Style.button
+            ]
+            [ Html.text <| Style.buttonLabel Style.SubmitValueForRestoredTag ]
         ]
 
 

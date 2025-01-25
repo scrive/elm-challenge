@@ -87,8 +87,9 @@ I will try these steps:
   * [X] Allow completely deleting tags (or make it default action?), current _remove_ could be _archive_
   * [X] Validate phone & zip code (current validators are stubs)
   * [ ] No way to cancel editing, especially when an error happened in the form
-  * [ ] `2FA enabled` tag couldn't be "restored"
+  * [X] `2FA enabled` tag couldn't be "restored"
     * Turned out it is because its name contains digit, we don't allow it currently, and we assume existing tags names' are already valid
+  * [ ] Put validity information in `input`'s valid attribute
   * [ ] Read-only modes for all the forms:
     * [ ] Tags
     * [ ] Contact details

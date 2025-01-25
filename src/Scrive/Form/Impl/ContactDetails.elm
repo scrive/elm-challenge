@@ -31,19 +31,24 @@ type alias State =
     { readOnly : Bool, currentlyEditing : Maybe ( CD.Field, String ) }
 
 
+
 view : List Error -> Handlers msg -> State -> ContactDetails -> Html msg
 view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEditing } { address } =
     if readOnly then
         let
             draftAddress = CD.toDraft address
+
             textFor field =
-                Html.li [] [ Html.text <| CD.fieldToLabel field ++ " : " ++ (Maybe.withDefault "-" <| CD.draftValueOf draftAddress field) ]
+                roLabelAndValue (CD.fieldToLabel field ++ " : ")
+                    <| Maybe.withDefault "-"
+                    <| CD.draftValueOf draftAddress field
         in
         Html.ul
-            []
-            ( Html.li [] [ Html.text <| "Preferred way of contact :" ++ CD.preferredContactToString address.preferredContactMethod ]
+            [ Attrs.class Style.readOnlyValuesList ]
+            <| (roLabelAndValue "Preferred way of contact : "
+                    <| CD.preferredContactToString address.preferredContactMethod
+               )
             :: (List.map textFor <| CD.allFields)
-            )
     else
         let
 
@@ -58,16 +63,20 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
             preferredContactOption : CD.PreferredContact -> Html msg
             preferredContactOption pc =
                 Html.option
-                    [ Attrs.selected <| pc == address.preferredContactMethod ]
+                    [ Attrs.class Style.selectOption
+                    , Attrs.selected <| pc == address.preferredContactMethod
+                    ]
                     [ Html.text <| CD.preferredContactToString pc ]
 
             inputFor field inputId currentValue =
-                Html.li []
-                    [ Html.label [ Attrs.for inputId ] [ Html.text <| CD.fieldToLabel field ++ " : " ]
+                Html.li [ Attrs.class Style.itemWithInput ]
+                    [ Html.label
+                        [ Attrs.for inputId, Attrs.class Style.inputLabel ]
+                        [ Html.text <| CD.fieldToLabel field ++ " : " ]
                     , Html.input
                         [ Attrs.id inputId
                         , Attrs.type_ "text"
-                        , Attrs.class Style.textInputClasses
+                        , Attrs.class Style.textInput
                         , Evts.onInput (\str -> editField ( field, str ))
                         , Attrs.placeholder <| qValueOf field
                         , Attrs.value currentValue
@@ -75,15 +84,24 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                         ]
                         [ ]
                     , Html.button
-                        [ Evts.onClick <| qSubmitValue field currentValue ]
-                        [ Html.text "(Set)" ]
+                        [ Evts.onClick <| qSubmitValue field currentValue
+                        , Attrs.class Style.button
+                        ]
+                        [ Html.text <| Style.buttonLabel Style.SetContactValue ]
                     , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
                     ]
 
             clickableTextFor field =
                 Html.li
-                    [ Evts.onClick <| editField ( field, qValueOf field ) ]
-                    [ Html.text <| CD.fieldToLabel field ++ " : " ++ qValueOf field
+                    [ Evts.onClick <| editField ( field, qValueOf field )
+                    , Attrs.class Style.itemWithEditableValue
+                    ]
+                    [ Html.span
+                        [ Attrs.class Style.fieldLabel ]
+                        [ Html.text <| CD.fieldToLabel field ]
+                    ,  Html.span
+                        [ Attrs.class Style.fieldValue ]
+                        [ Html.text <| qValueOf field ]
                     , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
                     ]
 
@@ -100,11 +118,12 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
 
         in
         Html.ul
-            []
-            [ Html.li []
-                [ Html.label  [ Attrs.for "preferred-contact" ] [ Html.text "Preferred way of contact:" ]
+            [ Attrs.class Style.inputsForValuesList ]
+            [ Html.li [ Attrs.class Style.itemWithInput ]
+                [ Html.label [ Attrs.for "preferred-contact", Attrs.class Style.inputLabel ] [ Html.text "Preferred way of contact:" ]
                 , Html.select
                     [ Attrs.id "preferred-contact"
+                    , Attrs.class Style.selectBox
                     , Evts.onInput (setContactMethod << CD.preferredContactFromOption)
                      ] <| List.map preferredContactOption CD.preferredWaysToContact
                 ]
@@ -116,3 +135,15 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
             , inputOrTextFor CD.F_City "contact-city"
             , inputOrTextFor CD.F_Country "contact-country"
             ]
+
+
+roLabelAndValue label value =
+    Html.li
+        [ Attrs.class Style.itemWithValue ]
+        [ Html.span
+            [ Attrs.class Style.fieldLabel ]
+            [ Html.text label  ]
+        ,  Html.span
+            [ Attrs.class Style.fieldValue ]
+            [ Html.text value ]
+        ]

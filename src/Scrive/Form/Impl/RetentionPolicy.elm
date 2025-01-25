@@ -50,25 +50,27 @@ view errors handlers state pl =
 
         viewPolicy { policy, value } =
             Html.li []
-                [ Html.text <| RP.toOption policy ++ " : "
+                [ Html.span [ Attrs.class Style.fieldLabel ] [ Html.text <| RP.toOption policy ++ " : " ]
                 , case mbCurrentlyEdited policy of
                     Nothing ->
                         Html.div []
                             [ Html.text <| String.fromInt value
                             , Html.button
                                 [ Evts.onClick <| handlers.editCurrentTimeout policy value
+                                , Attrs.class Style.button
                                 ]
-                                [ Html.text "(Update)" ]
+                                [ Html.text <| Style.buttonLabel Style.UpdateTimeout ]
                             , Html.button
                                 [ Evts.onClick <| handlers.clearTimeout policy
+                                , Attrs.class Style.button
                                 ]
-                                [ Html.text "(Remove)" ]
+                                [ Html.text <| Style.buttonLabel Style.RemoveTimeout ]
                             ]
                     Just ( _, currentValue ) ->
                         Html.div []
                             [ Html.input
                                 [ Attrs.type_ "number"
-                                , Attrs.class Style.textInputClasses
+                                , Attrs.class Style.textInput
                                 , Attrs.value <| String.fromInt currentValue
                                 , Attrs.placeholder <| String.fromInt value
                                 , Evts.onInput
@@ -80,15 +82,17 @@ view errors handlers state pl =
                                 ]
                                 []
                             , Html.button
-                                [ Evts.onClick <| handlers.applyCurrentTimeout policy ]
-                                [ Html.text "(Set)" ]
+                                [ Evts.onClick <| handlers.applyCurrentTimeout policy
+                                , Attrs.class Style.button
+                                ]
+                                [ Html.text <| Style.buttonLabel Style.SubmitTimeout ]
                             ]
                 ]
 
     in
         Html.div
             []
-            [ Html.ul [] <| List.map viewPolicy pl
+            [ Html.ul [ Attrs.class Style.inputsForValuesList ] <| List.map viewPolicy pl
 
             , if List.length lacksWhichPolicies > 0 then
 
@@ -99,12 +103,14 @@ view errors handlers state pl =
             , Html.input
                 [ Attrs.type_ "checkbox"
                 , Attrs.id "retention-immediate-trash"
+                , Attrs.class Style.checkBox
                 , Evts.onCheck handlers.toggleImmediateTrash
                 ]
                 [ ]
 
             , Html.label
                 [ Attrs.for "retention-immediate-trash"
+                , Attrs.class Style.inputLabel
                 ]
                 [ Html.text "Immediate trash (no timeouts)" ]
 
@@ -115,7 +121,7 @@ viewAddPolicySelect : Handlers msg -> State -> List DataRetentionPolicy -> Html 
 viewAddPolicySelect handlers state lacksWhichPolicies =
     let
         viewLackingPolicyOption policy =
-            Html.option []
+            Html.option [ Attrs.class Style.selectOption ]
                 [ Html.text <| RP.toString policy ++ " timeout" ]
     in
     Html.div []
@@ -125,13 +131,15 @@ viewAddPolicySelect handlers state lacksWhichPolicies =
                     case RP.fromOption str of
                         Just policy -> handlers.selectPolicyToAdd policy
                         Nothing -> handlers.clearPolicyToAdd)
+            , Attrs.class Style.selectBox
             ]
             ( Html.option
                 [ Attrs.selected <| case state.currentlyAdding of
                     Nothing -> True
                     Just _ -> False
+                , Attrs.class Style.selectOption
                 ]
-                [ Html.text "<Select one>" ]
+                [ Html.text <| Style.textForSelectPolicy ]
             :: List.map viewLackingPolicyOption lacksWhichPolicies
             )
         , Html.button
@@ -139,6 +147,7 @@ viewAddPolicySelect handlers state lacksWhichPolicies =
                 Nothing -> True
                 Just policy -> not <| List.member policy lacksWhichPolicies
             , Evts.onClick handlers.addSelectedPolicy
+            , Attrs.class Style.button
             ]
-            [ Html.text "(Add)" ]
+            [ Html.text <| Style.buttonLabel Style.AddPolicy ]
         ]
