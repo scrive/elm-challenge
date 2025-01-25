@@ -99,18 +99,25 @@ I will try these steps:
   * [ ] Wouldn't it is be nice if clicking mouse outside of text field would also submit?
   * [ ] Immediate Trash of Retention Timeouts should disable all of timeouts?
   * [X] `validateTagAnd` could return `Result` instead and we could change it through a chain of actions
-  * [ ] Additional validator as an example, that rejects huge timeouts
+  * [ ] Additional validator as an example, that rejects huge or negative timeouts
 * [ ] Style forms / UX / Design
-* [ ] Format code
+  * Loosely done
+  * Validation errors break the flow, also no flexing at all
+  * Inputs break the flow (see Contacts block)
+  * Also inputs are too wide, at least for tags
+  * Input boxes for tags could match the visual style of them
+  * Remove debug info
+* [X] Format code
+* [ ] Accessibility
 * [ ] Optionally, validate while typing
 * [ ] Optionally, Add tests for decoding / encoding : [fuzzy](https://package.elm-lang.org/packages/elm-explorations/test/latest/Fuzz)
 * [ ] Optionally, fake sending data from the model
 
-## Questions
+## Questions / Thoughts
 
 * Some IDs are strings in the API / data, but they are numerals, so I had to encode them back to strings for a proper JSON
-* I show removed tags in the tag list anyway (and allow to restore them back with specifying value), and they are checked for unique name when creating new tag, only when trying it in action I realized that it could be an overcomplication
+* I show removed (I named them _archived_) tags in the tag list anyway (and allow to restore them back with specifying value), and they are checked for unique name when creating new tag, only when trying it in action I realized that it could be an overcomplication
   * But it helps to quickly restore tag that was removed by accident, I also prefill the last known value for it (if it happend in current session)
 * I don't get exactly what `immediate_trash` for `retention_policy` means, at first I decided that it means removing all the policy values but after a second thought I got that it is a flag to remove the document right away, but then it should override all other timeouts anyway;
-* Could values for timeouts in `ContactDetails` be not Integers, but something else?
 * I have added `none` preferred contact method (to `email`, `post`, `phone`) to handle cases when the string in the JSON doesn't match any sample, so that it wouldn't set something undesired by accident. But may be there exist a default value I could always set in case of mismatch?
+* ZIP Codes could contain letters, I suppose. All the validators are easy replaceable

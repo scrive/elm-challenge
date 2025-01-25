@@ -115,7 +115,7 @@ formHeader =
 
 
 textInput =
-    "border-slate-300 border-solid border-2 rounded-r-md mr-3"
+    "border-slate-300 border-solid border-2 rounded-r-md mr-3 max-w-24"
 
 
 gradientHeader =
