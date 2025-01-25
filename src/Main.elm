@@ -478,7 +478,7 @@ dataRetentionPolicyView model =
                     , Events.onClick ClickedEditOptions
                     ]
                     []
-                , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map enabledTimeoutView enabledTimeouts)
+                , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView model.immediateTrash) enabledTimeouts)
                 ]
             , trash model.immediateTrash
             ]
@@ -517,8 +517,8 @@ trash immediateTrash =
         ]
 
 
-enabledTimeoutView : Item -> Html FormMsg
-enabledTimeoutView { timeout, value } =
+enabledTimeoutView : Bool -> Item -> Html FormMsg
+enabledTimeoutView trashImmediately { timeout, value } =
     Html.div
         [ Attrs.class "flex" ]
         [ Html.label
@@ -536,6 +536,7 @@ enabledTimeoutView { timeout, value } =
             , Attrs.value value
             , Events.onInput (DidInputIdleDocTimeout timeout)
             , Attrs.class "text-right w-20 border-2 rounded"
+            , Attrs.disabled trashImmediately
             ]
             []
         ]
