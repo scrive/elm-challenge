@@ -53,21 +53,25 @@ view errors handlers state pl =
                 [ Html.span [ Attrs.class Style.fieldLabel ] [ Html.text <| RP.toOption policy ++ " : " ]
                 , case mbCurrentlyEdited policy of
                     Nothing ->
-                        Html.div []
-                            [ Html.text <| String.fromInt value
+                        Html.span [ Attrs.class Style.itemWithValue ]
+                            [ Html.span
+                                [ Attrs.class Style.fieldValue ]
+                                [ Html.text <| String.fromInt value ]
                             , Html.button
                                 [ Evts.onClick <| handlers.editCurrentTimeout policy value
+                                , Attrs.title <| Style.altText Style.UpdateTimeout
                                 , Attrs.class Style.button
                                 ]
                                 [ Html.text <| Style.buttonLabel Style.UpdateTimeout ]
                             , Html.button
                                 [ Evts.onClick <| handlers.clearTimeout policy
+                                , Attrs.title <| Style.altText Style.RemoveTimeout
                                 , Attrs.class Style.button
                                 ]
                                 [ Html.text <| Style.buttonLabel Style.RemoveTimeout ]
                             ]
                     Just ( _, currentValue ) ->
-                        Html.div []
+                        Html.span [ Attrs.class Style.itemWithInput ]
                             [ Html.input
                                 [ Attrs.type_ "number"
                                 , Attrs.class Style.textInput
@@ -83,6 +87,7 @@ view errors handlers state pl =
                                 []
                             , Html.button
                                 [ Evts.onClick <| handlers.applyCurrentTimeout policy
+                                , Attrs.title <| Style.altText Style.SubmitTimeout
                                 , Attrs.class Style.button
                                 ]
                                 [ Html.text <| Style.buttonLabel Style.SubmitTimeout ]
@@ -147,6 +152,7 @@ viewAddPolicySelect handlers state lacksWhichPolicies =
                 Nothing -> True
                 Just policy -> not <| List.member policy lacksWhichPolicies
             , Evts.onClick handlers.addSelectedPolicy
+            , Attrs.title <| Style.altText Style.AddPolicy
             , Attrs.class Style.button
             ]
             [ Html.text <| Style.buttonLabel Style.AddPolicy ]

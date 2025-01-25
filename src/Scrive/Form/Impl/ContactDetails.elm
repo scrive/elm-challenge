@@ -85,6 +85,7 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                         [ ]
                     , Html.button
                         [ Evts.onClick <| qSubmitValue field currentValue
+                        , Attrs.title <| Style.altText Style.SetContactValue
                         , Attrs.class Style.button
                         ]
                         [ Html.text <| Style.buttonLabel Style.SetContactValue ]

@@ -66,6 +66,7 @@ view errors handlers tagInProgress items =
         addTagButton =
             Html.button
                 [ Evts.onClick <| handlers.setInProgress <| Creating { newName = "", newValue = "" }
+                , Attrs.title <| Style.altText Style.AddNewTag
                 , Attrs.class Style.button
                 ]
                 [ Html.text <| Style.buttonLabel Style.AddNewTag ]
@@ -101,16 +102,19 @@ viewTag handlers idx tag =
         , Html.span [ Attrs.class Style.tagValue ] [ Html.text <| Tag.valueOf tag ]
         , Html.button
             [ Evts.onClick <| handlers.setInProgress <| Changing idx { newValue = Tag.valueOf tag }
+            , Attrs.title <| Style.altText Style.UpdateTagValue
             , Attrs.class Style.button
             ]
             [ Html.text <| Style.buttonLabel Style.UpdateTagValue ]
         , Html.button
             [ Evts.onClick <| handlers.archive tag
+            , Attrs.title <| Style.altText Style.ArchiveTag
             , Attrs.class Style.button
             ]
             [ Html.text <| Style.buttonLabel Style.ArchiveTag ]
         , Html.button
             [ Evts.onClick <| handlers.remove <| Right tag
+            , Attrs.title <| Style.altText Style.RemoveTag
             , Attrs.class Style.button
             ]
             [ Html.text <| Style.buttonLabel Style.RemoveTag ]
@@ -126,14 +130,18 @@ viewArchivedTag :
 viewArchivedTag handlers idx archivedTag =
     Html.li
         [ Attrs.class Style.archivedTagItem ]
-        [ Html.span [ Attrs.class Style.tagName ] [ Html.text <| Tag.nameOfArchived archivedTag ]
+        [ Html.span [ Attrs.class Style.archivedTagName ] [ Html.text <| Tag.nameOfArchived archivedTag ]
         , Html.button
             [ Evts.onClick <| handlers.setInProgress <| Restoring idx { newValue = "" }
+            , Attrs.title <| Style.altText Style.RestoreTag
             , Attrs.class Style.button
             ]
             [ Html.text <| Style.buttonLabel Style.RestoreTag ]
         , Html.button
-            [ Evts.onClick <| handlers.remove <| Left archivedTag ]
+            [ Evts.onClick <| handlers.remove <| Left archivedTag
+            , Attrs.title <| Style.altText Style.RemoveTag
+            , Attrs.class Style.button
+            ]
             [ Html.text <| Style.buttonLabel Style.RemoveTag ]
         ]
 
@@ -166,6 +174,7 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
         , Errors.viewMany <| Errors.extractOnlyAt Field.NewTagValue errors
         , Html.button
             [ Evts.onClick <| handlers.tryCreate { newName = newName, newValue = newValue }
+            , Attrs.title <| Style.altText Style.SubmitNewTag
             , Attrs.class Style.button
             ]
             [ Html.text <| Style.buttonLabel Style.SubmitNewTag ]
@@ -194,9 +203,10 @@ viewWhileChangingTag errors handlers idx newValue tag =
         , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTag idx) errors
         , Html.button
             [ Evts.onClick <| handlers.tryChange tag { newValue = newValue }
+            , Attrs.title <| Style.altText Style.SubmitTagValue
             , Attrs.class Style.button
             ]
-            [ Html.text <| Style.buttonLabel Style.UpdateTagValue ]
+            [ Html.text <| Style.buttonLabel Style.SubmitTagValue ]
         ]
 
 
@@ -224,6 +234,7 @@ viewWhileRestoringTag errors handlers idx newValue archivedTag =
         , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTag idx) errors
         , Html.button
             [ Evts.onClick <| handlers.tryRestore archivedTag{ newValue = newValue }
+            , Attrs.title <| Style.altText Style.SubmitValueForRestoredTag
             , Attrs.class Style.button
             ]
             [ Html.text <| Style.buttonLabel Style.SubmitValueForRestoredTag ]
