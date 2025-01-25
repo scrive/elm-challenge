@@ -1,24 +1,15 @@
-module Scrive.Form.Impl.Tags exposing (TagInProgress, view, indexOfTagInProgress, tagInProgressToString)
+module Scrive.Form.Impl.Tags exposing (TagInProgress, indexOfTagInProgress, tagInProgressToString, view)
 
-import Either exposing (Either(..))
-import Either as Either
-
-import Html exposing (Html)
-import Html as Html
+import Either as Either exposing (Either(..))
+import Html as Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Evts
 import Html.Events.Extra as Evts
-
-import Style as Style
-
-import Scrive.Data.Tag exposing (Tag, ArchivedTag, SomeTag)
-import Scrive.Data.Tag as Tag
+import Scrive.Data.Tag as Tag exposing (ArchivedTag, SomeTag, Tag)
 import Scrive.Data.UserGroup as UG
-import Scrive.Form.Field exposing (Field)
-import Scrive.Form.Field as Field
-
-import Scrive.Form.Error exposing (Error)
-import Scrive.Form.Error as Errors
+import Scrive.Form.Error as Errors exposing (Error)
+import Scrive.Form.Field as Field exposing (Field)
+import Style as Style
 
 
 type TagInProgress
@@ -36,29 +27,33 @@ type alias Handlers msg =
     , setInProgress : TagInProgress -> msg
     }
 
+
 view : List Error -> Handlers msg -> Maybe TagInProgress -> List SomeTag -> Html msg
 view errors handlers tagInProgress items =
     let
-
         viewListItem idx =
             Either.unpack
-
                 -- if it's a removed tag, we could either restoring it or just viewing it
                 (case tagInProgress of
                     Just (Restoring otherIdx { newValue }) ->
-                        if (otherIdx == idx)
-                            then viewWhileRestoringTag errors handlers idx newValue
-                            else viewArchivedTag handlers idx
+                        if otherIdx == idx then
+                            viewWhileRestoringTag errors handlers idx newValue
+
+                        else
+                            viewArchivedTag handlers idx
+
                     _ ->
                         viewArchivedTag handlers idx
                 )
-
                 -- if it's a "normal" tag, we could either updating its value or just viewing it
                 (case tagInProgress of
                     Just (Changing otherIdx { newValue }) ->
-                        if (otherIdx == idx)
-                            then viewWhileChangingTag errors handlers idx newValue
-                            else viewTag handlers idx
+                        if otherIdx == idx then
+                            viewWhileChangingTag errors handlers idx newValue
+
+                        else
+                            viewTag handlers idx
+
                     _ ->
                         viewTag handlers idx
                 )
@@ -70,22 +65,24 @@ view errors handlers tagInProgress items =
                 , Attrs.class Style.button
                 ]
                 [ Html.text <| Style.buttonLabel Style.AddNewTag ]
-
-    in Html.div
+    in
+    Html.div
         []
-        <|
-            ( Html.ul [ Attrs.class Style.tagList ] <| List.indexedMap viewListItem items )
-            ::
-            case tagInProgress of
-                Just (Creating newData) ->
-                    [ viewWhileCreatingTag errors handlers newData ]
-                Just (Restoring _ _ )->
-                    [ ]
-                Just (Changing _ _) ->
-                    [ ]
-                Nothing ->
-                    [ addTagButton ]
+    <|
+        (Html.ul [ Attrs.class Style.tagList ] <| List.indexedMap viewListItem items)
+            :: (case tagInProgress of
+                    Just (Creating newData) ->
+                        [ viewWhileCreatingTag errors handlers newData ]
 
+                    Just (Restoring _ _) ->
+                        []
+
+                    Just (Changing _ _) ->
+                        []
+
+                    Nothing ->
+                        [ addTagButton ]
+               )
 
 
 viewTag :
@@ -94,7 +91,9 @@ viewTag :
         , archive : Tag -> msg
         , remove : SomeTag -> msg
     }
-    -> Int -> Tag -> Html msg
+    -> Int
+    -> Tag
+    -> Html msg
 viewTag handlers idx tag =
     Html.li
         [ Attrs.class Style.tagItem ]
@@ -126,7 +125,9 @@ viewArchivedTag :
         | setInProgress : TagInProgress -> msg
         , remove : SomeTag -> msg
     }
-    -> Int -> ArchivedTag -> Html msg
+    -> Int
+    -> ArchivedTag
+    -> Html msg
 viewArchivedTag handlers idx archivedTag =
     Html.li
         [ Attrs.class Style.archivedTagItem ]
@@ -147,12 +148,14 @@ viewArchivedTag handlers idx archivedTag =
 
 
 viewWhileCreatingTag :
-    List Error ->
-    { r
-        | setInProgress : TagInProgress -> msg
-        , tryCreate : { newName : String, newValue : String } -> msg
-    }
-    -> { newName : String, newValue : String } -> Html msg
+    List Error
+    ->
+        { r
+            | setInProgress : TagInProgress -> msg
+            , tryCreate : { newName : String, newValue : String } -> msg
+        }
+    -> { newName : String, newValue : String }
+    -> Html msg
 viewWhileCreatingTag errors handlers { newName, newValue } =
     Html.li
         [ Attrs.class Style.editingTagItem ]
@@ -182,12 +185,16 @@ viewWhileCreatingTag errors handlers { newName, newValue } =
 
 
 viewWhileChangingTag :
-    List Error ->
-    { r
-        | setInProgress : TagInProgress -> msg
-        , tryChange : Tag -> { newValue : String } -> msg
-    }
-    -> Int -> String -> Tag -> Html msg
+    List Error
+    ->
+        { r
+            | setInProgress : TagInProgress -> msg
+            , tryChange : Tag -> { newValue : String } -> msg
+        }
+    -> Int
+    -> String
+    -> Tag
+    -> Html msg
 viewWhileChangingTag errors handlers idx newValue tag =
     Html.li
         [ Attrs.class Style.editingTagItem ]
@@ -211,12 +218,16 @@ viewWhileChangingTag errors handlers idx newValue tag =
 
 
 viewWhileRestoringTag :
-    List Error ->
-    { r
-        | setInProgress : TagInProgress -> msg
-        , tryRestore : ArchivedTag -> { newValue : String } -> msg
-    }
-    -> Int -> String -> ArchivedTag -> Html msg
+    List Error
+    ->
+        { r
+            | setInProgress : TagInProgress -> msg
+            , tryRestore : ArchivedTag -> { newValue : String } -> msg
+        }
+    -> Int
+    -> String
+    -> ArchivedTag
+    -> Html msg
 viewWhileRestoringTag errors handlers idx newValue archivedTag =
     Html.li
         [ Attrs.class Style.editingTagItem ]
@@ -224,16 +235,20 @@ viewWhileRestoringTag errors handlers idx newValue archivedTag =
         , Errors.viewMany <| Errors.extractOnlyAt (Field.NameOfTag idx) errors
         , Html.input
             [ Attrs.class Style.textInput
-            , Attrs.placeholder <| case Tag.lastValueOfArchived archivedTag of
-                Just lastValue -> lastValue
-                Nothing -> ""
+            , Attrs.placeholder <|
+                case Tag.lastValueOfArchived archivedTag of
+                    Just lastValue ->
+                        lastValue
+
+                    Nothing ->
+                        ""
             , Evts.onInput <| \str -> handlers.setInProgress <| Restoring idx { newValue = str }
             , Evts.onEnter <| handlers.tryRestore archivedTag { newValue = newValue }
             ]
             [ Html.text newValue ]
         , Errors.viewMany <| Errors.extractOnlyAt (Field.ValueOfTag idx) errors
         , Html.button
-            [ Evts.onClick <| handlers.tryRestore archivedTag{ newValue = newValue }
+            [ Evts.onClick <| handlers.tryRestore archivedTag { newValue = newValue }
             , Attrs.title <| Style.altText Style.SubmitValueForRestoredTag
             , Attrs.class Style.button
             ]
@@ -252,6 +267,11 @@ indexOfTagInProgress tip =
 tagInProgressToString : TagInProgress -> String
 tagInProgressToString tip =
     case tip of
-        Changing n { newValue } -> "Changing tag #" ++ String.fromInt n ++ " (" ++ newValue ++ ")"
-        Restoring n { newValue }  -> "Restoring tag #" ++ String.fromInt n ++ " (" ++ newValue ++ ")"
-        Creating { newName, newValue } -> "Creating tag " ++ " (" ++ newName ++ " : " ++ newValue ++ ")"
+        Changing n { newValue } ->
+            "Changing tag #" ++ String.fromInt n ++ " (" ++ newValue ++ ")"
+
+        Restoring n { newValue } ->
+            "Restoring tag #" ++ String.fromInt n ++ " (" ++ newValue ++ ")"
+
+        Creating { newName, newValue } ->
+            "Creating tag " ++ " (" ++ newName ++ " : " ++ newValue ++ ")"

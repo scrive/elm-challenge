@@ -1,15 +1,9 @@
 module Scrive.Data.Settings exposing (..)
 
-
-import Json.Decode exposing (Decoder)
-import Json.Decode as D
+import Json.Decode as D exposing (Decoder)
 import Json.Encode as E
-
-
-import Scrive.Data.NullableInt exposing (NullableInt)
-import Scrive.Data.NullableInt as NI
-import Scrive.Data.RetentionPolicy exposing (PolicyRec)
-import Scrive.Data.RetentionPolicy as RetentionPolicy
+import Scrive.Data.NullableInt as NI exposing (NullableInt)
+import Scrive.Data.RetentionPolicy as RetentionPolicy exposing (PolicyRec)
 
 
 type alias Settings =
@@ -24,7 +18,6 @@ decoder =
         Settings
         (D.field "inherited_from" NI.decode)
         (D.field "data_retention_policy" RetentionPolicy.decoder)
-
 
 
 encode : Settings -> E.Value

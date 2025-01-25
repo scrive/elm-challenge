@@ -1,23 +1,16 @@
 module Scrive.Form.Impl.ContactDetails exposing (..)
 
-
 import Html exposing (Html)
-import Html
-import Html.Extra as Html
 import Html.Attributes as Attrs
 import Html.Events as Evts
 import Html.Events.Extra as Evts
-
+import Html.Extra as Html
 import Maybe
-
-import Style as Style
-
-import Scrive.Data.ContactDetails exposing (ContactDetails)
 import Scrive.Data.Address as CD
-import Scrive.Form.Field exposing (Field)
-import Scrive.Form.Field as Field
-import Scrive.Form.Error exposing (Error)
-import Scrive.Form.Error as Errors
+import Scrive.Data.ContactDetails exposing (ContactDetails)
+import Scrive.Form.Error as Errors exposing (Error)
+import Scrive.Form.Field as Field exposing (Field)
+import Style as Style
 
 
 type alias Handlers msg =
@@ -31,34 +24,38 @@ type alias State =
     { readOnly : Bool, currentlyEditing : Maybe ( CD.Field, String ) }
 
 
-
 view : List Error -> Handlers msg -> State -> ContactDetails -> Html msg
 view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEditing } { address } =
     if readOnly then
         let
-            draftAddress = CD.toDraft address
+            draftAddress =
+                CD.toDraft address
 
             textFor field =
-                roLabelAndValue (CD.fieldToLabel field ++ " : ")
-                    <| Maybe.withDefault "-"
-                    <| CD.draftValueOf draftAddress field
+                roLabelAndValue (CD.fieldToLabel field ++ " : ") <|
+                    Maybe.withDefault "-" <|
+                        CD.draftValueOf draftAddress field
         in
         Html.ul
             [ Attrs.class Style.readOnlyValuesList ]
-            <| (roLabelAndValue "Preferred way of contact : "
-                    <| CD.preferredContactToString address.preferredContactMethod
-               )
-            :: (List.map textFor <| CD.allFields)
+        <|
+            (roLabelAndValue "Preferred way of contact : " <|
+                CD.preferredContactToString address.preferredContactMethod
+            )
+                :: (List.map textFor <| CD.allFields)
+
     else
         let
-
-            draftAddress = CD.toDraft address
+            draftAddress =
+                CD.toDraft address
 
             qValueOf : CD.Field -> String
-            qValueOf = Maybe.withDefault "" << CD.draftValueOf draftAddress
+            qValueOf =
+                Maybe.withDefault "" << CD.draftValueOf draftAddress
 
             qSubmitValue : CD.Field -> String -> msg
-            qSubmitValue field currentValue = CD.setDraftValue draftAddress field currentValue |> tryUpdate
+            qSubmitValue field currentValue =
+                CD.setDraftValue draftAddress field currentValue |> tryUpdate
 
             preferredContactOption : CD.PreferredContact -> Html msg
             preferredContactOption pc =
@@ -82,7 +79,7 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                         , Attrs.value currentValue
                         , Evts.onEnter <| qSubmitValue field currentValue
                         ]
-                        [ ]
+                        []
                     , Html.button
                         [ Evts.onClick <| qSubmitValue field currentValue
                         , Attrs.title <| Style.altText Style.SetContactValue
@@ -100,7 +97,7 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                     [ Html.span
                         [ Attrs.class Style.fieldLabel ]
                         [ Html.text <| CD.fieldToLabel field ]
-                    ,  Html.span
+                    , Html.span
                         [ Attrs.class Style.fieldValue ]
                         [ Html.text <| qValueOf field ]
                     , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
@@ -112,11 +109,12 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                     Just ( currentField, currentValue ) ->
                         if currentField == field then
                             inputFor field inputId currentValue
+
                         else
                             clickableTextFor field
+
                     Nothing ->
                         clickableTextFor field
-
         in
         Html.ul
             [ Attrs.class Style.inputsForValuesList ]
@@ -126,7 +124,9 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                     [ Attrs.id "preferred-contact"
                     , Attrs.class Style.selectBox
                     , Evts.onInput (setContactMethod << CD.preferredContactFromOption)
-                     ] <| List.map preferredContactOption CD.preferredWaysToContact
+                    ]
+                  <|
+                    List.map preferredContactOption CD.preferredWaysToContact
                 ]
             , inputOrTextFor CD.F_Email "contact-email"
             , inputOrTextFor CD.F_Phone "contact-phone"
@@ -143,8 +143,8 @@ roLabelAndValue label value =
         [ Attrs.class Style.itemWithValue ]
         [ Html.span
             [ Attrs.class Style.fieldLabel ]
-            [ Html.text label  ]
-        ,  Html.span
+            [ Html.text label ]
+        , Html.span
             [ Attrs.class Style.fieldValue ]
             [ Html.text value ]
         ]

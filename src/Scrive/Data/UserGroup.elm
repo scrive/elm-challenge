@@ -1,22 +1,16 @@
 module Scrive.Data.UserGroup exposing (..)
 
 import Either exposing (Either)
-
-import Scrive.Data.Settings exposing (Settings)
-import Scrive.Data.Settings as Settings
-import Scrive.Data.ContactDetails exposing (ContactDetails)
-import Scrive.Data.ContactDetails as ContactDetails
-import Scrive.Data.Tag exposing (Tag, ArchivedTag, SomeTag)
-import Scrive.Data.Tag as Tag
-import Scrive.Data.NullableInt exposing (NullableInt)
-import Scrive.Data.NullableInt as NI
-
-import Json.Decode exposing (Decoder)
-import Json.Decode as D
+import Json.Decode as D exposing (Decoder)
 import Json.Encode as E
+import Scrive.Data.ContactDetails as ContactDetails exposing (ContactDetails)
+import Scrive.Data.NullableInt as NI exposing (NullableInt)
+import Scrive.Data.Settings as Settings exposing (Settings)
+import Scrive.Data.Tag as Tag exposing (ArchivedTag, SomeTag, Tag)
 
 
-type alias UserGroupRef = { id : NullableInt, name : String }
+type alias UserGroupRef =
+    { id : NullableInt, name : String }
 
 
 type alias UserGroup =
