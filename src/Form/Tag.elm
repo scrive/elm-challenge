@@ -3,18 +3,15 @@ module Form.Tag exposing
     , Model
     , Msg
     , ParentMsg(..)
-    , Tag
-    , decodeTag
     , initAddFormModel
     , initEditFormModel
     , update
     , view
     )
 
+import Data.Tag as Tag
 import Dict exposing (Dict)
 import Html exposing (Html)
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline as Pipeline
 
 
 type Model
@@ -23,7 +20,7 @@ type Model
 
 type alias ModelData =
     { errors : Errors
-    , tag : Tag
+    , tag : Tag.Model
     , formType : FormType
     }
 
@@ -42,47 +39,27 @@ type InputId
     | Value
 
 
-type alias Tag =
-    { name : String
-    , value : String
-    }
-
-
 emptyErrors : Errors
 emptyErrors =
     Dict.empty
-
-
-emptyTag : Tag
-emptyTag =
-    { name = ""
-    , value = ""
-    }
 
 
 initAddFormModel : Model
 initAddFormModel =
     Model
         { errors = emptyErrors
-        , tag = emptyTag
+        , tag = Tag.emptyTag
         , formType = Add
         }
 
 
-initEditFormModel : Tag -> Model
+initEditFormModel : Tag.Model -> Model
 initEditFormModel tag =
     Model
         { errors = emptyErrors
         , tag = tag
         , formType = Edit
         }
-
-
-decodeTag : Decoder Tag
-decodeTag =
-    Decode.succeed Tag
-        |> Pipeline.required "name" Decode.string
-        |> Pipeline.optional "value" Decode.string ""
 
 
 type Msg
@@ -94,28 +71,20 @@ type Msg
 type ParentMsg
     = NoUpdate
     | HideEditForm
-    | SubmittedForm Tag
+    | SubmittedForm Tag.Model
 
 
-update : List Tag -> Msg -> Model -> ( Model, Cmd Msg, ParentMsg )
-update tags msg ((Model ({ tag } as modelData)) as model) =
+update : Msg -> Model -> ( Model, Cmd Msg, ParentMsg )
+update msg ((Model ({ tag } as modelData)) as model) =
     case msg of
         InsertedInputValue Name name ->
-            let
-                updatedTag =
-                    { tag | name = name }
-            in
-            ( Model { modelData | tag = updatedTag }
+            ( Model { modelData | tag = Tag.updateName name tag }
             , Cmd.none
             , NoUpdate
             )
 
         InsertedInputValue Value value ->
-            let
-                updatedTag =
-                    { tag | value = value }
-            in
-            ( Model { modelData | tag = updatedTag }
+            ( Model { modelData | tag = Tag.updateValue value tag }
             , Cmd.none
             , NoUpdate
             )
@@ -136,4 +105,4 @@ update tags msg ((Model ({ tag } as modelData)) as model) =
 
 view : Model -> Html Msg
 view (Model model) =
-    Html.text "Tags"
+    Html.text "Tags form"

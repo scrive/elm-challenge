@@ -1,4 +1,4 @@
-module Types.UserGroup exposing
+module Data.UserGroup exposing
     ( Model
     , decode
     , getContactDetails
@@ -9,11 +9,11 @@ module Types.UserGroup exposing
     , updateTags
     )
 
-import ContactDetails
+import Data.ContactDetails as ContactDetails
+import Data.Settings as Settings
+import Data.Tag as Tag
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline
-import Settings as Settings
-import Tags as Tags
 
 
 type Model
@@ -27,7 +27,7 @@ type alias UserGroup =
     , children : List Children
     , settings : Settings.Model
     , contactDetails : ContactDetails.Model
-    , tags : Tags.Model
+    , tags : Tag.Tags
     }
 
 
@@ -51,7 +51,7 @@ decodeUserGroup =
         |> Pipeline.required "children" (Decode.list decodeChildren)
         |> Pipeline.required "settings" Settings.decode
         |> Pipeline.required "contact_details" ContactDetails.decode
-        |> Pipeline.required "tags" Tags.decode
+        |> Pipeline.required "tags" (Decode.list Tag.decode)
 
 
 decodeChildren : Decoder Children
@@ -71,7 +71,7 @@ getContactDetails (Model { contactDetails }) =
     contactDetails
 
 
-getTags : Model -> Tags.Model
+getTags : Model -> Tag.Tags
 getTags (Model { tags }) =
     tags
 
@@ -86,6 +86,6 @@ updateContactDetails contactDetails (Model userGroup) =
     Model { userGroup | contactDetails = contactDetails }
 
 
-updateTags : Tags.Model -> Model -> Model
+updateTags : Tag.Tags -> Model -> Model
 updateTags tags (Model userGroup) =
     Model { userGroup | tags = tags }

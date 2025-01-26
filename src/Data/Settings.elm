@@ -1,15 +1,8 @@
-module Settings exposing
-    ( Model
-    , Msg
-    , decode
-    , update
-    , view
-    )
+module Data.Settings exposing (Model, decode)
 
-import Html exposing (Html)
+import Data.InheritedFrom as InheritedFrom
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline
-import Types.InheritedFrom as InheritedFrom
 
 
 type Model
@@ -60,19 +53,3 @@ decodeDataRetentionPolicy =
 decodeNullableInt : Decoder (Maybe Int)
 decodeNullableInt =
     Decode.nullable Decode.int
-
-
-type Msg
-    = NoOp
-
-
-update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model
-    , Cmd.none
-    )
-
-
-view : Model -> Html Msg
-view _ =
-    Html.text "Settings"

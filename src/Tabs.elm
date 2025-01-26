@@ -31,8 +31,8 @@ type Msg
     = ChangedTab Tab
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update (ChangedTab tab) _ =
+update : Msg -> ( Model, Cmd Msg )
+update (ChangedTab tab) =
     ( tab
     , Cmd.none
     )

@@ -1,4 +1,4 @@
-module Types.InheritedFrom exposing
+module Data.InheritedFrom exposing
     ( Model
     , decode
     )

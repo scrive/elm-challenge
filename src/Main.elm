@@ -2,15 +2,15 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Navigation
-import ContactDetails
 import Data
+import Data.UserGroup as UserGroup
 import Html exposing (Html)
 import Html.Attributes as Attributes
 import Json.Decode as Decode
-import Settings
+import Section.ContactDetails as ContactDetails
+import Section.Settings as Settings
+import Section.Tags as Tags
 import Tabs
-import Tags
-import Types.UserGroup as UserGroup
 import Url
 
 
@@ -24,13 +24,19 @@ type Model
 
 
 type ErrorType
-    = DecodeError Decode.Error
+    = DecoderError Decode.Error
 
 
 type alias SuccessModelData =
     { userGroup : UserGroup.Model
-    , tabs : Tabs.Model
+    , section : Section
     }
+
+
+type Section
+    = ContactDetailsSection ContactDetails.Model
+    | SettingsSection Settings.Model
+    | TagsSection Tags.Model
 
 
 type alias Flags =
@@ -47,15 +53,41 @@ init _ _ _ =
         Ok userGroup ->
             Success
                 { userGroup = userGroup
-                , tabs = Tabs.init
+                , section = initSection Tabs.init
                 }
 
         Err error ->
             error
-                |> DecodeError
+                |> DecoderError
                 |> Error
     , Cmd.none
     )
+
+
+initSection : Tabs.Model -> Section
+initSection tabsModel =
+    case tabsModel of
+        Tabs.ContactDetails ->
+            ContactDetailsSection ContactDetails.init
+
+        Tabs.Settings ->
+            SettingsSection Settings.init
+
+        Tabs.Tags ->
+            TagsSection Tags.init
+
+
+sectionToTab : Section -> Tabs.Model
+sectionToTab section =
+    case section of
+        ContactDetailsSection _ ->
+            Tabs.ContactDetails
+
+        SettingsSection _ ->
+            Tabs.Settings
+
+        TagsSection _ ->
+            Tabs.Tags
 
 
 
@@ -73,43 +105,55 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        Success ({ tabs, userGroup } as successData) ->
-            (case msg of
-                NoOp ->
-                    ( successData
-                    , Cmd.none
+        Success ({ section, userGroup } as successData) ->
+            (case ( msg, section ) of
+                ( TabsMsg tabsMsg, _ ) ->
+                    let
+                        ( updatedTabsModel, cmd ) =
+                            Tabs.update tabsMsg
+                    in
+                    ( { successData | section = initSection updatedTabsModel }
+                    , Cmd.map TabsMsg cmd
                     )
 
-                TabsMsg tabsMsg ->
-                    tabs
-                        |> Tabs.update tabsMsg
-                        |> Tuple.mapBoth
-                            (\updatedTabs -> { successData | tabs = updatedTabs })
-                            (Cmd.map TabsMsg)
+                ( ContactDetailsMsg sectionMsg, ContactDetailsSection sectionModel ) ->
+                    let
+                        ( updatedModel, cmd, updatedContactDetails ) =
+                            ContactDetails.update (UserGroup.getContactDetails userGroup) sectionMsg sectionModel
+                    in
+                    ( { successData
+                        | section = ContactDetailsSection updatedModel
+                        , userGroup = UserGroup.updateContactDetails updatedContactDetails userGroup
+                      }
+                    , Cmd.map ContactDetailsMsg cmd
+                    )
 
-                ContactDetailsMsg contactDetailsMsg ->
-                    userGroup
-                        |> UserGroup.getContactDetails
-                        |> ContactDetails.update contactDetailsMsg
-                        |> Tuple.mapBoth
-                            (\contactDetails -> { successData | userGroup = UserGroup.updateContactDetails contactDetails userGroup })
-                            (Cmd.map ContactDetailsMsg)
+                ( SettingsMsg sectionMsg, SettingsSection sectionModel ) ->
+                    let
+                        ( updatedModel, cmd, updatedSettings ) =
+                            Settings.update (UserGroup.getSettings userGroup) sectionMsg sectionModel
+                    in
+                    ( { successData
+                        | section = SettingsSection updatedModel
+                        , userGroup = UserGroup.updateSettings updatedSettings userGroup
+                      }
+                    , Cmd.map SettingsMsg cmd
+                    )
 
-                SettingsMsg settingsMsg ->
-                    userGroup
-                        |> UserGroup.getSettings
-                        |> Settings.update settingsMsg
-                        |> Tuple.mapBoth
-                            (\settings -> { successData | userGroup = UserGroup.updateSettings settings userGroup })
-                            (Cmd.map SettingsMsg)
+                ( TagsMsg sectionMsg, TagsSection sectionModel ) ->
+                    let
+                        ( updatedModel, cmd, updatedTags ) =
+                            Tags.update (UserGroup.getTags userGroup) sectionMsg sectionModel
+                    in
+                    ( { successData
+                        | section = TagsSection updatedModel
+                        , userGroup = UserGroup.updateTags updatedTags userGroup
+                      }
+                    , Cmd.map TagsMsg cmd
+                    )
 
-                TagsMsg tagsMsg ->
-                    userGroup
-                        |> UserGroup.getTags
-                        |> Tags.update tagsMsg
-                        |> Tuple.mapBoth
-                            (\tags -> { successData | userGroup = UserGroup.updateTags tags userGroup })
-                            (Cmd.map TagsMsg)
+                _ ->
+                    ( successData, Cmd.none )
             )
                 |> Tuple.mapFirst Success
 
@@ -126,35 +170,36 @@ update msg model =
 view : Model -> Html Msg
 view model =
     case model of
-        Success ({ tabs } as successModelData) ->
+        Success ({ section } as successModelData) ->
             Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-                [ tabs
+                [ section
+                    |> sectionToTab
                     |> Tabs.view
                     |> Html.map TabsMsg
                 , formView successModelData
                 ]
 
         -- TODO error
-        Error (DecodeError error) ->
+        Error (DecoderError error) ->
             Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-                [ Html.text "Somethint went wrong ..."
+                [ Html.text "Something went wrong ..."
                 ]
 
 
 formView : SuccessModelData -> Html Msg
-formView { tabs, userGroup } =
+formView { section, userGroup } =
     Html.div [ Attributes.class "p-4 rounded-lg bg-gray-50 dark:bg-gray-800" ]
-        [ case tabs of
-            Tabs.ContactDetails ->
-                Html.text "Contact details"
+        [ case section of
+            ContactDetailsSection contactDetailsModel ->
+                ContactDetails.view (UserGroup.getContactDetails userGroup) contactDetailsModel
+                    |> Html.map ContactDetailsMsg
 
-            Tabs.Settings ->
-                Html.text "Settings"
+            SettingsSection settingsModel ->
+                Settings.view (UserGroup.getSettings userGroup) settingsModel
+                    |> Html.map SettingsMsg
 
-            Tabs.Tags ->
-                userGroup
-                    |> UserGroup.getTags
-                    |> Tags.view
+            TagsSection tagsModel ->
+                Tags.view (UserGroup.getTags userGroup) tagsModel
                     |> Html.map TagsMsg
         ]
 
