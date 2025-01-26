@@ -3,7 +3,9 @@ module Data.Tag exposing
     , Tags
     , decode
     , emptyTag
-    , isSameTag
+    , getName
+    , getValue
+    , isSameTagName
     , updateName
     , updateValue
     )
@@ -46,6 +48,16 @@ decodeTag =
         |> Pipeline.optional "value" Decode.string ""
 
 
+getName : Model -> String
+getName (Model { name }) =
+    name
+
+
+getValue : Model -> String
+getValue (Model { value }) =
+    value
+
+
 updateName : String -> Model -> Model
 updateName name (Model tag) =
     Model { tag | name = name }
@@ -56,6 +68,6 @@ updateValue value (Model tag) =
     Model { tag | value = value }
 
 
-isSameTag : Model -> Model -> Bool
-isSameTag (Model tagA) (Model tagB) =
+isSameTagName : Model -> Model -> Bool
+isSameTagName (Model tagA) (Model tagB) =
     tagA.name == tagB.name

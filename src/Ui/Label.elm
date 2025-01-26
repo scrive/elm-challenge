@@ -6,7 +6,7 @@ import Html.Attributes as Attributes
 
 type alias Model =
     { text : String
-    , inputId : String
+    , htmlFor : String
     }
 
 
@@ -16,9 +16,9 @@ baseCssClasses =
 
 
 view : Model -> Html msg
-view { inputId, text } =
+view { htmlFor, text } =
     Html.label
         [ Attributes.class baseCssClasses
-        , Attributes.for inputId
+        , Attributes.for htmlFor
         ]
         [ Html.text text ]

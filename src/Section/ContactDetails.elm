@@ -32,5 +32,5 @@ update contactDetails NoOp model =
 
 
 view : ContactDetails.Model -> Model -> Html Msg
-view contactDetials Model =
+view _ Model =
     Html.text "Contact details - not implemented"

@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Browser
-import Browser.Navigation as Navigation
 import Data
 import Data.UserGroup as UserGroup
 import Html exposing (Html)
@@ -11,7 +10,6 @@ import Section.ContactDetails as ContactDetails
 import Section.Settings as Settings
 import Section.Tags as Tags
 import Tabs
-import Url
 
 
 
@@ -39,12 +37,8 @@ type Section
     | TagsSection Tags.Model
 
 
-type alias Flags =
-    ()
-
-
-init : Flags -> Url.Url -> Navigation.Key -> ( Model, Cmd Msg )
-init _ _ _ =
+init : ( Model, Cmd Msg )
+init =
     let
         userGroupDecoderResult =
             Decode.decodeString UserGroup.decode Data.userGroup
@@ -106,13 +100,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
         Success ({ section, userGroup } as successData) ->
-            (case ( msg, section ) of
+            case ( msg, section ) of
                 ( TabsMsg tabsMsg, _ ) ->
                     let
                         ( updatedTabsModel, cmd ) =
                             Tabs.update tabsMsg
                     in
-                    ( { successData | section = initSection updatedTabsModel }
+                    ( Success { successData | section = initSection updatedTabsModel }
                     , Cmd.map TabsMsg cmd
                     )
 
@@ -121,10 +115,11 @@ update msg model =
                         ( updatedModel, cmd, updatedContactDetails ) =
                             ContactDetails.update (UserGroup.getContactDetails userGroup) sectionMsg sectionModel
                     in
-                    ( { successData
-                        | section = ContactDetailsSection updatedModel
-                        , userGroup = UserGroup.updateContactDetails updatedContactDetails userGroup
-                      }
+                    ( Success
+                        { successData
+                            | section = ContactDetailsSection updatedModel
+                            , userGroup = UserGroup.updateContactDetails updatedContactDetails userGroup
+                        }
                     , Cmd.map ContactDetailsMsg cmd
                     )
 
@@ -133,10 +128,11 @@ update msg model =
                         ( updatedModel, cmd, updatedSettings ) =
                             Settings.update (UserGroup.getSettings userGroup) sectionMsg sectionModel
                     in
-                    ( { successData
-                        | section = SettingsSection updatedModel
-                        , userGroup = UserGroup.updateSettings updatedSettings userGroup
-                      }
+                    ( Success
+                        { successData
+                            | section = SettingsSection updatedModel
+                            , userGroup = UserGroup.updateSettings updatedSettings userGroup
+                        }
                     , Cmd.map SettingsMsg cmd
                     )
 
@@ -145,17 +141,18 @@ update msg model =
                         ( updatedModel, cmd, updatedTags ) =
                             Tags.update (UserGroup.getTags userGroup) sectionMsg sectionModel
                     in
-                    ( { successData
-                        | section = TagsSection updatedModel
-                        , userGroup = UserGroup.updateTags updatedTags userGroup
-                      }
+                    ( Success
+                        { successData
+                            | section = TagsSection updatedModel
+                            , userGroup = UserGroup.updateTags updatedTags userGroup
+                        }
                     , Cmd.map TagsMsg cmd
                     )
 
                 _ ->
-                    ( successData, Cmd.none )
-            )
-                |> Tuple.mapFirst Success
+                    ( model
+                    , Cmd.none
+                    )
 
         Error _ ->
             ( model
@@ -179,10 +176,9 @@ view model =
                 , formView successModelData
                 ]
 
-        -- TODO error
-        Error (DecoderError error) ->
+        Error (DecoderError _) ->
             Html.div [ Attributes.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-                [ Html.text "Something went wrong ..."
+                [ Html.text "Decoder error - omething went wrong ..."
                 ]
 
 
@@ -216,7 +212,7 @@ main =
                 { title = "Scrive elm challenge task"
                 , body = [ view model ]
                 }
-        , init = init
+        , init = \_ _ _ -> init
         , update = update
         , subscriptions = always Sub.none
         , onUrlRequest = always NoOp

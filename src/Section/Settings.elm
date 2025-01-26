@@ -32,5 +32,5 @@ update settings NoOp model =
 
 
 view : Settings.Model -> Model -> Html Msg
-view settings Model =
+view _ Model =
     Html.text "Settings - not implemented"
