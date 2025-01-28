@@ -9,8 +9,12 @@ import Html.Attributes as Attrs
 import Html.Events as Events
 import IdleDocTimeout exposing (IdleDocTimeout(..))
 import Json.Decode
+import List.Extra
 import Set exposing (Set)
-import UserGroup
+import Svg
+import Svg.Attributes
+import Tag exposing (Tag)
+import UserGroup exposing (Account(..), Child)
 
 
 
@@ -23,7 +27,11 @@ type Model
 
 
 type alias LoadedModel =
-    { inheritedFrom : Maybe String
+    { id : String
+    , account : Account
+    , name : String
+    , children : List Child
+    , inheritedFrom : Maybe String
     , idleDocTimeoutPreparation : String
     , idleDocTimeoutClosed : String
     , idleDocTimeoutCanceled : String
@@ -42,7 +50,27 @@ type alias LoadedModel =
     , country : String
     , visibleOptions : Set String
     , showEditOptions : Bool
+    , tags : List EditableTag
     }
+
+
+type EditableTag
+    = NotEditing Tag
+    | Editing String (Maybe Tag.Error)
+
+
+currentTagNames : List EditableTag -> List String
+currentTagNames editableTags =
+    editableTags
+        |> List.filterMap
+            (\t ->
+                case t of
+                    Editing _ _ ->
+                        Nothing
+
+                    NotEditing tag ->
+                        Just tag.name
+            )
 
 
 init : ( Model, Cmd Msg )
@@ -55,7 +83,11 @@ init =
                     userGroup.settings.dataRetentionPolicy
             in
             Loaded
-                { inheritedFrom = userGroup.settings.inheritedFrom
+                { id = userGroup.id
+                , account = userGroup.account
+                , name = userGroup.name
+                , children = userGroup.children
+                , inheritedFrom = userGroup.settings.inheritedFrom
                 , idleDocTimeoutPreparation = dataRetentionPolicy.idleDocTimeoutPreparation |> Maybe.withDefault 0 |> String.fromInt
                 , idleDocTimeoutClosed = dataRetentionPolicy.idleDocTimeoutClosed |> Maybe.withDefault 0 |> String.fromInt
                 , idleDocTimeoutCanceled = dataRetentionPolicy.idleDocTimeoutCanceled |> Maybe.withDefault 0 |> String.fromInt
@@ -74,6 +106,7 @@ init =
                 , country = userGroup.contactDetails.address.country |> Maybe.withDefault ""
                 , visibleOptions = IdleDocTimeout.visibleOptions dataRetentionPolicy
                 , showEditOptions = False
+                , tags = userGroup.tags |> List.map NotEditing
                 }
 
         Err error ->
@@ -105,6 +138,11 @@ type FormMsg
     | InputZip String
     | InputCity String
     | InputCountry String
+    | AddTag
+    | SaveTag Int
+    | EditTag Int
+    | DeleteTag Int
+    | InputTag Int String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -179,6 +217,48 @@ updateForm msg model =
         InputCountry country ->
             { model | country = country }
 
+        AddTag ->
+            { model | tags = model.tags ++ [ Editing "" Nothing ] }
+
+        SaveTag index ->
+            case List.Extra.getAt index model.tags of
+                Just editableTag ->
+                    case editableTag of
+                        Editing tagString _ ->
+                            case Tag.make (currentTagNames model.tags) tagString of
+                                Ok tag ->
+                                    { model | tags = List.Extra.setAt index (NotEditing tag) model.tags }
+
+                                Err error ->
+                                    { model | tags = List.Extra.setAt index (Editing tagString (Just error)) model.tags }
+
+                        NotEditing _ ->
+                            model
+
+                Nothing ->
+                    model
+
+        EditTag index ->
+            { model
+                | tags =
+                    List.Extra.updateAt index
+                        (\editableTag ->
+                            case editableTag of
+                                NotEditing tag ->
+                                    Editing (Tag.toString tag) Nothing
+
+                                editing ->
+                                    editing
+                        )
+                        model.tags
+            }
+
+        DeleteTag index ->
+            { model | tags = List.Extra.removeAt index model.tags }
+
+        InputTag index tagString ->
+            { model | tags = List.Extra.setAt index (Editing tagString Nothing) model.tags }
+
 
 
 ---- VIEW ----
@@ -186,56 +266,109 @@ updateForm msg model =
 
 view : Model -> Html Msg
 view model =
-    Html.div [ Attrs.class "flex flex-col items-center mx-auto mt-16 mb-48" ]
-        [ case model of
-            LoadingError error ->
-                Html.text (Json.Decode.errorToString error)
+    case model of
+        LoadingError error ->
+            Html.text (Json.Decode.errorToString error)
 
-            Loaded loadedModel ->
-                loadedModelView loadedModel |> Html.map FormMsg
-        ]
+        Loaded loadedModel ->
+            loadedModelView loadedModel |> Html.map FormMsg
 
 
 loadedModelView : LoadedModel -> Html FormMsg
 loadedModelView model =
-    Html.form [ Attrs.class "flex flex-col gap-12 w-72 max-w-lg" ]
+    Html.form [ Attrs.class "flex flex-col gap-12 mt-8 px-6 mx-auto max-w-4xl mb-8" ]
         [ section
-            { title = "Settings"
-            , content = settingsView model
+            { title = "User group settings"
+            , content = userGroupSettingsView model
             }
-        , section
-            { title = "Contact Details"
-            , content = contactDetailsView model
-            }
+        , Html.div [ Attrs.class "flex flex-wrap gap-12" ]
+            [ section
+                { title = "Contact Details"
+                , content = contactDetailsView model
+                }
+            , section
+                { title = "Settings"
+                , content = settingsView model
+                }
+            , section
+                { title = "Tags"
+                , content = tagsView model.tags
+                }
+            ]
         , Html.input
             [ Attrs.type_ "submit"
             , Attrs.value "Save User Group"
-            , Attrs.class "p-2 bg-sky-500 rounded text-sky-50 font-medium"
+            , Attrs.class "p-2 bg-sky-500 rounded text-sky-50 font-medium w-40 max-w-xs self-end"
             ]
             []
         ]
 
 
-settingsView : LoadedModel -> List (Html FormMsg)
+userGroupSettingsView : LoadedModel -> Html FormMsg
+userGroupSettingsView model =
+    Html.div [ Attrs.class "flex flex-col gap-4" ]
+        [ Html.div [ Attrs.class "flex flex-wrap gap-x-12 gap-y-2" ]
+            [ Html.div [ Attrs.class "flex flex-col" ]
+                [ Html.span [ Attrs.class "text-sm" ] [ Html.text "name" ]
+                , Html.span [ Attrs.class "font-bold" ] [ Html.text model.name ]
+                ]
+            , Html.div [ Attrs.class "flex flex-col" ]
+                [ Html.span [ Attrs.class "text-sm" ] [ Html.text "id" ]
+                , Html.span [ Attrs.class "font-bold" ] [ Html.text model.id ]
+                ]
+            , case model.account of
+                Parent parentId ->
+                    Html.div [ Attrs.class "flex flex-col" ]
+                        [ Html.span [ Attrs.class "text-sm" ] [ Html.text "parent id" ]
+                        , Html.span [ Attrs.class "font-bold" ] [ Html.text parentId ]
+                        ]
+
+                Root ->
+                    Html.span [ Attrs.class "font-bold" ] [ Html.text "root user" ]
+            ]
+        , case model.children of
+            [] ->
+                Html.text ""
+
+            children ->
+                Html.div []
+                    [ Html.span [ Attrs.class "text-sm" ] [ Html.text "children" ]
+                    , Html.table [ Attrs.class "text-left border-2" ]
+                        (Html.tr [ Attrs.class "text-sm border-2" ]
+                            [ Html.th [ Attrs.class "px-2" ] [ Html.text "id" ]
+                            , Html.th [ Attrs.class "px-2" ] [ Html.text "name" ]
+                            ]
+                            :: List.map
+                                (\child ->
+                                    Html.tr []
+                                        [ Html.td [ Attrs.class "px-2" ] [ Html.text child.id ]
+                                        , Html.td [ Attrs.class "px-2" ] [ Html.text child.name ]
+                                        ]
+                                )
+                                children
+                        )
+                    ]
+        ]
+
+
+settingsView : LoadedModel -> Html FormMsg
 settingsView model =
-    [ case model.inheritedFrom of
+    case model.inheritedFrom of
         Just from ->
             inheritedDataRetentionPolicyView from model
 
         Nothing ->
             dataRetentionPolicyView model
-    ]
 
 
-contactDetailsView : LoadedModel -> List (Html FormMsg)
+contactDetailsView : LoadedModel -> Html FormMsg
 contactDetailsView model =
-    [ case model.contactDetailsInheritFrom of
+    case model.contactDetailsInheritFrom of
         Just parentId ->
             inheritedAddressView parentId model
 
         Nothing ->
             addressView model
-    ]
 
 
 inheritedAddressView : String -> LoadedModel -> Html msg
@@ -274,95 +407,99 @@ inheritedAddressField { title, value } =
 
 addressView : LoadedModel -> Html FormMsg
 addressView model =
-    Html.div [ Attrs.class "flex flex-col gap-4" ]
-        [ preferredContactMethodView model.preferredContactMethod
-        , Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.label [ Attrs.class "text-sm" ] [ Html.text "email" ]
-            , Html.input
-                [ Attrs.type_ "email"
-                , Attrs.class "border-2"
-                , Attrs.id "address-email"
-                , Attrs.name "address-email"
-                , Attrs.required (model.preferredContactMethod == ContactDetails.Email)
-                , Attrs.value model.email
-                , Events.onInput InputEmail
+    Html.div [ Attrs.class "flex flex-wrap gap-4" ]
+        [ Html.div [ Attrs.class "flex flex-col gap-4" ]
+            [ Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "email" ]
+                , Html.input
+                    [ Attrs.type_ "email"
+                    , Attrs.class "border-2"
+                    , Attrs.id "address-email"
+                    , Attrs.name "address-email"
+                    , Attrs.required (model.preferredContactMethod == ContactDetails.Email)
+                    , Attrs.value model.email
+                    , Events.onInput InputEmail
+                    ]
+                    []
                 ]
-                []
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "phone" ]
+                , Html.input
+                    [ Attrs.type_ "tel"
+                    , Attrs.class "border-2"
+                    , Attrs.id "address-phone"
+                    , Attrs.name "address-phone"
+                    , Attrs.placeholder "###-###-####"
+                    , Attrs.pattern "[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                    , Attrs.required (model.preferredContactMethod == ContactDetails.Phone)
+                    , Attrs.value model.phone
+                    , Events.onInput InputPhone
+                    ]
+                    []
+                ]
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "company name" ]
+                , Html.input
+                    [ Attrs.class "border-2"
+                    , Attrs.id "company-name"
+                    , Attrs.name "company-name"
+                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value model.companyName
+                    , Events.onInput InputCompanyName
+                    ]
+                    []
+                ]
             ]
-        , Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.label [ Attrs.class "text-sm" ] [ Html.text "phone" ]
-            , Html.input
-                [ Attrs.type_ "tel"
-                , Attrs.class "border-2"
-                , Attrs.id "address-phone"
-                , Attrs.name "address-phone"
-                , Attrs.placeholder "###-###-####"
-                , Attrs.pattern "[0-9]{3}-[0-9]{3}-[0-9]{4}"
-                , Attrs.required (model.preferredContactMethod == ContactDetails.Phone)
-                , Attrs.value model.phone
-                , Events.onInput InputPhone
+        , Html.div [ Attrs.class "flex flex-col gap-4" ]
+            [ Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "address" ]
+                , Html.input
+                    [ Attrs.class "border-2"
+                    , Attrs.id "address"
+                    , Attrs.name "address"
+                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value model.address
+                    , Events.onInput InputAddress
+                    ]
+                    []
                 ]
-                []
-            ]
-        , Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.label [ Attrs.class "text-sm" ] [ Html.text "company name" ]
-            , Html.input
-                [ Attrs.class "border-2"
-                , Attrs.id "company-name"
-                , Attrs.name "company-name"
-                , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                , Attrs.value model.companyName
-                , Events.onInput InputCompanyName
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "zip" ]
+                , Html.input
+                    [ Attrs.class "border-2"
+                    , Attrs.id "zip"
+                    , Attrs.name "zip"
+                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value model.zip
+                    , Events.onInput InputZip
+                    ]
+                    []
                 ]
-                []
-            ]
-        , Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.label [ Attrs.class "text-sm" ] [ Html.text "address" ]
-            , Html.input
-                [ Attrs.class "border-2"
-                , Attrs.id "address"
-                , Attrs.name "address"
-                , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                , Attrs.value model.address
-                , Events.onInput InputAddress
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "city" ]
+                , Html.input
+                    [ Attrs.class "border-2"
+                    , Attrs.id "city"
+                    , Attrs.name "city"
+                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value model.city
+                    , Events.onInput InputCity
+                    ]
+                    []
                 ]
-                []
-            ]
-        , Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.label [ Attrs.class "text-sm" ] [ Html.text "zip" ]
-            , Html.input
-                [ Attrs.class "border-2"
-                , Attrs.id "zip"
-                , Attrs.name "zip"
-                , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                , Attrs.value model.zip
-                , Events.onInput InputZip
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "country" ]
+                , Html.input
+                    [ Attrs.class "border-2"
+                    , Attrs.id "country"
+                    , Attrs.name "country"
+                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value model.country
+                    , Events.onInput InputCountry
+                    ]
+                    []
                 ]
-                []
-            ]
-        , Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.label [ Attrs.class "text-sm" ] [ Html.text "city" ]
-            , Html.input
-                [ Attrs.class "border-2"
-                , Attrs.id "city"
-                , Attrs.name "city"
-                , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                , Attrs.value model.city
-                , Events.onInput InputCity
-                ]
-                []
-            ]
-        , Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.label [ Attrs.class "text-sm" ] [ Html.text "country" ]
-            , Html.input
-                [ Attrs.class "border-2"
-                , Attrs.id "country"
-                , Attrs.name "country"
-                , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                , Attrs.value model.country
-                , Events.onInput InputCountry
-                ]
-                []
+            , preferredContactMethodView model.preferredContactMethod
             ]
         ]
 
@@ -416,17 +553,16 @@ preferredContactMethodOption { id, title, checked, onClick } =
 
 section :
     { title : String
-    , content : List (Html FormMsg)
+    , content : Html FormMsg
     }
     -> Html FormMsg
 section { title, content } =
-    Html.section [ Attrs.class "grid gap-4" ]
-        (Html.h2
-            [ Attrs.class "text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800"
-            ]
+    Html.section [ Attrs.class "flex flex-col gap-4" ]
+        [ Html.h2
+            [ Attrs.class "text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
             [ Html.text title ]
-            :: content
-        )
+        , content
+        ]
 
 
 inheritedDataRetentionPolicyView : String -> LoadedModel -> Html msg
@@ -451,37 +587,39 @@ inheritedField { timeout, value } =
 
 dataRetentionPolicyView : LoadedModel -> Html FormMsg
 dataRetentionPolicyView model =
-    if model.showEditOptions then
-        Html.div [ Attrs.class "flex flex-col gap-1" ]
-            [ Html.input
-                [ Attrs.class "self-end text-sky-500 text-sm"
-                , Attrs.type_ "button"
-                , Attrs.value "Done"
-                , Events.onClick ClickedDone
-                ]
-                []
-            , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView model.visibleOptions) IdleDocTimeout.all)
-            ]
-
-    else
-        let
-            enabledTimeouts : List Item
-            enabledTimeouts =
-                filterEnabledTimeouts model
-        in
-        Html.div [ Attrs.class "flex flex-col gap-4" ]
-            [ Html.div [ Attrs.class "flex flex-col gap-2" ]
+    Html.div [ Attrs.class "w-48" ]
+        [ if model.showEditOptions then
+            Html.div [ Attrs.class "flex flex-col gap-1" ]
                 [ Html.input
                     [ Attrs.class "self-end text-sky-500 text-sm"
                     , Attrs.type_ "button"
-                    , Attrs.value "Edit options"
-                    , Events.onClick ClickedEditOptions
+                    , Attrs.value "Done"
+                    , Events.onClick ClickedDone
                     ]
                     []
-                , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView model.immediateTrash) enabledTimeouts)
+                , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView model.visibleOptions) IdleDocTimeout.all)
                 ]
-            , trash model.immediateTrash
-            ]
+
+          else
+            let
+                enabledTimeouts : List Item
+                enabledTimeouts =
+                    filterEnabledTimeouts model
+            in
+            Html.div [ Attrs.class "flex flex-col gap-4" ]
+                [ Html.div [ Attrs.class "flex flex-col gap-2" ]
+                    [ Html.input
+                        [ Attrs.class "self-end text-sky-500 text-sm"
+                        , Attrs.type_ "button"
+                        , Attrs.value "Edit options"
+                        , Events.onClick ClickedEditOptions
+                        ]
+                        []
+                    , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView model.immediateTrash) enabledTimeouts)
+                    ]
+                , trash model.immediateTrash
+                ]
+        ]
 
 
 editOptionView : Set String -> IdleDocTimeout -> Html FormMsg
@@ -567,6 +705,129 @@ maybeItem option model value =
 
     else
         Nothing
+
+
+tagsView : List EditableTag -> Html FormMsg
+tagsView tags =
+    Html.div [ Attrs.class "flex flex-col gap-2" ]
+        [ Html.div [ Attrs.class "flex flex-wrap gap-2" ] (List.indexedMap tagView tags)
+        , if
+            List.any
+                (\tag ->
+                    case tag of
+                        Editing _ _ ->
+                            True
+
+                        NotEditing _ ->
+                            False
+                )
+                tags
+          then
+            Html.text ""
+
+          else
+            Html.input
+                [ Attrs.type_ "button"
+                , Attrs.value "Add a tag"
+                , Attrs.class "self-start text-sm text-sky-500"
+                , Events.onClick AddTag
+                ]
+                []
+        ]
+
+
+tagView : Int -> EditableTag -> Html FormMsg
+tagView index editableTag =
+    case editableTag of
+        Editing tagString maybeError ->
+            Html.div [ Attrs.class "flex border rounded text-sm" ]
+                [ Html.input
+                    [ Attrs.value tagString
+                    , Attrs.placeholder "key:value"
+                    , Attrs.class "px-2 w-36"
+                    , Events.onInput (InputTag index)
+                    ]
+                    []
+                , Html.div [ Attrs.class "bg-slate-100 px-1 text-slate-400" ]
+                    [ Html.button
+                        [ Attrs.type_ "button"
+                        , Attrs.class "p-1"
+                        , Events.onClick (DeleteTag index)
+                        ]
+                        [ xMarkSvg ]
+                    , Html.button
+                        [ Attrs.type_ "button"
+                        , Attrs.class "p-1"
+                        , Events.onClick (SaveTag index)
+                        ]
+                        [ checkSvg ]
+                    ]
+                , case maybeError of
+                    Just error ->
+                        Html.text (Tag.errorDescription error)
+
+                    Nothing ->
+                        Html.text ""
+                ]
+
+        NotEditing tag ->
+            Html.div [ Attrs.class "flex gap-1 bg-slate-50 px-2 border rounded text-sm w-fit items-center" ]
+                [ case tag.maybeValue of
+                    Just value ->
+                        Html.div [ Events.onClick (EditTag index), Attrs.class "flex" ]
+                            [ Html.span [] [ Html.text (tag.name ++ ":\u{00A0}") ]
+                            , Html.span [ Attrs.class "text-slate-500" ] [ Html.text value ]
+                            ]
+
+                    Nothing ->
+                        Html.span [ Events.onClick (EditTag index) ] [ Html.text tag.name ]
+                , Html.button
+                    [ Attrs.type_ "button"
+                    , Attrs.class "text-slate-400"
+                    , Events.onClick (DeleteTag index)
+                    ]
+                    [ xMarkSvg ]
+                ]
+
+
+xMarkSvg : Svg.Svg msg
+xMarkSvg =
+    Svg.svg
+        [ Svg.Attributes.fill "none"
+        , Svg.Attributes.viewBox "0 0 24 24"
+        , Svg.Attributes.strokeWidth "3"
+        , Svg.Attributes.stroke "currentColor"
+        , Svg.Attributes.class "size-6"
+        , Svg.Attributes.width "16"
+        , Svg.Attributes.height "16"
+        ]
+        [ Svg.path
+            [ Svg.Attributes.strokeLinecap "round"
+            , Svg.Attributes.strokeLinejoin "round"
+            , Svg.Attributes.d "M6 18 18 6M6 6l12 12"
+            ]
+            []
+        ]
+
+
+checkSvg : Svg.Svg msg
+checkSvg =
+    Svg.svg
+        [ Svg.Attributes.fill "none"
+        , Svg.Attributes.viewBox "0 0 24 24"
+        , Svg.Attributes.strokeWidth "3"
+        , Svg.Attributes.stroke "currentColor"
+        , Svg.Attributes.class "size-6"
+        , Svg.Attributes.width "16"
+        , Svg.Attributes.height "16"
+        ]
+        [ Svg.path
+            [ Svg.Attributes.strokeLinecap "round"
+            , Svg.Attributes.strokeLinejoin "round"
+            , Svg.Attributes.d "m4.5 12.75 6 6 9-13.5"
+            ]
+            []
+        ]
 
 
 
