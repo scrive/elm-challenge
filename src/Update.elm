@@ -1,10 +1,10 @@
 module Update exposing (update)
 
 import Data
+import Data.Form as Form
 import Data.UserGroup as UserGroup
 import Json.Decode as JD
-import Lenses exposing (userGroupOfModel)
-import Model exposing (Model)
+import Model exposing (Model, formOfModel, userGroupOfModel)
 import Msg exposing (Msg(..))
 import Update.Extra exposing (updateModel)
 
@@ -20,7 +20,16 @@ update msg model =
                 |> (case JD.decodeString UserGroup.decode Data.userGroup of
                         Ok userGroup ->
                             updateModel (userGroupOfModel.set <| Just userGroup)
+                                >> updateModel (formOfModel.set <| Form.populateAddress userGroup model.form)
 
                         Err _ ->
                             identity
                    )
+
+        AnswerQuestion question answer ->
+            ( model, Cmd.none )
+                |> updateModel (formOfModel.set <| Form.answerQuestion question.tag answer model.form)
+
+        Submit ->
+            ( model, Cmd.none )
+                |> updateModel (formOfModel.set <| Form.validateAddress model.form)

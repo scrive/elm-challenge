@@ -1,69 +1,61 @@
 module View exposing (view)
 
-import Html exposing (Html)
+import Data.Question exposing (QuestionTag(..))
+import Html exposing (Attribute, Html, div, span, text)
 import Model exposing (Model)
 import Msg exposing (Msg)
 import Utils exposing (classList)
+import Views.Form as Form
 
 
 view : Model -> Html Msg
-view _ =
-    Html.div [ stylesContainer ]
-        [ header "UserGroup Form"
-        , subheader "Settings"
+view model =
+    div [ stylesContainer ]
+        [ header "User Group"
         , subheader "Contact Details"
-        , subheader "Tags"
+        , Form.view model.form
         ]
 
 
-header : String -> Html msg
-header text =
-    Html.span [ stylesHeader ]
-        [ Html.text text ]
+header : String -> Html Msg
+header text_ =
+    span [ stylesHeader ]
+        [ text text_ ]
 
 
-subheader : String -> Html msg
-subheader text =
-    Html.span [ stylesSubheader ]
-        [ Html.text text ]
+subheader : String -> Html Msg
+subheader text_ =
+    span [ stylesSubheader ]
+        [ text text_ ]
 
 
 
 -- Styles
 
 
-stylesContainer : Html.Attribute msg
+stylesContainer : Attribute Msg
 stylesContainer =
     classList
-        [ "flex"
-        , "flex-col"
-        , "w-[1024px]"
+        [ "grid"
+        , "gap-6"
+        , "max-w-sm"
         , "items-center"
         , "mx-auto"
-        , "mt-16"
-        , "mb-48"
+        , "my-16"
         ]
 
 
-stylesHeader : Html.Attribute msg
+stylesHeader : Attribute Msg
 stylesHeader =
     classList
-        [ "p-2"
-        , "text-5xl"
-        , "font-extrabold"
-        , "text-transparent"
-        , "bg-clip-text"
-        , "bg-gradient-to-br"
-        , "from-slate-400"
-        , "to-slate-800"
+        [ "text-5xl"
+        , "font-bold"
         ]
 
 
-stylesSubheader : Html.Attribute msg
+stylesSubheader : Attribute Msg
 stylesSubheader =
     classList
-        [ "p-2"
-        , "text-2xl"
-        , "font-extrabold"
-        , "text-slate-800"
+        [ "text-2xl"
+        , "font-bold"
         ]

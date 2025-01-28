@@ -26,5 +26,5 @@ main =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { userGroup = Nothing }, Cmd.none )
+    ( Model.init, Cmd.none )
         |> andThen update LoadUserGroup

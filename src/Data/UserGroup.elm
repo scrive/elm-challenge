@@ -1,8 +1,25 @@
-module Data.UserGroup exposing (UserGroup, decode, decodeAddress)
+module Data.UserGroup exposing
+    ( Address
+    , ContactDetails
+    , ContactMethod(..)
+    , Inheritable(..)
+    , Settings
+    , UserGroup
+    , UserGroupChild
+    , addressOfUserGroup
+    , contactMethodFromString
+    , contactMethodToString
+    , decode
+    , decodeAddress
+    , uuidToString
+    )
 
+import Data exposing (userGroup)
+import Dict exposing (Dict)
 import Json.Decode as JD
 import Json.Decode.Pipeline exposing (optional, required)
 import Maybe.Extra
+import Monocle.Lens as Lens exposing (Lens)
 
 
 type alias UserGroup =
@@ -12,7 +29,7 @@ type alias UserGroup =
     , children : List UserGroupChild
     , settings : Inheritable Settings
     , contactDetails : Inheritable ContactDetails
-    , tags : List Tag
+    , tags : Tags
     }
 
 
@@ -68,10 +85,8 @@ type ContactMethod
     | Email
 
 
-type alias Tag =
-    { name : String
-    , value : String
-    }
+type alias Tags =
+    Dict String String
 
 
 decode : JD.Decoder UserGroup
@@ -83,7 +98,7 @@ decode =
         |> required "children" (JD.list decodeUserGroupChild)
         |> required "settings" (decodeInheritable decodeSettings)
         |> required "contact_details" (decodeInheritable decodeContactDetails)
-        |> required "tags" (JD.list decodeTag)
+        |> required "tags" decodeTags
 
 
 decodeUserGroupChild : JD.Decoder UserGroupChild
@@ -168,8 +183,62 @@ contactMethodFromString str =
             Nothing
 
 
-decodeTag : JD.Decoder Tag
-decodeTag =
-    JD.succeed Tag
+contactMethodToString : ContactMethod -> String
+contactMethodToString str =
+    case str of
+        Post ->
+            "post"
+
+        Phone ->
+            "phone"
+
+        Email ->
+            "email"
+
+
+decodeTags : JD.Decoder Tags
+decodeTags =
+    JD.succeed Tuple.pair
         |> required "name" JD.string
         |> optional "value" JD.string ""
+        |> JD.list
+        |> JD.map Dict.fromList
+
+
+contactDetailsOfUserGroup : Lens UserGroup ContactDetails
+contactDetailsOfUserGroup =
+    Lens
+        (\userGroup ->
+            case userGroup.contactDetails of
+                Inherited _ c ->
+                    c
+
+                Uninherited c ->
+                    c
+        )
+        (\b a ->
+            { a
+                | contactDetails =
+                    case a.contactDetails of
+                        Inherited u _ ->
+                            Inherited u b
+
+                        Uninherited _ ->
+                            Uninherited b
+            }
+        )
+
+
+addressOfContactDetails : Lens ContactDetails Address
+addressOfContactDetails =
+    Lens .address (\b a -> { a | address = b })
+
+
+addressOfUserGroup : Lens UserGroup Address
+addressOfUserGroup =
+    Lens.compose contactDetailsOfUserGroup addressOfContactDetails
+
+
+uuidToString : Uuid -> String
+uuidToString (Uuid str) =
+    str
