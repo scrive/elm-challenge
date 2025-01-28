@@ -14,7 +14,6 @@ module Data.Form exposing
 
 import AssocList exposing (Dict)
 import Basics.Extra exposing (flip)
-import Data exposing (userGroup)
 import Data.Answer as Answer exposing (Answer(..))
 import Data.Question exposing (Condition(..), Question, QuestionTag(..), addressQuestions, validate)
 import Data.UserGroup as UserGroup exposing (Inheritable(..), UserGroup, uuidToString)

@@ -17,7 +17,6 @@ module Data.Question exposing
 
 import Data.Answer as Answer exposing (Answer, AnswerValidator(..))
 import Data.Field as Field exposing (Field, Option)
-import Json.Decode exposing (Error(..))
 import Utils exposing (onlyIf)
 import Validate exposing (Valid)
 

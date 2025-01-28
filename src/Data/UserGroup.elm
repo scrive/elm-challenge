@@ -14,7 +14,6 @@ module Data.UserGroup exposing
     , uuidToString
     )
 
-import Data exposing (userGroup)
 import Dict exposing (Dict)
 import Json.Decode as JD
 import Json.Decode.Pipeline exposing (optional, required)

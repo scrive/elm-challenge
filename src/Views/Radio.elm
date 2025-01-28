@@ -1,7 +1,7 @@
 module Views.Radio exposing (view)
 
 import Data.Answer as Answer
-import Data.Field exposing (Field(..), Option, TextType(..), getInputType)
+import Data.Field exposing (Option, getInputType)
 import Data.Form exposing (Entry, hasErrors)
 import Data.Question exposing (Question, tagToString)
 import Html exposing (Attribute, Html, div, input, label, text)

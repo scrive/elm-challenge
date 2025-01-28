@@ -1,7 +1,7 @@
 module Views.Checkbox exposing (view)
 
 import Data.Answer as Answer
-import Data.Field exposing (Field(..), TextType(..), getInputType)
+import Data.Field exposing (getInputType)
 import Data.Form exposing (Entry, hasErrors)
 import Data.Question exposing (Question, tagToString)
 import Html exposing (Attribute, Html, div, input, label, text)

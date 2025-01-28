@@ -1,12 +1,12 @@
 module Views.Question exposing (view)
 
-import Data.Field exposing (Field(..), TextType(..))
+import Data.Field exposing (Field(..))
 import Data.Form exposing (Entry, hasErrors)
 import Data.Question exposing (Question, tagToString)
 import Html exposing (Attribute, Html, div, label, text)
 import Html.Attributes exposing (for)
 import Html.Extra exposing (viewIf)
-import Msg exposing (Msg(..))
+import Msg exposing (Msg)
 import Utils exposing (classList, onlyIf)
 import Views.Checkbox as Checkbox
 import Views.Errors as Errors

@@ -17,14 +17,12 @@ view validation =
                 []
 
             Invalid errors ->
-                List.concat
-                    [ List.map
-                        (text
-                            >> List.singleton
-                            >> div [ stylesError ]
-                        )
-                        errors
-                    ]
+                List.map
+                    (text
+                        >> List.singleton
+                        >> div [ stylesError ]
+                    )
+                    errors
 
 
 

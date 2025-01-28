@@ -1,6 +1,5 @@
 module View exposing (view)
 
-import Data.Question exposing (QuestionTag(..))
 import Html exposing (Attribute, Html, div, span, text)
 import Model exposing (Model)
 import Msg exposing (Msg)
