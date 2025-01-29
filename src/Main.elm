@@ -32,15 +32,7 @@ type alias LoadedModel =
     , name : String
     , children : List Child
     , settings : Settings
-    , contactDetailsInheritFrom : Maybe String
-    , preferredContactMethod : PreferredContactMethod
-    , email : String
-    , phone : String
-    , companyName : String
-    , address : String
-    , zip : String
-    , city : String
-    , country : String
+    , contactDetails : ContactDetails
     , tags : List EditableTag
     }
 
@@ -56,6 +48,19 @@ type alias Settings =
     , idleDocTimeoutRejected : String
     , idleDocTimeoutError : String
     , immediateTrash : Bool
+    }
+
+
+type alias ContactDetails =
+    { contactDetailsInheritFrom : Maybe String
+    , preferredContactMethod : PreferredContactMethod
+    , email : String
+    , phone : String
+    , companyName : String
+    , address : String
+    , zip : String
+    , city : String
+    , country : String
     }
 
 
@@ -104,15 +109,17 @@ init =
                     , idleDocTimeoutError = dataRetentionPolicy.idleDocTimeoutError |> Maybe.withDefault 0 |> String.fromInt
                     , immediateTrash = dataRetentionPolicy.immediateTrash
                     }
-                , contactDetailsInheritFrom = userGroup.contactDetails.inheritedFrom
-                , preferredContactMethod = userGroup.contactDetails.address.preferredContactMethod
-                , email = userGroup.contactDetails.address.email |> Maybe.withDefault ""
-                , phone = userGroup.contactDetails.address.phone |> Maybe.withDefault ""
-                , companyName = userGroup.contactDetails.address.companyName |> Maybe.withDefault ""
-                , address = userGroup.contactDetails.address.address |> Maybe.withDefault ""
-                , zip = userGroup.contactDetails.address.zip |> Maybe.withDefault ""
-                , city = userGroup.contactDetails.address.city |> Maybe.withDefault ""
-                , country = userGroup.contactDetails.address.country |> Maybe.withDefault ""
+                , contactDetails =
+                    { contactDetailsInheritFrom = userGroup.contactDetails.inheritedFrom
+                    , preferredContactMethod = userGroup.contactDetails.address.preferredContactMethod
+                    , email = userGroup.contactDetails.address.email |> Maybe.withDefault ""
+                    , phone = userGroup.contactDetails.address.phone |> Maybe.withDefault ""
+                    , companyName = userGroup.contactDetails.address.companyName |> Maybe.withDefault ""
+                    , address = userGroup.contactDetails.address.address |> Maybe.withDefault ""
+                    , zip = userGroup.contactDetails.address.zip |> Maybe.withDefault ""
+                    , city = userGroup.contactDetails.address.city |> Maybe.withDefault ""
+                    , country = userGroup.contactDetails.address.country |> Maybe.withDefault ""
+                    }
                 , tags = userGroup.tags |> List.map NotEditing
                 }
 
@@ -132,21 +139,13 @@ type Msg
 
 
 type FormMsg
-    = ChangePreferredContactMethod PreferredContactMethod
-    | InputEmail String
-    | InputPhone String
-    | InputCompanyName String
-    | InputAddress String
-    | InputZip String
-    | InputCity String
-    | InputCountry String
-    | AddTag
+    = AddTag
     | SaveTag Int
     | EditTag Int
     | DeleteTag Int
     | InputTag Int String
-    | ClickedContactDetailsInheritedFrom Bool
     | SettingsMsg SettingsMsg
+    | ContactDetailsMsg ContactDetailsMsg
 
 
 type SettingsMsg
@@ -156,6 +155,18 @@ type SettingsMsg
     | ClickedDone
     | CheckOption IdleDocTimeout Bool
     | ClickedSettingsInheritedFrom Bool
+
+
+type ContactDetailsMsg
+    = ChangePreferredContactMethod PreferredContactMethod
+    | InputEmail String
+    | InputPhone String
+    | InputCompanyName String
+    | InputAddress String
+    | InputZip String
+    | InputCity String
+    | InputCountry String
+    | ClickedContactDetailsInheritedFrom Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -178,29 +189,12 @@ updateForm msg model =
             in
             { model | settings = updateSettings settingsMsg settings }
 
-        ChangePreferredContactMethod method ->
-            { model | preferredContactMethod = method }
-
-        InputEmail email ->
-            { model | email = email }
-
-        InputPhone phone ->
-            { model | phone = phone }
-
-        InputCompanyName companyName ->
-            { model | companyName = companyName }
-
-        InputAddress address ->
-            { model | address = address }
-
-        InputZip zip ->
-            { model | zip = zip }
-
-        InputCity city ->
-            { model | city = city }
-
-        InputCountry country ->
-            { model | country = country }
+        ContactDetailsMsg contactDetailsMsg ->
+            let
+                contactDetails =
+                    model.contactDetails
+            in
+            { model | contactDetails = updateContactDetails contactDetailsMsg contactDetails }
 
         AddTag ->
             { model | tags = model.tags ++ [ Editing "" Nothing ] }
@@ -243,12 +237,6 @@ updateForm msg model =
 
         InputTag index tagString ->
             { model | tags = List.Extra.setAt index (Editing tagString Nothing) model.tags }
-
-        ClickedContactDetailsInheritedFrom True ->
-            { model | contactDetailsInheritFrom = Just "" }
-
-        ClickedContactDetailsInheritedFrom False ->
-            { model | contactDetailsInheritFrom = Nothing }
 
 
 updateSettings : SettingsMsg -> Settings -> Settings
@@ -296,6 +284,40 @@ updateSettings msg settings =
             { settings | settingsInheritedFrom = Nothing }
 
 
+updateContactDetails : ContactDetailsMsg -> ContactDetails -> ContactDetails
+updateContactDetails msg contactDetails =
+    case msg of
+        ChangePreferredContactMethod method ->
+            { contactDetails | preferredContactMethod = method }
+
+        InputEmail email ->
+            { contactDetails | email = email }
+
+        InputPhone phone ->
+            { contactDetails | phone = phone }
+
+        InputCompanyName companyName ->
+            { contactDetails | companyName = companyName }
+
+        InputAddress address ->
+            { contactDetails | address = address }
+
+        InputZip zip ->
+            { contactDetails | zip = zip }
+
+        InputCity city ->
+            { contactDetails | city = city }
+
+        InputCountry country ->
+            { contactDetails | country = country }
+
+        ClickedContactDetailsInheritedFrom True ->
+            { contactDetails | contactDetailsInheritFrom = Just "" }
+
+        ClickedContactDetailsInheritedFrom False ->
+            { contactDetails | contactDetailsInheritFrom = Nothing }
+
+
 
 ---- VIEW ----
 
@@ -320,7 +342,7 @@ loadedModelView model =
         , Html.div [ Attrs.class "flex flex-wrap gap-12" ]
             [ section
                 { title = "Contact Details"
-                , content = contactDetailsView model
+                , content = contactDetailsView model.contactDetails |> Html.map ContactDetailsMsg
                 }
             , section
                 { title = "Settings"
@@ -387,11 +409,11 @@ userGroupSettingsView model =
         ]
 
 
-contactDetailsView : LoadedModel -> Html FormMsg
-contactDetailsView model =
+contactDetailsView : ContactDetails -> Html ContactDetailsMsg
+contactDetailsView contactDetails =
     let
         ( checked, value ) =
-            case model.contactDetailsInheritFrom of
+            case contactDetails.contactDetailsInheritFrom of
                 Just parentId ->
                     ( True, parentId )
 
@@ -425,8 +447,8 @@ contactDetailsView model =
                             , Attrs.class "border-2 rounded px-1"
                             , Attrs.id "address-email"
                             , Attrs.name "address-email"
-                            , Attrs.required (model.preferredContactMethod == ContactDetails.Email)
-                            , Attrs.value model.email
+                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Email)
+                            , Attrs.value contactDetails.email
                             , Attrs.disabled checked
                             , Events.onInput InputEmail
                             ]
@@ -441,8 +463,8 @@ contactDetailsView model =
                             , Attrs.name "address-phone"
                             , Attrs.placeholder "###-###-####"
                             , Attrs.pattern "[0-9]{3}-[0-9]{3}-[0-9]{4}"
-                            , Attrs.required (model.preferredContactMethod == ContactDetails.Phone)
-                            , Attrs.value model.phone
+                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Phone)
+                            , Attrs.value contactDetails.phone
                             , Attrs.disabled checked
                             , Events.onInput InputPhone
                             ]
@@ -454,8 +476,8 @@ contactDetailsView model =
                             [ Attrs.class "border-2 rounded px-1"
                             , Attrs.id "company-name"
                             , Attrs.name "company-name"
-                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value model.companyName
+                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value contactDetails.companyName
                             , Attrs.disabled checked
                             , Events.onInput InputCompanyName
                             ]
@@ -469,8 +491,8 @@ contactDetailsView model =
                             [ Attrs.class "border-2 rounded px-1"
                             , Attrs.id "address"
                             , Attrs.name "address"
-                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value model.address
+                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value contactDetails.address
                             , Attrs.disabled checked
                             , Events.onInput InputAddress
                             ]
@@ -482,8 +504,8 @@ contactDetailsView model =
                             [ Attrs.class "border-2 rounded px-1"
                             , Attrs.id "zip"
                             , Attrs.name "zip"
-                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value model.zip
+                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value contactDetails.zip
                             , Attrs.disabled checked
                             , Events.onInput InputZip
                             ]
@@ -495,8 +517,8 @@ contactDetailsView model =
                             [ Attrs.class "border-2 rounded px-1"
                             , Attrs.id "city"
                             , Attrs.name "city"
-                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value model.city
+                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value contactDetails.city
                             , Attrs.disabled checked
                             , Events.onInput InputCity
                             ]
@@ -508,8 +530,8 @@ contactDetailsView model =
                             [ Attrs.class "border-2 rounded px-1"
                             , Attrs.id "country"
                             , Attrs.name "country"
-                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value model.country
+                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value contactDetails.country
                             , Attrs.disabled checked
                             , Events.onInput InputCountry
                             ]
@@ -520,19 +542,19 @@ contactDetailsView model =
                         , preferredContactMethodOption
                             { id = "preferred-contact-method-email"
                             , title = "Email"
-                            , checked = model.preferredContactMethod == ContactDetails.Email
+                            , checked = contactDetails.preferredContactMethod == ContactDetails.Email
                             , onClick = ChangePreferredContactMethod ContactDetails.Email
                             }
                         , preferredContactMethodOption
                             { id = "preferred-contact-method-phone"
                             , title = "Phone"
-                            , checked = model.preferredContactMethod == ContactDetails.Phone
+                            , checked = contactDetails.preferredContactMethod == ContactDetails.Phone
                             , onClick = ChangePreferredContactMethod ContactDetails.Phone
                             }
                         , preferredContactMethodOption
                             { id = "preferred-contact-method-post"
                             , title = "Post"
-                            , checked = model.preferredContactMethod == ContactDetails.Post
+                            , checked = contactDetails.preferredContactMethod == ContactDetails.Post
                             , onClick = ChangePreferredContactMethod ContactDetails.Post
                             }
                         ]
@@ -546,9 +568,9 @@ preferredContactMethodOption :
     { id : String
     , title : String
     , checked : Bool
-    , onClick : FormMsg
+    , onClick : msg
     }
-    -> Html FormMsg
+    -> Html msg
 preferredContactMethodOption { id, title, checked, onClick } =
     Html.div [ Attrs.class "flex gap-1" ]
         [ Html.input
