@@ -114,8 +114,11 @@ updateForms msg fmodel =
                                 |> V.validate (addressValidator pmethod)
                     in
                     case resValidDraftAddress of
-                        Ok _ -> []
-                        Err errors -> errors
+                        Ok _ ->
+                            []
+
+                        Err errors ->
+                            errors
             }
 
         TryToUpdateAddress newDraftAddress ->
@@ -141,46 +144,45 @@ updateForms msg fmodel =
             { fmodel | editFocus = FocusTag inProgress }
 
         TryToCreateTag { newName, newValue } ->
-
             Tag.make newName newValue
                 |> validateTagAnd addTag (tagValidator { isNew = True, index = Nothing }) fmodel
                 |> applyResultOrStoreErrors fmodel
 
         TryToChangeTag theTag { newValue } ->
-
             Tag.setValue newValue theTag
                 |> validateTagAnd changeTag (tagValidator { isNew = False, index = indexOfTagInProgress fmodel }) fmodel
                 |> applyResultOrStoreErrors fmodel
 
         TryToRestoreTag archivedTag { newValue } ->
-
             Tag.make (Tag.nameOfArchived archivedTag) newValue
                 |> validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress fmodel }) fmodel
                 |> applyResultOrStoreErrors fmodel
 
         ArchiveTag theTag ->
             let
-                currentUserGroup = fmodel.userGroup
+                currentUserGroup =
+                    fmodel.userGroup
             in
-                { fmodel
+            { fmodel
                 | editFocus = NotEditing
                 , userGroup =
                     { currentUserGroup
-                    | tags = archiveTag theTag currentUserGroup.tags
+                        | tags = archiveTag theTag currentUserGroup.tags
                     }
-                }
+            }
 
         RemoveTag theTag ->
             let
-                currentUserGroup = fmodel.userGroup
+                currentUserGroup =
+                    fmodel.userGroup
             in
-                { fmodel
+            { fmodel
                 | editFocus = NotEditing
                 , userGroup =
                     { currentUserGroup
-                    | tags = removeTag theTag currentUserGroup.tags
+                        | tags = removeTag theTag currentUserGroup.tags
                     }
-                }
+            }
 
         SelectPolicyToAdd policy ->
             { fmodel
@@ -194,6 +196,7 @@ updateForms msg fmodel =
                     case fmodel.editFocus of
                         FocusPolicyAdd policyToAdd ->
                             changePolicies (RP.setPolicyTimeout policyToAdd 0) fmodel.userGroup
+
                         _ ->
                             fmodel.userGroup
             }
@@ -211,8 +214,10 @@ updateForms msg fmodel =
                         FocusPolicyEdit ( policy, timeout ) ->
                             if policy == expectedPolicy then
                                 changePolicies (RP.setPolicyTimeout policy timeout) fmodel.userGroup
+
                             else
                                 fmodel.userGroup
+
                         _ ->
                             fmodel.userGroup
             }
@@ -234,7 +239,7 @@ updateForms msg fmodel =
                         else
                             RP.clearImmediateTrash
                     )
-                    fmodel.userGroup
+                        fmodel.userGroup
             }
 
         ToggleJsonMode jsonMode ->
@@ -242,7 +247,6 @@ updateForms msg fmodel =
 
         NoOp ->
             fmodel
-
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -284,18 +288,22 @@ validateTagAnd :
     -> Result (List FE.Error) UserGroup
 validateTagAnd fValid fValidator fmodel theTag =
     let
-        userGroup = fmodel.userGroup
-        currentTags = fmodel.userGroup.tags
+        userGroup =
+            fmodel.userGroup
+
+        currentTags =
+            fmodel.userGroup.tags
+
         resValidTag =
             V.validate (fValidator currentTags) theTag
     in
-        resValidTag |>
-            Result.map
-                (\validTag ->
-                    { userGroup
+    resValidTag
+        |> Result.map
+            (\validTag ->
+                { userGroup
                     | tags = fValid validTag userGroup.tags
-                    }
-                )
+                }
+            )
 
 
 addTag : Valid Tag -> List SomeTag -> List SomeTag
@@ -442,31 +450,43 @@ viewForms fmodel =
 
         mbTagInProgress =
             case fmodel.editFocus of
-                FocusTag tip -> Just tip
-                _ -> Nothing
+                FocusTag tip ->
+                    Just tip
+
+                _ ->
+                    Nothing
 
         mbAddingPolicy =
             case fmodel.editFocus of
-                FocusPolicyAdd policy -> Just policy
-                _ -> Nothing
+                FocusPolicyAdd policy ->
+                    Just policy
+
+                _ ->
+                    Nothing
 
         mbEditingPolicy =
             case fmodel.editFocus of
-                FocusPolicyEdit ( policy, pvalue ) -> Just ( policy, pvalue )
-                _ -> Nothing
+                FocusPolicyEdit ( policy, pvalue ) ->
+                    Just ( policy, pvalue )
+
+                _ ->
+                    Nothing
 
         mbContactsField =
             case fmodel.editFocus of
-                FocusContactsEdit ( field, fvalue ) -> Just ( field, fvalue )
-                _ -> Nothing
+                FocusContactsEdit ( field, fvalue ) ->
+                    Just ( field, fvalue )
+
+                _ ->
+                    Nothing
 
         formHeader title =
             Html.h1 [ Attrs.class Style.formHeader ] [ Html.text title ]
 
-        userGroup = fmodel.userGroup
+        userGroup =
+            fmodel.userGroup
     in
     Html.div [ Attrs.class Style.mainContainer ] <|
-
         [ formHeader "Contacts"
         , ContactForm.view
             (fmodel.validationErrors |> FE.onlyBelongingTo BelongsTo.Contacts)
@@ -486,37 +506,51 @@ viewForms fmodel =
             { currentlyAdding = mbAddingPolicy
             , currentlyEditing = mbEditingPolicy
             }
-            <|
+          <|
             RP.toList userGroup.settings.policy
         ]
 
 
 view : Model -> Html Msg
-view model = case model of
-    Ok formsModel ->
-        Html.div
-            []
-            [ viewForms formsModel
-            , viewDebugInfo formsModel
-            ]
-    Err jsonError -> viewError jsonError
+view model =
+    case model of
+        Ok formsModel ->
+            Html.div
+                []
+                [ viewForms formsModel
+                , viewDebugInfo formsModel
+                ]
+
+        Err jsonError ->
+            viewError jsonError
 
 
 viewError : Json.Error -> Html msg
-viewError error = Html.text <| Json.errorToString error
+viewError error =
+    Html.text <| Json.errorToString error
 
 
 viewDebugInfo : FormsModel -> Html Msg
 viewDebugInfo fmodel =
-    Html.div -- temporary div with current Debug info
+    Html.div
+        -- temporary div with current Debug info
         [ Attrs.class "absolute top-0 left-0" ]
-        [ Html.text
-            <| case fmodel.editFocus of
-                FocusTag tip -> "Tag : " ++ TagsForm.tagInProgressToString tip
-                FocusPolicyAdd policy -> "Policy add : " ++ RP.toString policy
-                FocusPolicyEdit ( policy, intVal ) -> "Policy edit : " ++ RP.toString policy ++ " (" ++ String.fromInt intVal ++ ")"
-                FocusContactsEdit ( cdField, value ) -> "Contacts edit : " ++ A.fieldToLabel cdField ++ " (" ++ value ++ ")"
-                NotEditing -> "Not editing"
+        [ Html.text <|
+            case fmodel.editFocus of
+                FocusTag tip ->
+                    "Tag : " ++ TagsForm.tagInProgressToString tip
+
+                FocusPolicyAdd policy ->
+                    "Policy add : " ++ RP.toString policy
+
+                FocusPolicyEdit ( policy, intVal ) ->
+                    "Policy edit : " ++ RP.toString policy ++ " (" ++ String.fromInt intVal ++ ")"
+
+                FocusContactsEdit ( cdField, value ) ->
+                    "Contacts edit : " ++ A.fieldToLabel cdField ++ " (" ++ value ++ ")"
+
+                NotEditing ->
+                    "Not editing"
         , Html.hr [] []
         , Html.button [ Evts.onClick <| ToggleJsonMode NoJson, Attrs.class Style.button ] [ Html.text "No JSON" ]
         , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson, Attrs.class Style.button ] [ Html.text "Original JSON" ]
@@ -525,9 +559,12 @@ viewDebugInfo fmodel =
             [ Attrs.class "my-8 py-4 px-9 text-xs bg-slate-100 font-mono shadow rounded" ]
             [ Html.text <|
                 case fmodel.debugMode of
-                    NoJson -> ""
+                    NoJson ->
+                        ""
+
                     CurrentJson ->
                         Json.encode 2 <| UG.encode fmodel.userGroup
+
                     OriginalJson ->
                         Data.userGroup
             ]
