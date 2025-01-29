@@ -40,7 +40,6 @@ type alias FormsModel =
     { userGroup : UserGroup
     , editFocus : EditFocus
     , validationErrors : List FE.Error
-    , debugMode : ViewJson
     }
 
 
@@ -56,17 +55,10 @@ init =
                 { userGroup = userGroup
                 , editFocus = NotEditing
                 , validationErrors = []
-                , debugMode = CurrentJson
                 }
             )
     , Cmd.none
     )
-
-
-type ViewJson
-    = NoJson
-    | OriginalJson
-    | CurrentJson
 
 
 
@@ -91,7 +83,6 @@ type Msg
     | ApplyPolicyTimeout RP.DataRetentionPolicy
     | ClearPolicyTimeout RP.DataRetentionPolicy
     | ToggleImmediateTrash Bool
-    | ToggleJsonMode ViewJson
 
 
 updateForms : Msg -> FormsModel -> FormsModel
@@ -241,9 +232,6 @@ updateForms msg fmodel =
                     )
                         fmodel.userGroup
             }
-
-        ToggleJsonMode jsonMode ->
-            { fmodel | debugMode = jsonMode }
 
         NoOp ->
             fmodel
@@ -515,11 +503,7 @@ view : Model -> Html Msg
 view model =
     case model of
         Ok formsModel ->
-            Html.div
-                []
-                [ viewForms formsModel
-                , viewDebugInfo formsModel
-                ]
+            viewForms formsModel
 
         Err jsonError ->
             viewError jsonError
@@ -528,47 +512,6 @@ view model =
 viewError : Json.Error -> Html msg
 viewError error =
     Html.text <| Json.errorToString error
-
-
-viewDebugInfo : FormsModel -> Html Msg
-viewDebugInfo fmodel =
-    Html.div
-        -- temporary div with current Debug info
-        [ Attrs.class "absolute top-0 left-0" ]
-        [ Html.text <|
-            case fmodel.editFocus of
-                FocusTag tip ->
-                    "Tag : " ++ TagsForm.tagInProgressToString tip
-
-                FocusPolicyAdd policy ->
-                    "Policy add : " ++ RP.toString policy
-
-                FocusPolicyEdit ( policy, intVal ) ->
-                    "Policy edit : " ++ RP.toString policy ++ " (" ++ String.fromInt intVal ++ ")"
-
-                FocusContactsEdit ( cdField, value ) ->
-                    "Contacts edit : " ++ A.fieldToLabel cdField ++ " (" ++ value ++ ")"
-
-                NotEditing ->
-                    "Not editing"
-        , Html.hr [] []
-        , Html.button [ Evts.onClick <| ToggleJsonMode NoJson, Attrs.class Style.button ] [ Html.text "No JSON" ]
-        , Html.button [ Evts.onClick <| ToggleJsonMode OriginalJson, Attrs.class Style.button ] [ Html.text "Original JSON" ]
-        , Html.button [ Evts.onClick <| ToggleJsonMode CurrentJson, Attrs.class Style.button ] [ Html.text "Current JSON" ]
-        , Html.pre
-            [ Attrs.class "my-8 py-4 px-9 text-xs bg-slate-100 font-mono shadow rounded" ]
-            [ Html.text <|
-                case fmodel.debugMode of
-                    NoJson ->
-                        ""
-
-                    CurrentJson ->
-                        Json.encode 2 <| UG.encode fmodel.userGroup
-
-                    OriginalJson ->
-                        Data.userGroup
-            ]
-        ]
 
 
 
