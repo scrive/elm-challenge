@@ -31,14 +31,7 @@ type alias LoadedModel =
     , account : Account
     , name : String
     , children : List Child
-    , settingsInheritedFrom : Maybe String
-    , idleDocTimeoutPreparation : String
-    , idleDocTimeoutClosed : String
-    , idleDocTimeoutCanceled : String
-    , idleDocTimeoutTimedout : String
-    , idleDocTimeoutRejected : String
-    , idleDocTimeoutError : String
-    , immediateTrash : Bool
+    , settings : Settings
     , contactDetailsInheritFrom : Maybe String
     , preferredContactMethod : PreferredContactMethod
     , email : String
@@ -48,9 +41,21 @@ type alias LoadedModel =
     , zip : String
     , city : String
     , country : String
-    , visibleOptions : Set String
-    , showEditOptions : Bool
     , tags : List EditableTag
+    }
+
+
+type alias Settings =
+    { settingsInheritedFrom : Maybe String
+    , showEditOptions : Bool
+    , visibleOptions : Set String
+    , idleDocTimeoutPreparation : String
+    , idleDocTimeoutClosed : String
+    , idleDocTimeoutCanceled : String
+    , idleDocTimeoutTimedout : String
+    , idleDocTimeoutRejected : String
+    , idleDocTimeoutError : String
+    , immediateTrash : Bool
     }
 
 
@@ -87,14 +92,18 @@ init =
                 , account = userGroup.account
                 , name = userGroup.name
                 , children = userGroup.children
-                , settingsInheritedFrom = userGroup.settings.inheritedFrom
-                , idleDocTimeoutPreparation = dataRetentionPolicy.idleDocTimeoutPreparation |> Maybe.withDefault 0 |> String.fromInt
-                , idleDocTimeoutClosed = dataRetentionPolicy.idleDocTimeoutClosed |> Maybe.withDefault 0 |> String.fromInt
-                , idleDocTimeoutCanceled = dataRetentionPolicy.idleDocTimeoutCanceled |> Maybe.withDefault 0 |> String.fromInt
-                , idleDocTimeoutTimedout = dataRetentionPolicy.idleDocTimeoutTimedout |> Maybe.withDefault 0 |> String.fromInt
-                , idleDocTimeoutRejected = dataRetentionPolicy.idleDocTimeoutRejected |> Maybe.withDefault 0 |> String.fromInt
-                , idleDocTimeoutError = dataRetentionPolicy.idleDocTimeoutError |> Maybe.withDefault 0 |> String.fromInt
-                , immediateTrash = dataRetentionPolicy.immediateTrash
+                , settings =
+                    { settingsInheritedFrom = userGroup.settings.inheritedFrom
+                    , showEditOptions = False
+                    , visibleOptions = IdleDocTimeout.visibleOptions dataRetentionPolicy
+                    , idleDocTimeoutPreparation = dataRetentionPolicy.idleDocTimeoutPreparation |> Maybe.withDefault 0 |> String.fromInt
+                    , idleDocTimeoutClosed = dataRetentionPolicy.idleDocTimeoutClosed |> Maybe.withDefault 0 |> String.fromInt
+                    , idleDocTimeoutCanceled = dataRetentionPolicy.idleDocTimeoutCanceled |> Maybe.withDefault 0 |> String.fromInt
+                    , idleDocTimeoutTimedout = dataRetentionPolicy.idleDocTimeoutTimedout |> Maybe.withDefault 0 |> String.fromInt
+                    , idleDocTimeoutRejected = dataRetentionPolicy.idleDocTimeoutRejected |> Maybe.withDefault 0 |> String.fromInt
+                    , idleDocTimeoutError = dataRetentionPolicy.idleDocTimeoutError |> Maybe.withDefault 0 |> String.fromInt
+                    , immediateTrash = dataRetentionPolicy.immediateTrash
+                    }
                 , contactDetailsInheritFrom = userGroup.contactDetails.inheritedFrom
                 , preferredContactMethod = userGroup.contactDetails.address.preferredContactMethod
                 , email = userGroup.contactDetails.address.email |> Maybe.withDefault ""
@@ -104,8 +113,6 @@ init =
                 , zip = userGroup.contactDetails.address.zip |> Maybe.withDefault ""
                 , city = userGroup.contactDetails.address.city |> Maybe.withDefault ""
                 , country = userGroup.contactDetails.address.country |> Maybe.withDefault ""
-                , visibleOptions = IdleDocTimeout.visibleOptions dataRetentionPolicy
-                , showEditOptions = False
                 , tags = userGroup.tags |> List.map NotEditing
                 }
 
@@ -125,12 +132,7 @@ type Msg
 
 
 type FormMsg
-    = DidInputIdleDocTimeout IdleDocTimeout String
-    | CheckedImmediateTrash Bool
-    | ClickedEditOptions
-    | ClickedDone
-    | CheckOption IdleDocTimeout Bool
-    | ChangePreferredContactMethod PreferredContactMethod
+    = ChangePreferredContactMethod PreferredContactMethod
     | InputEmail String
     | InputPhone String
     | InputCompanyName String
@@ -144,6 +146,15 @@ type FormMsg
     | DeleteTag Int
     | InputTag Int String
     | ClickedContactDetailsInheritedFrom Bool
+    | SettingsMsg SettingsMsg
+
+
+type SettingsMsg
+    = DidInputIdleDocTimeout IdleDocTimeout String
+    | CheckedImmediateTrash Bool
+    | ClickedEditOptions
+    | ClickedDone
+    | CheckOption IdleDocTimeout Bool
     | ClickedSettingsInheritedFrom Bool
 
 
@@ -160,40 +171,12 @@ update msg model =
 updateForm : FormMsg -> LoadedModel -> LoadedModel
 updateForm msg model =
     case msg of
-        DidInputIdleDocTimeout timeout value ->
-            case timeout of
-                Preparation ->
-                    { model | idleDocTimeoutPreparation = value }
-
-                Closed ->
-                    { model | idleDocTimeoutClosed = value }
-
-                Canceled ->
-                    { model | idleDocTimeoutCanceled = value }
-
-                Timedout ->
-                    { model | idleDocTimeoutTimedout = value }
-
-                Rejected ->
-                    { model | idleDocTimeoutRejected = value }
-
-                Error ->
-                    { model | idleDocTimeoutError = value }
-
-        CheckedImmediateTrash checked ->
-            { model | immediateTrash = checked }
-
-        ClickedEditOptions ->
-            { model | showEditOptions = True }
-
-        ClickedDone ->
-            { model | showEditOptions = False }
-
-        CheckOption option True ->
-            { model | visibleOptions = Set.insert (IdleDocTimeout.id option) model.visibleOptions }
-
-        CheckOption option False ->
-            { model | visibleOptions = Set.remove (IdleDocTimeout.id option) model.visibleOptions }
+        SettingsMsg settingsMsg ->
+            let
+                settings =
+                    model.settings
+            in
+            { model | settings = updateSettings settingsMsg settings }
 
         ChangePreferredContactMethod method ->
             { model | preferredContactMethod = method }
@@ -267,11 +250,50 @@ updateForm msg model =
         ClickedContactDetailsInheritedFrom False ->
             { model | contactDetailsInheritFrom = Nothing }
 
+
+updateSettings : SettingsMsg -> Settings -> Settings
+updateSettings msg settings =
+    case msg of
+        DidInputIdleDocTimeout timeout value ->
+            case timeout of
+                Preparation ->
+                    { settings | idleDocTimeoutPreparation = value }
+
+                Closed ->
+                    { settings | idleDocTimeoutClosed = value }
+
+                Canceled ->
+                    { settings | idleDocTimeoutCanceled = value }
+
+                Timedout ->
+                    { settings | idleDocTimeoutTimedout = value }
+
+                Rejected ->
+                    { settings | idleDocTimeoutRejected = value }
+
+                Error ->
+                    { settings | idleDocTimeoutError = value }
+
+        CheckedImmediateTrash checked ->
+            { settings | immediateTrash = checked }
+
+        ClickedEditOptions ->
+            { settings | showEditOptions = True }
+
+        ClickedDone ->
+            { settings | showEditOptions = False }
+
+        CheckOption option True ->
+            { settings | visibleOptions = Set.insert (IdleDocTimeout.id option) settings.visibleOptions }
+
+        CheckOption option False ->
+            { settings | visibleOptions = Set.remove (IdleDocTimeout.id option) settings.visibleOptions }
+
         ClickedSettingsInheritedFrom True ->
-            { model | settingsInheritedFrom = Just "", showEditOptions = False }
+            { settings | settingsInheritedFrom = Just "", showEditOptions = False }
 
         ClickedSettingsInheritedFrom False ->
-            { model | settingsInheritedFrom = Nothing }
+            { settings | settingsInheritedFrom = Nothing }
 
 
 
@@ -302,7 +324,7 @@ loadedModelView model =
                 }
             , section
                 { title = "Settings"
-                , content = settingsView model
+                , content = settingsView model.settings |> Html.map SettingsMsg
                 }
             , section
                 { title = "Tags"
@@ -542,11 +564,11 @@ preferredContactMethodOption { id, title, checked, onClick } =
         ]
 
 
-settingsView : LoadedModel -> Html FormMsg
-settingsView model =
+settingsView : Settings -> Html SettingsMsg
+settingsView settings =
     let
         ( checked, value ) =
-            case model.settingsInheritedFrom of
+            case settings.settingsInheritedFrom of
                 Just parentId ->
                     ( True, parentId )
 
@@ -571,7 +593,7 @@ settingsView model =
                 []
             ]
         , Html.div [ Attrs.class "w-48" ]
-            [ if model.showEditOptions then
+            [ if settings.showEditOptions then
                 Html.div [ Attrs.class "flex flex-col gap-1" ]
                     [ Html.input
                         [ Attrs.class "self-end text-sky-500 text-sm"
@@ -580,14 +602,14 @@ settingsView model =
                         , Events.onClick ClickedDone
                         ]
                         []
-                    , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView model.visibleOptions) IdleDocTimeout.all)
+                    , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView settings.visibleOptions) IdleDocTimeout.all)
                     ]
 
               else
                 let
                     enabledTimeouts : List Item
                     enabledTimeouts =
-                        filterEnabledTimeouts model
+                        filterEnabledTimeouts settings
                 in
                 Html.div [ Attrs.class "flex flex-col gap-4" ]
                     [ Html.div [ Attrs.class "flex flex-col gap-2" ]
@@ -603,13 +625,13 @@ settingsView model =
                             , Events.onClick ClickedEditOptions
                             ]
                             []
-                        , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView model.immediateTrash checked) enabledTimeouts)
+                        , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView settings.immediateTrash checked) enabledTimeouts)
                         ]
                     , Html.p [ Attrs.class "flex gap-2" ]
                         [ Html.input
                             [ Attrs.type_ "checkbox"
                             , Attrs.id "immediate_trash"
-                            , Attrs.checked model.immediateTrash
+                            , Attrs.checked settings.immediateTrash
                             , Attrs.disabled checked
                             , Events.onCheck CheckedImmediateTrash
                             ]
@@ -635,7 +657,7 @@ section { title, content } =
         ]
 
 
-editOptionView : Set String -> IdleDocTimeout -> Html FormMsg
+editOptionView : Set String -> IdleDocTimeout -> Html SettingsMsg
 editOptionView visibleOptions option =
     let
         id : String
@@ -654,7 +676,7 @@ editOptionView visibleOptions option =
         ]
 
 
-enabledTimeoutView : Bool -> Bool -> Item -> Html FormMsg
+enabledTimeoutView : Bool -> Bool -> Item -> Html SettingsMsg
 enabledTimeoutView trashImmediately disabled { timeout, value } =
     Html.div
         [ Attrs.class "flex" ]
@@ -685,21 +707,21 @@ type alias Item =
     }
 
 
-filterEnabledTimeouts : LoadedModel -> List Item
-filterEnabledTimeouts model =
+filterEnabledTimeouts : Settings -> List Item
+filterEnabledTimeouts settings =
     List.filterMap identity
-        [ model.idleDocTimeoutPreparation |> maybeItem Preparation model
-        , model.idleDocTimeoutClosed |> maybeItem Closed model
-        , model.idleDocTimeoutCanceled |> maybeItem Canceled model
-        , model.idleDocTimeoutTimedout |> maybeItem Timedout model
-        , model.idleDocTimeoutRejected |> maybeItem Rejected model
-        , model.idleDocTimeoutError |> maybeItem Error model
+        [ settings.idleDocTimeoutPreparation |> maybeItem Preparation settings
+        , settings.idleDocTimeoutClosed |> maybeItem Closed settings
+        , settings.idleDocTimeoutCanceled |> maybeItem Canceled settings
+        , settings.idleDocTimeoutTimedout |> maybeItem Timedout settings
+        , settings.idleDocTimeoutRejected |> maybeItem Rejected settings
+        , settings.idleDocTimeoutError |> maybeItem Error settings
         ]
 
 
-maybeItem : IdleDocTimeout -> LoadedModel -> String -> Maybe Item
-maybeItem option model value =
-    if Set.member (IdleDocTimeout.id option) model.visibleOptions then
+maybeItem : IdleDocTimeout -> Settings -> String -> Maybe Item
+maybeItem option settings value =
+    if Set.member (IdleDocTimeout.id option) settings.visibleOptions then
         Just (Item option value)
 
     else
