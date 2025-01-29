@@ -31,7 +31,7 @@ type alias LoadedModel =
     , account : Account
     , name : String
     , children : List Child
-    , inheritedFrom : Maybe String
+    , settingsInheritedFrom : Maybe String
     , idleDocTimeoutPreparation : String
     , idleDocTimeoutClosed : String
     , idleDocTimeoutCanceled : String
@@ -87,7 +87,7 @@ init =
                 , account = userGroup.account
                 , name = userGroup.name
                 , children = userGroup.children
-                , inheritedFrom = userGroup.settings.inheritedFrom
+                , settingsInheritedFrom = userGroup.settings.inheritedFrom
                 , idleDocTimeoutPreparation = dataRetentionPolicy.idleDocTimeoutPreparation |> Maybe.withDefault 0 |> String.fromInt
                 , idleDocTimeoutClosed = dataRetentionPolicy.idleDocTimeoutClosed |> Maybe.withDefault 0 |> String.fromInt
                 , idleDocTimeoutCanceled = dataRetentionPolicy.idleDocTimeoutCanceled |> Maybe.withDefault 0 |> String.fromInt
@@ -143,6 +143,8 @@ type FormMsg
     | EditTag Int
     | DeleteTag Int
     | InputTag Int String
+    | ClickedContactDetailsInheritedFrom Bool
+    | ClickedSettingsInheritedFrom Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -259,6 +261,18 @@ updateForm msg model =
         InputTag index tagString ->
             { model | tags = List.Extra.setAt index (Editing tagString Nothing) model.tags }
 
+        ClickedContactDetailsInheritedFrom True ->
+            { model | contactDetailsInheritFrom = Just "" }
+
+        ClickedContactDetailsInheritedFrom False ->
+            { model | contactDetailsInheritFrom = Nothing }
+
+        ClickedSettingsInheritedFrom True ->
+            { model | settingsInheritedFrom = Just "", showEditOptions = False }
+
+        ClickedSettingsInheritedFrom False ->
+            { model | settingsInheritedFrom = Nothing }
+
 
 
 ---- VIEW ----
@@ -351,181 +365,158 @@ userGroupSettingsView model =
         ]
 
 
-settingsView : LoadedModel -> Html FormMsg
-settingsView model =
-    case model.inheritedFrom of
-        Just from ->
-            inheritedDataRetentionPolicyView from model
-
-        Nothing ->
-            dataRetentionPolicyView model
-
-
 contactDetailsView : LoadedModel -> Html FormMsg
 contactDetailsView model =
-    case model.contactDetailsInheritFrom of
-        Just parentId ->
-            inheritedAddressView parentId model
+    let
+        ( checked, value ) =
+            case model.contactDetailsInheritFrom of
+                Just parentId ->
+                    ( True, parentId )
 
-        Nothing ->
-            addressView model
-
-
-inheritedAddressView : String -> LoadedModel -> Html msg
-inheritedAddressView parentId model =
-    Html.div [ Attrs.class "flex flex-col gap-8" ]
-        [ Html.span [ Attrs.class "text-sm" ]
-            [ Html.text ("inherited from: " ++ parentId) ]
-        , Html.div [ Attrs.class "flex flex-col gap-4" ]
-            [ inheritedAddressField { title = "email", value = model.email }
-            , inheritedAddressField { title = "phone", value = model.phone }
-            , inheritedAddressField { title = "company name", value = model.companyName }
-            , inheritedAddressField { title = "address", value = model.address }
-            , inheritedAddressField { title = "zip", value = model.zip }
-            , inheritedAddressField { title = "city", value = model.city }
-            , inheritedAddressField { title = "country", value = model.country }
+                Nothing ->
+                    ( False, "" )
+    in
+    Html.div [ Attrs.class "flex flex-col gap-4" ]
+        [ Html.div [ Attrs.class "flex gap-2 items-baseline" ]
+            [ Html.input
+                [ Attrs.type_ "checkbox"
+                , Attrs.id "contact_details_inherited_from"
+                , Attrs.checked checked
+                , Events.onCheck ClickedContactDetailsInheritedFrom
+                ]
+                []
+            , Html.label [ Attrs.for "contact_details_inherited_from" ] [ Html.text "Inherited from:" ]
+            , Html.input
+                [ Attrs.class "border-2 rounded w-16 text-end px-1"
+                , Attrs.value value
+                , Attrs.disabled (not checked)
+                ]
+                []
             ]
-        ]
-
-
-inheritedAddressField : { title : String, value : String } -> Html msg
-inheritedAddressField { title, value } =
-    Html.div
-        [ Attrs.class "flex flex-col" ]
-        [ Html.span [ Attrs.class "text-sm" ] [ Html.text title ]
-        , Html.span [ Attrs.class "font-bold" ]
-            [ Html.text
-                (if String.isEmpty value then
-                    "-"
-
-                 else
-                    value
-                )
+        , Html.div []
+            [ Html.div [ Attrs.class "flex flex-wrap gap-4" ]
+                [ Html.div [ Attrs.class "flex flex-col gap-4" ]
+                    [ Html.div [ Attrs.class "flex flex-col gap-1" ]
+                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "email" ]
+                        , Html.input
+                            [ Attrs.type_ "email"
+                            , Attrs.class "border-2 rounded px-1"
+                            , Attrs.id "address-email"
+                            , Attrs.name "address-email"
+                            , Attrs.required (model.preferredContactMethod == ContactDetails.Email)
+                            , Attrs.value model.email
+                            , Attrs.disabled checked
+                            , Events.onInput InputEmail
+                            ]
+                            []
+                        ]
+                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "phone" ]
+                        , Html.input
+                            [ Attrs.type_ "tel"
+                            , Attrs.class "border-2 rounded px-1"
+                            , Attrs.id "address-phone"
+                            , Attrs.name "address-phone"
+                            , Attrs.placeholder "###-###-####"
+                            , Attrs.pattern "[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                            , Attrs.required (model.preferredContactMethod == ContactDetails.Phone)
+                            , Attrs.value model.phone
+                            , Attrs.disabled checked
+                            , Events.onInput InputPhone
+                            ]
+                            []
+                        ]
+                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "company name" ]
+                        , Html.input
+                            [ Attrs.class "border-2 rounded px-1"
+                            , Attrs.id "company-name"
+                            , Attrs.name "company-name"
+                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value model.companyName
+                            , Attrs.disabled checked
+                            , Events.onInput InputCompanyName
+                            ]
+                            []
+                        ]
+                    ]
+                , Html.div [ Attrs.class "flex flex-col gap-4" ]
+                    [ Html.div [ Attrs.class "flex flex-col gap-1" ]
+                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "address" ]
+                        , Html.input
+                            [ Attrs.class "border-2 rounded px-1"
+                            , Attrs.id "address"
+                            , Attrs.name "address"
+                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value model.address
+                            , Attrs.disabled checked
+                            , Events.onInput InputAddress
+                            ]
+                            []
+                        ]
+                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "zip" ]
+                        , Html.input
+                            [ Attrs.class "border-2 rounded px-1"
+                            , Attrs.id "zip"
+                            , Attrs.name "zip"
+                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value model.zip
+                            , Attrs.disabled checked
+                            , Events.onInput InputZip
+                            ]
+                            []
+                        ]
+                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "city" ]
+                        , Html.input
+                            [ Attrs.class "border-2 rounded px-1"
+                            , Attrs.id "city"
+                            , Attrs.name "city"
+                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value model.city
+                            , Attrs.disabled checked
+                            , Events.onInput InputCity
+                            ]
+                            []
+                        ]
+                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "country" ]
+                        , Html.input
+                            [ Attrs.class "border-2 rounded px-1"
+                            , Attrs.id "country"
+                            , Attrs.name "country"
+                            , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
+                            , Attrs.value model.country
+                            , Attrs.disabled checked
+                            , Events.onInput InputCountry
+                            ]
+                            []
+                        ]
+                    , Html.fieldset [ Attrs.disabled checked ]
+                        [ Html.legend [ Attrs.class "text-sm" ] [ Html.text "preferred contact method" ]
+                        , preferredContactMethodOption
+                            { id = "preferred-contact-method-email"
+                            , title = "Email"
+                            , checked = model.preferredContactMethod == ContactDetails.Email
+                            , onClick = ChangePreferredContactMethod ContactDetails.Email
+                            }
+                        , preferredContactMethodOption
+                            { id = "preferred-contact-method-phone"
+                            , title = "Phone"
+                            , checked = model.preferredContactMethod == ContactDetails.Phone
+                            , onClick = ChangePreferredContactMethod ContactDetails.Phone
+                            }
+                        , preferredContactMethodOption
+                            { id = "preferred-contact-method-post"
+                            , title = "Post"
+                            , checked = model.preferredContactMethod == ContactDetails.Post
+                            , onClick = ChangePreferredContactMethod ContactDetails.Post
+                            }
+                        ]
+                    ]
+                ]
             ]
-        ]
-
-
-addressView : LoadedModel -> Html FormMsg
-addressView model =
-    Html.div [ Attrs.class "flex flex-wrap gap-4" ]
-        [ Html.div [ Attrs.class "flex flex-col gap-4" ]
-            [ Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "email" ]
-                , Html.input
-                    [ Attrs.type_ "email"
-                    , Attrs.class "border-2"
-                    , Attrs.id "address-email"
-                    , Attrs.name "address-email"
-                    , Attrs.required (model.preferredContactMethod == ContactDetails.Email)
-                    , Attrs.value model.email
-                    , Events.onInput InputEmail
-                    ]
-                    []
-                ]
-            , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "phone" ]
-                , Html.input
-                    [ Attrs.type_ "tel"
-                    , Attrs.class "border-2"
-                    , Attrs.id "address-phone"
-                    , Attrs.name "address-phone"
-                    , Attrs.placeholder "###-###-####"
-                    , Attrs.pattern "[0-9]{3}-[0-9]{3}-[0-9]{4}"
-                    , Attrs.required (model.preferredContactMethod == ContactDetails.Phone)
-                    , Attrs.value model.phone
-                    , Events.onInput InputPhone
-                    ]
-                    []
-                ]
-            , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "company name" ]
-                , Html.input
-                    [ Attrs.class "border-2"
-                    , Attrs.id "company-name"
-                    , Attrs.name "company-name"
-                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                    , Attrs.value model.companyName
-                    , Events.onInput InputCompanyName
-                    ]
-                    []
-                ]
-            ]
-        , Html.div [ Attrs.class "flex flex-col gap-4" ]
-            [ Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "address" ]
-                , Html.input
-                    [ Attrs.class "border-2"
-                    , Attrs.id "address"
-                    , Attrs.name "address"
-                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                    , Attrs.value model.address
-                    , Events.onInput InputAddress
-                    ]
-                    []
-                ]
-            , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "zip" ]
-                , Html.input
-                    [ Attrs.class "border-2"
-                    , Attrs.id "zip"
-                    , Attrs.name "zip"
-                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                    , Attrs.value model.zip
-                    , Events.onInput InputZip
-                    ]
-                    []
-                ]
-            , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "city" ]
-                , Html.input
-                    [ Attrs.class "border-2"
-                    , Attrs.id "city"
-                    , Attrs.name "city"
-                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                    , Attrs.value model.city
-                    , Events.onInput InputCity
-                    ]
-                    []
-                ]
-            , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "country" ]
-                , Html.input
-                    [ Attrs.class "border-2"
-                    , Attrs.id "country"
-                    , Attrs.name "country"
-                    , Attrs.required (model.preferredContactMethod == ContactDetails.Post)
-                    , Attrs.value model.country
-                    , Events.onInput InputCountry
-                    ]
-                    []
-                ]
-            , preferredContactMethodView model.preferredContactMethod
-            ]
-        ]
-
-
-preferredContactMethodView : PreferredContactMethod -> Html FormMsg
-preferredContactMethodView method =
-    Html.fieldset []
-        [ Html.legend [ Attrs.class "text-sm" ] [ Html.text "preferred contact method" ]
-        , preferredContactMethodOption
-            { id = "preferred-contact-method-email"
-            , title = "Email"
-            , checked = method == ContactDetails.Email
-            , onClick = ChangePreferredContactMethod ContactDetails.Email
-            }
-        , preferredContactMethodOption
-            { id = "preferred-contact-method-phone"
-            , title = "Phone"
-            , checked = method == ContactDetails.Phone
-            , onClick = ChangePreferredContactMethod ContactDetails.Phone
-            }
-        , preferredContactMethodOption
-            { id = "preferred-contact-method-post"
-            , title = "Post"
-            , checked = method == ContactDetails.Post
-            , onClick = ChangePreferredContactMethod ContactDetails.Post
-            }
         ]
 
 
@@ -551,6 +542,85 @@ preferredContactMethodOption { id, title, checked, onClick } =
         ]
 
 
+settingsView : LoadedModel -> Html FormMsg
+settingsView model =
+    let
+        ( checked, value ) =
+            case model.settingsInheritedFrom of
+                Just parentId ->
+                    ( True, parentId )
+
+                Nothing ->
+                    ( False, "" )
+    in
+    Html.div [ Attrs.class "flex flex-col gap-4" ]
+        [ Html.div [ Attrs.class "flex gap-2 items-baseline" ]
+            [ Html.input
+                [ Attrs.type_ "checkbox"
+                , Attrs.id "settings_inherited_from"
+                , Attrs.checked checked
+                , Events.onCheck ClickedSettingsInheritedFrom
+                ]
+                []
+            , Html.label [ Attrs.for "settings_inherited_from" ] [ Html.text "Inherited from:" ]
+            , Html.input
+                [ Attrs.class "border-2 rounded w-16 text-end px-1"
+                , Attrs.value value
+                , Attrs.disabled (not checked)
+                ]
+                []
+            ]
+        , Html.div [ Attrs.class "w-48" ]
+            [ if model.showEditOptions then
+                Html.div [ Attrs.class "flex flex-col gap-1" ]
+                    [ Html.input
+                        [ Attrs.class "self-end text-sky-500 text-sm"
+                        , Attrs.type_ "button"
+                        , Attrs.value "Done"
+                        , Events.onClick ClickedDone
+                        ]
+                        []
+                    , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView model.visibleOptions) IdleDocTimeout.all)
+                    ]
+
+              else
+                let
+                    enabledTimeouts : List Item
+                    enabledTimeouts =
+                        filterEnabledTimeouts model
+                in
+                Html.div [ Attrs.class "flex flex-col gap-4" ]
+                    [ Html.div [ Attrs.class "flex flex-col gap-2" ]
+                        [ Html.input
+                            [ if checked then
+                                Attrs.class "self-end text-slate-500 text-sm"
+
+                              else
+                                Attrs.class "self-end text-sky-500 text-sm"
+                            , Attrs.type_ "button"
+                            , Attrs.value "Edit options"
+                            , Attrs.disabled checked
+                            , Events.onClick ClickedEditOptions
+                            ]
+                            []
+                        , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView model.immediateTrash checked) enabledTimeouts)
+                        ]
+                    , Html.p [ Attrs.class "flex gap-2" ]
+                        [ Html.input
+                            [ Attrs.type_ "checkbox"
+                            , Attrs.id "immediate_trash"
+                            , Attrs.checked model.immediateTrash
+                            , Attrs.disabled checked
+                            , Events.onCheck CheckedImmediateTrash
+                            ]
+                            []
+                        , Html.label [ Attrs.for "immediate_trash" ] [ Html.text "Trash immediately" ]
+                        ]
+                    ]
+            ]
+        ]
+
+
 section :
     { title : String
     , content : Html FormMsg
@@ -562,63 +632,6 @@ section { title, content } =
             [ Attrs.class "text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
             [ Html.text title ]
         , content
-        ]
-
-
-inheritedDataRetentionPolicyView : String -> LoadedModel -> Html msg
-inheritedDataRetentionPolicyView from model =
-    let
-        enabledTimeouts : List Item
-        enabledTimeouts =
-            filterEnabledTimeouts model
-    in
-    Html.div [ Attrs.class "flex flex-col gap-8" ]
-        [ Html.span [ Attrs.class "text-sm" ] [ Html.text <| "inherited from: " ++ from ]
-        , Html.div [ Attrs.class "flex" ] <| List.concatMap inheritedField enabledTimeouts
-        ]
-
-
-inheritedField : Item -> List (Html msg)
-inheritedField { timeout, value } =
-    [ Html.span [ Attrs.class "inline-block w-32" ] [ Html.text (IdleDocTimeout.title timeout) ]
-    , Html.span [ Attrs.class "text-right w-20" ] [ Html.text value ]
-    ]
-
-
-dataRetentionPolicyView : LoadedModel -> Html FormMsg
-dataRetentionPolicyView model =
-    Html.div [ Attrs.class "w-48" ]
-        [ if model.showEditOptions then
-            Html.div [ Attrs.class "flex flex-col gap-1" ]
-                [ Html.input
-                    [ Attrs.class "self-end text-sky-500 text-sm"
-                    , Attrs.type_ "button"
-                    , Attrs.value "Done"
-                    , Events.onClick ClickedDone
-                    ]
-                    []
-                , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView model.visibleOptions) IdleDocTimeout.all)
-                ]
-
-          else
-            let
-                enabledTimeouts : List Item
-                enabledTimeouts =
-                    filterEnabledTimeouts model
-            in
-            Html.div [ Attrs.class "flex flex-col gap-4" ]
-                [ Html.div [ Attrs.class "flex flex-col gap-2" ]
-                    [ Html.input
-                        [ Attrs.class "self-end text-sky-500 text-sm"
-                        , Attrs.type_ "button"
-                        , Attrs.value "Edit options"
-                        , Events.onClick ClickedEditOptions
-                        ]
-                        []
-                    , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView model.immediateTrash) enabledTimeouts)
-                    ]
-                , trash model.immediateTrash
-                ]
         ]
 
 
@@ -641,22 +654,8 @@ editOptionView visibleOptions option =
         ]
 
 
-trash : Bool -> Html FormMsg
-trash immediateTrash =
-    Html.p [ Attrs.class "flex gap-2" ]
-        [ Html.input
-            [ Attrs.type_ "checkbox"
-            , Attrs.id "immediate_trash"
-            , Attrs.checked immediateTrash
-            , Events.onCheck CheckedImmediateTrash
-            ]
-            []
-        , Html.label [ Attrs.for "immediate_trash" ] [ Html.text "Trash immediately" ]
-        ]
-
-
-enabledTimeoutView : Bool -> Item -> Html FormMsg
-enabledTimeoutView trashImmediately { timeout, value } =
+enabledTimeoutView : Bool -> Bool -> Item -> Html FormMsg
+enabledTimeoutView trashImmediately disabled { timeout, value } =
     Html.div
         [ Attrs.class "flex" ]
         [ Html.label
@@ -674,7 +673,7 @@ enabledTimeoutView trashImmediately { timeout, value } =
             , Attrs.value value
             , Events.onInput (DidInputIdleDocTimeout timeout)
             , Attrs.class "text-right w-20 border-2 rounded"
-            , Attrs.disabled trashImmediately
+            , Attrs.disabled (trashImmediately || disabled)
             ]
             []
         ]

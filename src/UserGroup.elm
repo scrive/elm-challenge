@@ -37,14 +37,14 @@ type Account
 accountDecoder : Decoder Account
 accountDecoder =
     Json.Decode.field "parent_id" (Json.Decode.maybe Json.Decode.string)
-        |> Json.Decode.andThen
+        |> Json.Decode.map
             (\maybeParentId ->
                 case maybeParentId of
                     Just parentId ->
-                        Json.Decode.succeed (Parent parentId)
+                        Parent parentId
 
                     Nothing ->
-                        Json.Decode.succeed Root
+                        Root
             )
 
 
