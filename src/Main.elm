@@ -9,7 +9,6 @@ import Html.Events as Evts
 import Json.Decode as Json
 import Json.Encode as Json
 import Scrive.Data.Address as A
-import Scrive.Data.ContactDetails as CD
 import Scrive.Data.RetentionPolicy as RP
 import Scrive.Data.Tag as Tag exposing (ArchivedTag, SomeTag, Tag)
 import Scrive.Data.UserGroup as UG exposing (UserGroup)
@@ -37,21 +36,29 @@ type EditFocus
     | NotEditing
 
 
-type alias Model =
-    { userGroup : Result Json.Error UserGroup
+type alias FormsModel =
+    { userGroup : UserGroup
     , editFocus : EditFocus
     , validationErrors : List FE.Error
-    , viewMode : ViewJson -- TODO: remove, only for debugging
+    , debugMode : ViewJson
     }
+
+
+type alias Model =
+    Result Json.Error FormsModel
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { userGroup = Json.decodeString UG.decoder Data.userGroup
-      , editFocus = NotEditing
-      , validationErrors = []
-      , viewMode = CurrentJson
-      }
+    ( Json.decodeString UG.decoder Data.userGroup
+        |> Result.map
+            (\userGroup ->
+                { userGroup = userGroup
+                , editFocus = NotEditing
+                , validationErrors = []
+                , debugMode = CurrentJson
+                }
+            )
     , Cmd.none
     )
 
@@ -87,196 +94,179 @@ type Msg
     | ToggleJsonMode ViewJson
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    ( case msg of
+updateForms : Msg -> FormsModel -> FormsModel
+updateForms msg fmodel =
+    case msg of
         ClearEditFocus ->
-            { model | editFocus = NotEditing }
+            { fmodel | editFocus = NotEditing }
 
         EditContactsField ( field, value ) ->
-            { model | editFocus = FocusContactsEdit ( field, value ) }
+            { fmodel | editFocus = FocusContactsEdit ( field, value ) }
 
         SetContactMethod pmethod ->
-            { model
-                | userGroup = Result.map (updateContactMethod pmethod) model.userGroup
+            { fmodel
+                | userGroup = updateContactMethod pmethod fmodel.userGroup
                 , validationErrors =
-                    case model.userGroup of
-                        Ok userGroup ->
-                            let
-                                resValidDraftAddress =
-                                    -- just revalidating address with new contact method
-                                    A.toDraft userGroup.contactDetails.address
-                                        |> V.validate (addressValidator pmethod)
-                            in
-                            case resValidDraftAddress of
-                                Ok _ -> []
-                                Err errors -> errors
-
-                        Err _ ->
-                            []
+                    let
+                        resValidDraftAddress =
+                            -- just revalidating address with new contact method
+                            A.toDraft fmodel.userGroup.contactDetails.address
+                                |> V.validate (addressValidator pmethod)
+                    in
+                    case resValidDraftAddress of
+                        Ok _ -> []
+                        Err errors -> errors
             }
 
         TryToUpdateAddress newDraftAddress ->
             let
                 preferredMethod =
-                    Result.map (.contactDetails >> .address >> .preferredContactMethod) model.userGroup
-                        |> Result.withDefault A.PC_None -- if result is erronous, we won't update anything anyway
+                    fmodel.userGroup.contactDetails.address.preferredContactMethod
 
                 resValidDraftAddress =
                     V.validate (addressValidator preferredMethod) newDraftAddress
             in
             case resValidDraftAddress of
                 Ok validDraftAddress ->
-                    { model
+                    { fmodel
                         | validationErrors = []
                         , editFocus = NotEditing
-                        , userGroup = Result.map (updateAddress validDraftAddress) model.userGroup
+                        , userGroup = updateAddress validDraftAddress fmodel.userGroup
                     }
 
                 Err errors ->
-                    { model | validationErrors = errors }
+                    { fmodel | validationErrors = errors }
 
         SetTagInProgress inProgress ->
-            { model | editFocus = FocusTag inProgress }
+            { fmodel | editFocus = FocusTag inProgress }
 
         TryToCreateTag { newName, newValue } ->
-            let
-                resNextUserGroup =
-                    validateTagAnd addTag (tagValidator { isNew = True, index = Nothing }) model <|
-                        Tag.make newName newValue
-            in -- The three `in` blocks here are actually the same, merge them in one action?
-            case resNextUserGroup of
-                Ok nextUserGroup ->
-                    { model
-                        | editFocus = NotEditing
-                        , validationErrors = []
-                        , userGroup = Ok nextUserGroup
-                    }
 
-                Err validationErrors ->
-                    { model | validationErrors = validationErrors }
+            Tag.make newName newValue
+                |> validateTagAnd addTag (tagValidator { isNew = True, index = Nothing }) fmodel
+                |> applyResultOrStoreErrors fmodel
 
         TryToChangeTag theTag { newValue } ->
-            let
-                resNextUserGroup =
-                    validateTagAnd changeTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model <|
-                        Tag.setValue newValue theTag
-            in -- The three `in` blocks here are actually the same, merge them in one action?
-            case resNextUserGroup of
-                Ok nextUserGroup ->
-                    { model
-                        | editFocus = NotEditing
-                        , validationErrors = []
-                        , userGroup = Ok nextUserGroup
-                    }
 
-                Err validationErrors ->
-                    { model | validationErrors = validationErrors }
+            Tag.setValue newValue theTag
+                |> validateTagAnd changeTag (tagValidator { isNew = False, index = indexOfTagInProgress fmodel }) fmodel
+                |> applyResultOrStoreErrors fmodel
 
         TryToRestoreTag archivedTag { newValue } ->
-            let
-                resNextUserGroup =
-                    validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress model }) model <|
-                        Tag.make (Tag.nameOfArchived archivedTag) newValue
-            in -- The three `in` blocks here are actually the same, merge them in one action?
-            case resNextUserGroup of
-                Ok nextUserGroup ->
-                    { model
-                        | editFocus = NotEditing
-                        , validationErrors = []
-                        , userGroup = Ok nextUserGroup
-                    }
 
-                Err validationErrors ->
-                    { model | validationErrors = validationErrors }
+            Tag.make (Tag.nameOfArchived archivedTag) newValue
+                |> validateTagAnd restoreTag (tagValidator { isNew = False, index = indexOfTagInProgress fmodel }) fmodel
+                |> applyResultOrStoreErrors fmodel
 
         ArchiveTag theTag ->
-            { model
+            let
+                currentUserGroup = fmodel.userGroup
+            in
+                { fmodel
                 | editFocus = NotEditing
                 , userGroup =
-                    Result.map
-                        (\ug -> { ug | tags = archiveTag theTag ug.tags })
-                        model.userGroup
-            }
+                    { currentUserGroup
+                    | tags = archiveTag theTag currentUserGroup.tags
+                    }
+                }
 
         RemoveTag theTag ->
-            { model
+            let
+                currentUserGroup = fmodel.userGroup
+            in
+                { fmodel
                 | editFocus = NotEditing
                 , userGroup =
-                    Result.map
-                        (\ug -> { ug | tags = removeTag theTag ug.tags })
-                        model.userGroup
-            }
-
-        ToggleJsonMode jsonMode ->
-            { model | viewMode = jsonMode }
+                    { currentUserGroup
+                    | tags = removeTag theTag currentUserGroup.tags
+                    }
+                }
 
         SelectPolicyToAdd policy ->
-            { model
+            { fmodel
                 | editFocus = FocusPolicyAdd policy
             }
 
         AddSelectedPolicy ->
-            { model
+            { fmodel
                 | editFocus = NotEditing
                 , userGroup =
-                    case model.editFocus of
+                    case fmodel.editFocus of
                         FocusPolicyAdd policyToAdd ->
-                            Result.map (changePolicies <| RP.setPolicyTimeout policyToAdd 0) model.userGroup
-
+                            changePolicies (RP.setPolicyTimeout policyToAdd 0) fmodel.userGroup
                         _ ->
-                            model.userGroup
+                            fmodel.userGroup
             }
 
         EditPolicyTimeout policy timeout ->
-            { model
+            { fmodel
                 | editFocus = FocusPolicyEdit ( policy, timeout )
             }
 
         ApplyPolicyTimeout expectedPolicy ->
-            { model
+            { fmodel
                 | editFocus = NotEditing
                 , userGroup =
-                    case model.editFocus of
+                    case fmodel.editFocus of
                         FocusPolicyEdit ( policy, timeout ) ->
                             if policy == expectedPolicy then
-                                Result.map (changePolicies <| RP.setPolicyTimeout policy timeout) model.userGroup
-
+                                changePolicies (RP.setPolicyTimeout policy timeout) fmodel.userGroup
                             else
-                                model.userGroup
-
+                                fmodel.userGroup
                         _ ->
-                            model.userGroup
+                            fmodel.userGroup
             }
 
         ClearPolicyTimeout policy ->
-            { model
+            { fmodel
                 | editFocus = NotEditing
-                , userGroup = Result.map (changePolicies <| RP.clearPolicyTimeout policy) model.userGroup
+                , userGroup = changePolicies (RP.clearPolicyTimeout policy) fmodel.userGroup
             }
 
         ToggleImmediateTrash doTrash ->
-            { model
+            { fmodel
                 | editFocus = NotEditing
                 , userGroup =
-                    Result.map
-                        (changePolicies <|
-                            if doTrash then
-                                RP.setImmediateTrash
+                    (changePolicies <|
+                        if doTrash then
+                            RP.setImmediateTrash
 
-                            else
-                                RP.clearImmediateTrash
-                        )
-                        model.userGroup
+                        else
+                            RP.clearImmediateTrash
+                    )
+                    fmodel.userGroup
             }
 
+        ToggleJsonMode jsonMode ->
+            { fmodel | debugMode = jsonMode }
+
         NoOp ->
-            model
+            fmodel
+
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    ( model |> Result.map (updateForms msg)
     , Cmd.none
     )
 
 
-indexOfTagInProgress : Model -> Maybe Int
+applyResultOrStoreErrors : FormsModel -> Result (List FE.Error) UserGroup -> FormsModel
+applyResultOrStoreErrors fmodel resNextUserGroup =
+    case resNextUserGroup of
+        Ok nextUserGroup ->
+            { fmodel
+                | editFocus = NotEditing -- FIXME: silently resets edit focus
+                , validationErrors = []
+                , userGroup = nextUserGroup
+            }
+
+        Err validationErrors ->
+            { fmodel | validationErrors = validationErrors }
+
+
+indexOfTagInProgress : FormsModel -> Maybe Int
 indexOfTagInProgress model =
     case model.editFocus of
         FocusTag tip ->
@@ -289,28 +279,23 @@ indexOfTagInProgress model =
 validateTagAnd :
     (Valid Tag -> List SomeTag -> List SomeTag)
     -> (List SomeTag -> Validator FE.Error Tag)
-    -> Model
+    -> FormsModel
     -> Tag
     -> Result (List FE.Error) UserGroup
-validateTagAnd fValid fValidator model theTag =
-    case Result.map .tags model.userGroup of
-        Ok currentTags ->
-            let
-                resValidTag =
-                    V.validate (fValidator currentTags) theTag
-            in
-            case resValidTag of
-                Ok validTag ->
-                    Result.map
-                        (\ug -> { ug | tags = fValid validTag ug.tags })
-                        model.userGroup
-                        |> Result.mapError (always [])
-
-                Err errors ->
-                    Err errors
-
-        Err _ ->
-            Err []
+validateTagAnd fValid fValidator fmodel theTag =
+    let
+        userGroup = fmodel.userGroup
+        currentTags = fmodel.userGroup.tags
+        resValidTag =
+            V.validate (fValidator currentTags) theTag
+    in
+        resValidTag |>
+            Result.map
+                (\validTag ->
+                    { userGroup
+                    | tags = fValid validTag userGroup.tags
+                    }
+                )
 
 
 addTag : Valid Tag -> List SomeTag -> List SomeTag
@@ -427,8 +412,8 @@ changePolicies fPolicyRec ugroup =
 ---- VIEW ----
 
 
-view : Model -> Html Msg
-view model =
+viewForms : FormsModel -> Html Msg
+viewForms fmodel =
     let
         tagHandlers =
             { tryCreate = TryToCreateTag
@@ -456,69 +441,77 @@ view model =
             }
 
         mbTagInProgress =
-            case model.editFocus of
+            case fmodel.editFocus of
                 FocusTag tip -> Just tip
                 _ -> Nothing
 
         mbAddingPolicy =
-            case model.editFocus of
+            case fmodel.editFocus of
                 FocusPolicyAdd policy -> Just policy
                 _ -> Nothing
 
         mbEditingPolicy =
-            case model.editFocus of
+            case fmodel.editFocus of
                 FocusPolicyEdit ( policy, pvalue ) -> Just ( policy, pvalue )
                 _ -> Nothing
 
         mbContactsField =
-            case model.editFocus of
+            case fmodel.editFocus of
                 FocusContactsEdit ( field, fvalue ) -> Just ( field, fvalue )
                 _ -> Nothing
 
         formHeader title =
             Html.h1 [ Attrs.class Style.formHeader ] [ Html.text title ]
+
+        userGroup = fmodel.userGroup
     in
-    Html.div
-        []
-        [ Html.div [ Attrs.class Style.mainContainer ] <|
+    Html.div [ Attrs.class Style.mainContainer ] <|
 
-            (case model.userGroup of
-                Ok userGroup ->
-                    [ formHeader "Contacts"
-                    , ContactForm.view
-                        (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Contacts)
-                        contactsHandlers
-                        { readOnly = False, currentlyEditing = mbContactsField }
-                        userGroup.contactDetails
-                    , formHeader "Tags"
-                    , TagsForm.view
-                        (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Tags)
-                        tagHandlers
-                        mbTagInProgress
-                        userGroup.tags
-                    , formHeader "Retention Policy"
-                    , RetentionPolicy.view
-                        (model.validationErrors |> FE.onlyBelongingTo BelongsTo.Settings)
-                        policyHandlers
-                        { currentlyAdding = mbAddingPolicy
-                        , currentlyEditing = mbEditingPolicy
-                        }
-                      <|
-                        RP.toList userGroup.settings.policy
-                    ]
-
-                Err error ->
-                    [ Html.text <| Json.errorToString error ]
-            ) ++
-            [ viewDebugInfo model ]
+        [ formHeader "Contacts"
+        , ContactForm.view
+            (fmodel.validationErrors |> FE.onlyBelongingTo BelongsTo.Contacts)
+            contactsHandlers
+            { readOnly = False, currentlyEditing = mbContactsField }
+            userGroup.contactDetails
+        , formHeader "Tags"
+        , TagsForm.view
+            (fmodel.validationErrors |> FE.onlyBelongingTo BelongsTo.Tags)
+            tagHandlers
+            mbTagInProgress
+            userGroup.tags
+        , formHeader "Retention Policy"
+        , RetentionPolicy.view
+            (fmodel.validationErrors |> FE.onlyBelongingTo BelongsTo.Settings)
+            policyHandlers
+            { currentlyAdding = mbAddingPolicy
+            , currentlyEditing = mbEditingPolicy
+            }
+            <|
+            RP.toList userGroup.settings.policy
         ]
 
 
-viewDebugInfo model =
+view : Model -> Html Msg
+view model = case model of
+    Ok formsModel ->
+        Html.div
+            []
+            [ viewForms formsModel
+            , viewDebugInfo formsModel
+            ]
+    Err jsonError -> viewError jsonError
+
+
+viewError : Json.Error -> Html msg
+viewError error = Html.text <| Json.errorToString error
+
+
+viewDebugInfo : FormsModel -> Html Msg
+viewDebugInfo fmodel =
     Html.div -- temporary div with current Debug info
         [ Attrs.class "absolute top-0 left-0" ]
         [ Html.text
-            <| case model.editFocus of
+            <| case fmodel.editFocus of
                 FocusTag tip -> "Tag : " ++ TagsForm.tagInProgressToString tip
                 FocusPolicyAdd policy -> "Policy add : " ++ RP.toString policy
                 FocusPolicyEdit ( policy, intVal ) -> "Policy edit : " ++ RP.toString policy ++ " (" ++ String.fromInt intVal ++ ")"
@@ -531,12 +524,10 @@ viewDebugInfo model =
         , Html.pre
             [ Attrs.class "my-8 py-4 px-9 text-xs bg-slate-100 font-mono shadow rounded" ]
             [ Html.text <|
-                case model.viewMode of
+                case fmodel.debugMode of
                     NoJson -> ""
                     CurrentJson ->
-                        case model.userGroup of
-                            Ok userGroup -> Json.encode 2 <| UG.encode userGroup
-                            Err _ -> "Initial: " ++ Data.userGroup
+                        Json.encode 2 <| UG.encode fmodel.userGroup
                     OriginalJson ->
                         Data.userGroup
             ]

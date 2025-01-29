@@ -50,4 +50,14 @@ validPhone =
 
 
 
+nested : (subject -> part) -> V.Validator error part -> V.Validator error subject
+nested getPart subV =
+    V.fromErrors <|
+        \subject ->
+            case V.validate subV <| getPart subject of
+                Ok _ -> []
+                Err errors -> errors
+
+
+
 -- Zip Codes format from all over the world: https://gist.github.com/jamesbar2/1c677c22df8f21e869cca7e439fc3f5b
