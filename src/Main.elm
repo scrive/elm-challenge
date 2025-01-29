@@ -139,13 +139,9 @@ type Msg
 
 
 type FormMsg
-    = AddTag
-    | SaveTag Int
-    | EditTag Int
-    | DeleteTag Int
-    | InputTag Int String
-    | SettingsMsg SettingsMsg
+    = SettingsMsg SettingsMsg
     | ContactDetailsMsg ContactDetailsMsg
+    | TagsMsg TagsMsg
 
 
 type SettingsMsg
@@ -169,6 +165,14 @@ type ContactDetailsMsg
     | ClickedContactDetailsInheritedFrom Bool
 
 
+type TagsMsg
+    = AddTag
+    | SaveTag Int
+    | EditTag Int
+    | DeleteTag Int
+    | InputTag Int String
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( model, msg ) of
@@ -183,60 +187,13 @@ updateForm : FormMsg -> LoadedModel -> LoadedModel
 updateForm msg model =
     case msg of
         SettingsMsg settingsMsg ->
-            let
-                settings =
-                    model.settings
-            in
-            { model | settings = updateSettings settingsMsg settings }
+            { model | settings = updateSettings settingsMsg model.settings }
 
         ContactDetailsMsg contactDetailsMsg ->
-            let
-                contactDetails =
-                    model.contactDetails
-            in
-            { model | contactDetails = updateContactDetails contactDetailsMsg contactDetails }
+            { model | contactDetails = updateContactDetails contactDetailsMsg model.contactDetails }
 
-        AddTag ->
-            { model | tags = model.tags ++ [ Editing "" Nothing ] }
-
-        SaveTag index ->
-            case List.Extra.getAt index model.tags of
-                Just editableTag ->
-                    case editableTag of
-                        Editing tagString _ ->
-                            case Tag.make (currentTagNames model.tags) tagString of
-                                Ok tag ->
-                                    { model | tags = List.Extra.setAt index (NotEditing tag) model.tags }
-
-                                Err error ->
-                                    { model | tags = List.Extra.setAt index (Editing tagString (Just error)) model.tags }
-
-                        NotEditing _ ->
-                            model
-
-                Nothing ->
-                    model
-
-        EditTag index ->
-            { model
-                | tags =
-                    List.Extra.updateAt index
-                        (\editableTag ->
-                            case editableTag of
-                                NotEditing tag ->
-                                    Editing (Tag.toString tag) Nothing
-
-                                editing ->
-                                    editing
-                        )
-                        model.tags
-            }
-
-        DeleteTag index ->
-            { model | tags = List.Extra.removeAt index model.tags }
-
-        InputTag index tagString ->
-            { model | tags = List.Extra.setAt index (Editing tagString Nothing) model.tags }
+        TagsMsg tagsMsg ->
+            { model | tags = updateTags tagsMsg model.tags }
 
 
 updateSettings : SettingsMsg -> Settings -> Settings
@@ -318,6 +275,49 @@ updateContactDetails msg contactDetails =
             { contactDetails | contactDetailsInheritFrom = Nothing }
 
 
+updateTags : TagsMsg -> List EditableTag -> List EditableTag
+updateTags msg tags =
+    case msg of
+        AddTag ->
+            tags ++ [ Editing "" Nothing ]
+
+        SaveTag index ->
+            case List.Extra.getAt index tags of
+                Just editableTag ->
+                    case editableTag of
+                        Editing tagString _ ->
+                            case Tag.make (currentTagNames tags) tagString of
+                                Ok tag ->
+                                    List.Extra.setAt index (NotEditing tag) tags
+
+                                Err error ->
+                                    List.Extra.setAt index (Editing tagString (Just error)) tags
+
+                        NotEditing _ ->
+                            tags
+
+                Nothing ->
+                    tags
+
+        EditTag index ->
+            List.Extra.updateAt index
+                (\editableTag ->
+                    case editableTag of
+                        NotEditing tag ->
+                            Editing (Tag.toString tag) Nothing
+
+                        editing ->
+                            editing
+                )
+                tags
+
+        DeleteTag index ->
+            List.Extra.removeAt index tags
+
+        InputTag index tagString ->
+            List.Extra.setAt index (Editing tagString Nothing) tags
+
+
 
 ---- VIEW ----
 
@@ -350,7 +350,7 @@ loadedModelView model =
                 }
             , section
                 { title = "Tags"
-                , content = tagsView model.tags
+                , content = tagsView model.tags |> Html.map TagsMsg
                 }
             ]
         , Html.input
@@ -359,6 +359,20 @@ loadedModelView model =
             , Attrs.class "p-2 bg-sky-500 rounded text-sky-50 font-medium w-40 max-w-xs self-end"
             ]
             []
+        ]
+
+
+section :
+    { title : String
+    , content : Html FormMsg
+    }
+    -> Html FormMsg
+section { title, content } =
+    Html.section [ Attrs.class "flex flex-col gap-4" ]
+        [ Html.h2
+            [ Attrs.class "text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
+            [ Html.text title ]
+        , content
         ]
 
 
@@ -665,20 +679,6 @@ settingsView settings =
         ]
 
 
-section :
-    { title : String
-    , content : Html FormMsg
-    }
-    -> Html FormMsg
-section { title, content } =
-    Html.section [ Attrs.class "flex flex-col gap-4" ]
-        [ Html.h2
-            [ Attrs.class "text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
-            [ Html.text title ]
-        , content
-        ]
-
-
 editOptionView : Set String -> IdleDocTimeout -> Html SettingsMsg
 editOptionView visibleOptions option =
     let
@@ -750,7 +750,7 @@ maybeItem option settings value =
         Nothing
 
 
-tagsView : List EditableTag -> Html FormMsg
+tagsView : List EditableTag -> Html TagsMsg
 tagsView tags =
     Html.div [ Attrs.class "flex flex-col gap-2" ]
         [ Html.div [ Attrs.class "flex flex-wrap gap-2" ] (List.indexedMap tagView tags)
@@ -779,7 +779,7 @@ tagsView tags =
         ]
 
 
-tagView : Int -> EditableTag -> Html FormMsg
+tagView : Int -> EditableTag -> Html TagsMsg
 tagView index editableTag =
     case editableTag of
         Editing tagString maybeError ->
