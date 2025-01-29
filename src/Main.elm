@@ -342,11 +342,11 @@ loadedModelView model =
         , Html.div [ Attrs.class "flex flex-wrap gap-12" ]
             [ section
                 { title = "Contact Details"
-                , content = contactDetailsView model.contactDetails |> Html.map ContactDetailsMsg
+                , content = contactDetailsView model.account model.contactDetails |> Html.map ContactDetailsMsg
                 }
             , section
                 { title = "Settings"
-                , content = settingsView model.settings |> Html.map SettingsMsg
+                , content = settingsView model.account model.settings |> Html.map SettingsMsg
                 }
             , section
                 { title = "Tags"
@@ -423,156 +423,164 @@ userGroupSettingsView model =
         ]
 
 
-contactDetailsView : ContactDetails -> Html ContactDetailsMsg
-contactDetailsView contactDetails =
-    let
-        ( checked, value ) =
-            case contactDetails.contactDetailsInheritFrom of
-                Just parentId ->
-                    ( True, parentId )
+contactDetailsView : Account -> ContactDetails -> Html ContactDetailsMsg
+contactDetailsView account contactDetails =
+    case account of
+        Root ->
+            contactDetailsView_ contactDetails False
 
-                Nothing ->
-                    ( False, "" )
-    in
-    Html.div [ Attrs.class "flex flex-col gap-4" ]
-        [ Html.div [ Attrs.class "flex gap-2 items-baseline" ]
-            [ Html.input
-                [ Attrs.type_ "checkbox"
-                , Attrs.id "contact_details_inherited_from"
-                , Attrs.checked checked
-                , Events.onCheck ClickedContactDetailsInheritedFrom
+        Parent _ ->
+            let
+                ( checked, value ) =
+                    case contactDetails.contactDetailsInheritFrom of
+                        Just parentId ->
+                            ( True, parentId )
+
+                        Nothing ->
+                            ( False, "" )
+            in
+            Html.div [ Attrs.class "flex flex-col gap-4" ]
+                [ Html.div [ Attrs.class "flex gap-2 items-baseline" ]
+                    [ Html.input
+                        [ Attrs.type_ "checkbox"
+                        , Attrs.id "contact_details_inherited_from"
+                        , Attrs.checked checked
+                        , Events.onCheck ClickedContactDetailsInheritedFrom
+                        ]
+                        []
+                    , Html.label [ Attrs.for "contact_details_inherited_from" ] [ Html.text "Inherited from:" ]
+                    , Html.input
+                        [ Attrs.class "border-2 rounded w-16 text-end px-1"
+                        , Attrs.value value
+                        , Attrs.disabled (not checked)
+                        ]
+                        []
+                    ]
+                , contactDetailsView_ contactDetails checked
                 ]
-                []
-            , Html.label [ Attrs.for "contact_details_inherited_from" ] [ Html.text "Inherited from:" ]
-            , Html.input
-                [ Attrs.class "border-2 rounded w-16 text-end px-1"
-                , Attrs.value value
-                , Attrs.disabled (not checked)
+
+
+contactDetailsView_ : ContactDetails -> Bool -> Html ContactDetailsMsg
+contactDetailsView_ contactDetails disabled =
+    Html.div [ Attrs.class "flex flex-wrap gap-4" ]
+        [ Html.div [ Attrs.class "flex flex-col gap-4" ]
+            [ Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "email" ]
+                , Html.input
+                    [ Attrs.type_ "email"
+                    , Attrs.class "border-2 rounded px-1"
+                    , Attrs.id "address-email"
+                    , Attrs.name "address-email"
+                    , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Email)
+                    , Attrs.value contactDetails.email
+                    , Attrs.disabled disabled
+                    , Events.onInput InputEmail
+                    ]
+                    []
                 ]
-                []
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "phone" ]
+                , Html.input
+                    [ Attrs.type_ "tel"
+                    , Attrs.class "border-2 rounded px-1"
+                    , Attrs.id "address-phone"
+                    , Attrs.name "address-phone"
+                    , Attrs.placeholder "###-###-####"
+                    , Attrs.pattern "[0-9]{3}-[0-9]{3}-[0-9]{4}"
+                    , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Phone)
+                    , Attrs.value contactDetails.phone
+                    , Attrs.disabled disabled
+                    , Events.onInput InputPhone
+                    ]
+                    []
+                ]
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "company name" ]
+                , Html.input
+                    [ Attrs.class "border-2 rounded px-1"
+                    , Attrs.id "company-name"
+                    , Attrs.name "company-name"
+                    , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value contactDetails.companyName
+                    , Attrs.disabled disabled
+                    , Events.onInput InputCompanyName
+                    ]
+                    []
+                ]
             ]
-        , Html.div []
-            [ Html.div [ Attrs.class "flex flex-wrap gap-4" ]
-                [ Html.div [ Attrs.class "flex flex-col gap-4" ]
-                    [ Html.div [ Attrs.class "flex flex-col gap-1" ]
-                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "email" ]
-                        , Html.input
-                            [ Attrs.type_ "email"
-                            , Attrs.class "border-2 rounded px-1"
-                            , Attrs.id "address-email"
-                            , Attrs.name "address-email"
-                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Email)
-                            , Attrs.value contactDetails.email
-                            , Attrs.disabled checked
-                            , Events.onInput InputEmail
-                            ]
-                            []
-                        ]
-                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "phone" ]
-                        , Html.input
-                            [ Attrs.type_ "tel"
-                            , Attrs.class "border-2 rounded px-1"
-                            , Attrs.id "address-phone"
-                            , Attrs.name "address-phone"
-                            , Attrs.placeholder "###-###-####"
-                            , Attrs.pattern "[0-9]{3}-[0-9]{3}-[0-9]{4}"
-                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Phone)
-                            , Attrs.value contactDetails.phone
-                            , Attrs.disabled checked
-                            , Events.onInput InputPhone
-                            ]
-                            []
-                        ]
-                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "company name" ]
-                        , Html.input
-                            [ Attrs.class "border-2 rounded px-1"
-                            , Attrs.id "company-name"
-                            , Attrs.name "company-name"
-                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value contactDetails.companyName
-                            , Attrs.disabled checked
-                            , Events.onInput InputCompanyName
-                            ]
-                            []
-                        ]
+        , Html.div [ Attrs.class "flex flex-col gap-4" ]
+            [ Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "address" ]
+                , Html.input
+                    [ Attrs.class "border-2 rounded px-1"
+                    , Attrs.id "address"
+                    , Attrs.name "address"
+                    , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value contactDetails.address
+                    , Attrs.disabled disabled
+                    , Events.onInput InputAddress
                     ]
-                , Html.div [ Attrs.class "flex flex-col gap-4" ]
-                    [ Html.div [ Attrs.class "flex flex-col gap-1" ]
-                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "address" ]
-                        , Html.input
-                            [ Attrs.class "border-2 rounded px-1"
-                            , Attrs.id "address"
-                            , Attrs.name "address"
-                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value contactDetails.address
-                            , Attrs.disabled checked
-                            , Events.onInput InputAddress
-                            ]
-                            []
-                        ]
-                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "zip" ]
-                        , Html.input
-                            [ Attrs.class "border-2 rounded px-1"
-                            , Attrs.id "zip"
-                            , Attrs.name "zip"
-                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value contactDetails.zip
-                            , Attrs.disabled checked
-                            , Events.onInput InputZip
-                            ]
-                            []
-                        ]
-                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "city" ]
-                        , Html.input
-                            [ Attrs.class "border-2 rounded px-1"
-                            , Attrs.id "city"
-                            , Attrs.name "city"
-                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value contactDetails.city
-                            , Attrs.disabled checked
-                            , Events.onInput InputCity
-                            ]
-                            []
-                        ]
-                    , Html.div [ Attrs.class "flex flex-col gap-1" ]
-                        [ Html.label [ Attrs.class "text-sm" ] [ Html.text "country" ]
-                        , Html.input
-                            [ Attrs.class "border-2 rounded px-1"
-                            , Attrs.id "country"
-                            , Attrs.name "country"
-                            , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
-                            , Attrs.value contactDetails.country
-                            , Attrs.disabled checked
-                            , Events.onInput InputCountry
-                            ]
-                            []
-                        ]
-                    , Html.fieldset [ Attrs.disabled checked ]
-                        [ Html.legend [ Attrs.class "text-sm" ] [ Html.text "preferred contact method" ]
-                        , preferredContactMethodOption
-                            { id = "preferred-contact-method-email"
-                            , title = "Email"
-                            , checked = contactDetails.preferredContactMethod == ContactDetails.Email
-                            , onClick = ChangePreferredContactMethod ContactDetails.Email
-                            }
-                        , preferredContactMethodOption
-                            { id = "preferred-contact-method-phone"
-                            , title = "Phone"
-                            , checked = contactDetails.preferredContactMethod == ContactDetails.Phone
-                            , onClick = ChangePreferredContactMethod ContactDetails.Phone
-                            }
-                        , preferredContactMethodOption
-                            { id = "preferred-contact-method-post"
-                            , title = "Post"
-                            , checked = contactDetails.preferredContactMethod == ContactDetails.Post
-                            , onClick = ChangePreferredContactMethod ContactDetails.Post
-                            }
-                        ]
+                    []
+                ]
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "zip" ]
+                , Html.input
+                    [ Attrs.class "border-2 rounded px-1"
+                    , Attrs.id "zip"
+                    , Attrs.name "zip"
+                    , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value contactDetails.zip
+                    , Attrs.disabled disabled
+                    , Events.onInput InputZip
                     ]
+                    []
+                ]
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "city" ]
+                , Html.input
+                    [ Attrs.class "border-2 rounded px-1"
+                    , Attrs.id "city"
+                    , Attrs.name "city"
+                    , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value contactDetails.city
+                    , Attrs.disabled disabled
+                    , Events.onInput InputCity
+                    ]
+                    []
+                ]
+            , Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.label [ Attrs.class "text-sm" ] [ Html.text "country" ]
+                , Html.input
+                    [ Attrs.class "border-2 rounded px-1"
+                    , Attrs.id "country"
+                    , Attrs.name "country"
+                    , Attrs.required (contactDetails.preferredContactMethod == ContactDetails.Post)
+                    , Attrs.value contactDetails.country
+                    , Attrs.disabled disabled
+                    , Events.onInput InputCountry
+                    ]
+                    []
+                ]
+            , Html.fieldset [ Attrs.disabled disabled ]
+                [ Html.legend [ Attrs.class "text-sm" ] [ Html.text "preferred contact method" ]
+                , preferredContactMethodOption
+                    { id = "preferred-contact-method-email"
+                    , title = "Email"
+                    , checked = contactDetails.preferredContactMethod == ContactDetails.Email
+                    , onClick = ChangePreferredContactMethod ContactDetails.Email
+                    }
+                , preferredContactMethodOption
+                    { id = "preferred-contact-method-phone"
+                    , title = "Phone"
+                    , checked = contactDetails.preferredContactMethod == ContactDetails.Phone
+                    , onClick = ChangePreferredContactMethod ContactDetails.Phone
+                    }
+                , preferredContactMethodOption
+                    { id = "preferred-contact-method-post"
+                    , title = "Post"
+                    , checked = contactDetails.preferredContactMethod == ContactDetails.Post
+                    , onClick = ChangePreferredContactMethod ContactDetails.Post
+                    }
                 ]
             ]
         ]
@@ -600,82 +608,97 @@ preferredContactMethodOption { id, title, checked, onClick } =
         ]
 
 
-settingsView : Settings -> Html SettingsMsg
-settingsView settings =
-    let
-        ( checked, value ) =
-            case settings.settingsInheritedFrom of
-                Just parentId ->
-                    ( True, parentId )
+settingsView : Account -> Settings -> Html SettingsMsg
+settingsView account settings =
+    case account of
+        Root ->
+            settingsView_ settings False
 
-                Nothing ->
-                    ( False, "" )
-    in
-    Html.div [ Attrs.class "flex flex-col gap-4" ]
-        [ Html.div [ Attrs.class "flex gap-2 items-baseline" ]
-            [ Html.input
-                [ Attrs.type_ "checkbox"
-                , Attrs.id "settings_inherited_from"
-                , Attrs.checked checked
-                , Events.onCheck ClickedSettingsInheritedFrom
+        Parent _ ->
+            let
+                ( checked, value ) =
+                    case settings.settingsInheritedFrom of
+                        Just parentId ->
+                            ( True, parentId )
+
+                        Nothing ->
+                            ( False, "" )
+            in
+            Html.div [ Attrs.class "flex flex-col gap-4" ]
+                [ case account of
+                    Root ->
+                        Html.text ""
+
+                    Parent _ ->
+                        Html.div [ Attrs.class "flex gap-2 items-baseline" ]
+                            [ Html.input
+                                [ Attrs.type_ "checkbox"
+                                , Attrs.id "settings_inherited_from"
+                                , Attrs.checked checked
+                                , Events.onCheck ClickedSettingsInheritedFrom
+                                ]
+                                []
+                            , Html.label [ Attrs.for "settings_inherited_from" ] [ Html.text "Inherited from:" ]
+                            , Html.input
+                                [ Attrs.class "border-2 rounded w-16 text-end px-1"
+                                , Attrs.value value
+                                , Attrs.disabled (not checked)
+                                ]
+                                []
+                            ]
+                , settingsView_ settings checked
                 ]
-                []
-            , Html.label [ Attrs.for "settings_inherited_from" ] [ Html.text "Inherited from:" ]
-            , Html.input
-                [ Attrs.class "border-2 rounded w-16 text-end px-1"
-                , Attrs.value value
-                , Attrs.disabled (not checked)
+
+
+settingsView_ : Settings -> Bool -> Html SettingsMsg
+settingsView_ settings disabled =
+    Html.div [ Attrs.class "w-48" ]
+        [ if settings.showEditOptions then
+            Html.div [ Attrs.class "flex flex-col gap-1" ]
+                [ Html.input
+                    [ Attrs.class "self-end text-sky-500 text-sm"
+                    , Attrs.type_ "button"
+                    , Attrs.value "Done"
+                    , Events.onClick ClickedDone
+                    ]
+                    []
+                , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView settings.visibleOptions) IdleDocTimeout.all)
                 ]
-                []
-            ]
-        , Html.div [ Attrs.class "w-48" ]
-            [ if settings.showEditOptions then
-                Html.div [ Attrs.class "flex flex-col gap-1" ]
+
+          else
+            let
+                enabledTimeouts : List Item
+                enabledTimeouts =
+                    filterEnabledTimeouts settings
+            in
+            Html.div [ Attrs.class "flex flex-col gap-4" ]
+                [ Html.div [ Attrs.class "flex flex-col gap-2" ]
                     [ Html.input
-                        [ Attrs.class "self-end text-sky-500 text-sm"
+                        [ if disabled then
+                            Attrs.class "self-end text-slate-500 text-sm"
+
+                          else
+                            Attrs.class "self-end text-sky-500 text-sm"
                         , Attrs.type_ "button"
-                        , Attrs.value "Done"
-                        , Events.onClick ClickedDone
+                        , Attrs.value "Edit options"
+                        , Attrs.disabled disabled
+                        , Events.onClick ClickedEditOptions
                         ]
                         []
-                    , Html.div [ Attrs.class "flex flex-col" ] (List.map (editOptionView settings.visibleOptions) IdleDocTimeout.all)
+                    , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView settings.immediateTrash disabled) enabledTimeouts)
                     ]
-
-              else
-                let
-                    enabledTimeouts : List Item
-                    enabledTimeouts =
-                        filterEnabledTimeouts settings
-                in
-                Html.div [ Attrs.class "flex flex-col gap-4" ]
-                    [ Html.div [ Attrs.class "flex flex-col gap-2" ]
-                        [ Html.input
-                            [ if checked then
-                                Attrs.class "self-end text-slate-500 text-sm"
-
-                              else
-                                Attrs.class "self-end text-sky-500 text-sm"
-                            , Attrs.type_ "button"
-                            , Attrs.value "Edit options"
-                            , Attrs.disabled checked
-                            , Events.onClick ClickedEditOptions
-                            ]
-                            []
-                        , Html.div [ Attrs.class "flex flex-col gap-1" ] (List.map (enabledTimeoutView settings.immediateTrash checked) enabledTimeouts)
+                , Html.p [ Attrs.class "flex gap-2" ]
+                    [ Html.input
+                        [ Attrs.type_ "checkbox"
+                        , Attrs.id "immediate_trash"
+                        , Attrs.checked settings.immediateTrash
+                        , Attrs.disabled disabled
+                        , Events.onCheck CheckedImmediateTrash
                         ]
-                    , Html.p [ Attrs.class "flex gap-2" ]
-                        [ Html.input
-                            [ Attrs.type_ "checkbox"
-                            , Attrs.id "immediate_trash"
-                            , Attrs.checked settings.immediateTrash
-                            , Attrs.disabled checked
-                            , Events.onCheck CheckedImmediateTrash
-                            ]
-                            []
-                        , Html.label [ Attrs.for "immediate_trash" ] [ Html.text "Trash immediately" ]
-                        ]
+                        []
+                    , Html.label [ Attrs.for "immediate_trash" ] [ Html.text "Trash immediately" ]
                     ]
-            ]
+                ]
         ]
 
 
