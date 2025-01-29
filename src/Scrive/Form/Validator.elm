@@ -1,10 +1,8 @@
 module Scrive.Form.Validator exposing (..)
 
 import Either exposing (Either(..))
-import Scrive.Data.Address as CD
-import Scrive.Data.ContactDetails as CD
+import Scrive.Data.Address as A
 import Scrive.Data.Tag as Tag exposing (SomeTag, Tag)
-import Scrive.Data.UserGroup as UG
 import Scrive.Form.Error as FE
 import Scrive.Form.Field as Field
 import Set
@@ -19,14 +17,12 @@ tagValidator { isNew, index } currentTags =
         nameField =
             if isNew then
                 Field.NewTagName
-
             else
                 Field.NameOfTag <| Maybe.withDefault -1 index
 
         valueField =
             if isNew then
                 Field.NewTagValue
-
             else
                 Field.ValueOfTag <| Maybe.withDefault -1 index
     in
@@ -47,7 +43,7 @@ tagValidator { isNew, index } currentTags =
         ]
 
 
-addressValidator : CD.PreferredContact -> Validator FE.Error CD.DraftAddress
+addressValidator : A.PreferredContact -> Validator FE.Error A.DraftAddress
 addressValidator preferredMethod =
     let
         notSpecified : Maybe String -> Bool
@@ -59,26 +55,26 @@ addressValidator preferredMethod =
     Validate.all
         [ V.ifTrue
             (\addr ->
-                preferredMethod == CD.PC_Email && notSpecified addr.email
+                preferredMethod == A.PC_Email && notSpecified addr.email
             )
           <|
-            FE.make (Field.Address CD.F_Email) "E-mail should be specified when preferred contact method is set to \"e-mail\""
+            FE.make (Field.Address A.F_Email) "E-mail should be specified when preferred contact method is set to \"e-mail\""
         , V.ifTrue
             (\addr ->
-                preferredMethod == CD.PC_Post && notSpecified addr.address
+                preferredMethod == A.PC_Post && notSpecified addr.address
             )
           <|
-            FE.make (Field.Address CD.F_StreetAddress) "Street address should be specified when preferred contact method is set to \"post\""
+            FE.make (Field.Address A.F_StreetAddress) "Street address should be specified when preferred contact method is set to \"post\""
         , V.ifTrue
             (\addr ->
-                preferredMethod == CD.PC_Phone && notSpecified addr.phone
+                preferredMethod == A.PC_Phone && notSpecified addr.phone
             )
           <|
-            FE.make (Field.Address CD.F_Phone) "Phone should be specified when preferred contact method is set to \"phone\""
+            FE.make (Field.Address A.F_Phone) "Phone should be specified when preferred contact method is set to \"phone\""
         , V.ifFalse (.email >> Maybe.map (\e -> V.isValidEmail e || String.isEmpty e) >> Maybe.withDefault True) <|
-            FE.make (Field.Address CD.F_Email) "Specified e-mail has invalid format"
+            FE.make (Field.Address A.F_Email) "Specified e-mail has invalid format"
         , V.ifFalse (.phone >> Maybe.map (\p -> V.isValidPhone p || String.isEmpty p) >> Maybe.withDefault True) <|
-            FE.make (Field.Address CD.F_Phone) "Specified phone has invalid format"
+            FE.make (Field.Address A.F_Phone) "Specified phone has invalid format"
         , V.ifNotAllCharsAre (\c -> Char.isDigit c || c == ' ') (.zip >> Maybe.withDefault "") <|
-            FE.make (Field.Address CD.F_ZipCode) "ZIP code should contain only digits or spaces"
+            FE.make (Field.Address A.F_ZipCode) "ZIP code should contain only digits or spaces"
         ]

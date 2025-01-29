@@ -6,7 +6,7 @@ import Html.Events as Evts
 import Html.Events.Extra as Evts
 import Html.Extra as Html
 import Maybe
-import Scrive.Data.Address as CD
+import Scrive.Data.Address as Address
 import Scrive.Data.ContactDetails exposing (ContactDetails)
 import Scrive.Form.Error as Errors exposing (Error)
 import Scrive.Form.Field as Field exposing (Field)
@@ -14,14 +14,14 @@ import Style as Style
 
 
 type alias Handlers msg =
-    { setContactMethod : CD.PreferredContact -> msg
-    , tryUpdate : CD.DraftAddress -> msg
-    , editField : ( CD.Field, String ) -> msg
+    { setContactMethod : Address.PreferredContact -> msg
+    , tryUpdate : Address.DraftAddress -> msg
+    , editField : ( Address.Field, String ) -> msg
     }
 
 
 type alias State =
-    { readOnly : Bool, currentlyEditing : Maybe ( CD.Field, String ) }
+    { readOnly : Bool, currentlyEditing : Maybe ( Address.Field, String ) }
 
 
 view : List Error -> Handlers msg -> State -> ContactDetails -> Html msg
@@ -29,47 +29,47 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
     if readOnly then
         let
             draftAddress =
-                CD.toDraft address
+                Address.toDraft address
 
             textFor field =
-                roLabelAndValue (CD.fieldToLabel field ++ " : ") <|
+                roLabelAndValue (Address.fieldToLabel field ++ " : ") <|
                     Maybe.withDefault "-" <|
-                        CD.draftValueOf draftAddress field
+                        Address.draftValueOf draftAddress field
         in
         Html.ul
             [ Attrs.class Style.readOnlyValuesList ]
         <|
             (roLabelAndValue "Preferred way of contact : " <|
-                CD.preferredContactToString address.preferredContactMethod
+                Address.preferredContactToString address.preferredContactMethod
             )
-                :: (List.map textFor <| CD.allFields)
+                :: (List.map textFor <| Address.allFields)
 
     else
         let
             draftAddress =
-                CD.toDraft address
+                Address.toDraft address
 
-            qValueOf : CD.Field -> String
+            qValueOf : Address.Field -> String
             qValueOf =
-                Maybe.withDefault "" << CD.draftValueOf draftAddress
+                Maybe.withDefault "" << Address.draftValueOf draftAddress
 
-            qSubmitValue : CD.Field -> String -> msg
+            qSubmitValue : Address.Field -> String -> msg
             qSubmitValue field currentValue =
-                CD.setDraftValue draftAddress field currentValue |> tryUpdate
+                Address.setDraftValue draftAddress field currentValue |> tryUpdate
 
-            preferredContactOption : CD.PreferredContact -> Html msg
+            preferredContactOption : Address.PreferredContact -> Html msg
             preferredContactOption pc =
                 Html.option
                     [ Attrs.class Style.selectOption
                     , Attrs.selected <| pc == address.preferredContactMethod
                     ]
-                    [ Html.text <| CD.preferredContactToString pc ]
+                    [ Html.text <| Address.preferredContactToString pc ]
 
             inputFor field inputId currentValue =
                 Html.li [ Attrs.class Style.itemWithInput ]
                     [ Html.label
                         [ Attrs.for inputId, Attrs.class Style.inputLabel ]
-                        [ Html.text <| CD.fieldToLabel field ++ " : " ]
+                        [ Html.text <| Address.fieldToLabel field ++ " : " ]
                     , Html.input
                         [ Attrs.id inputId
                         , Attrs.type_ "text"
@@ -96,14 +96,14 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                     ]
                     [ Html.span
                         [ Attrs.class Style.fieldLabel ]
-                        [ Html.text <| CD.fieldToLabel field ]
+                        [ Html.text <| Address.fieldToLabel field ]
                     , Html.span
                         [ Attrs.class Style.fieldValue ]
                         [ Html.text <| qValueOf field ]
                     , Errors.viewMany <| Errors.extractOnlyAt (Field.Address field) errors
                     ]
 
-            inputOrTextFor : CD.Field -> String -> Html msg
+            inputOrTextFor : Address.Field -> String -> Html msg
             inputOrTextFor field inputId =
                 case currentlyEditing of
                     Just ( currentField, currentValue ) ->
@@ -123,18 +123,18 @@ view errors { setContactMethod, tryUpdate, editField } { readOnly, currentlyEdit
                 , Html.select
                     [ Attrs.id "preferred-contact"
                     , Attrs.class Style.selectBox
-                    , Evts.onInput (setContactMethod << CD.preferredContactFromOption)
+                    , Evts.onInput (setContactMethod << Address.preferredContactFromOption)
                     ]
                   <|
-                    List.map preferredContactOption CD.preferredWaysToContact
+                    List.map preferredContactOption Address.preferredWaysToContact
                 ]
-            , inputOrTextFor CD.F_Email "contact-email"
-            , inputOrTextFor CD.F_Phone "contact-phone"
-            , inputOrTextFor CD.F_CompanyName "contact-company"
-            , inputOrTextFor CD.F_StreetAddress "contact-street-address"
-            , inputOrTextFor CD.F_ZipCode "contact-zip-code"
-            , inputOrTextFor CD.F_City "contact-city"
-            , inputOrTextFor CD.F_Country "contact-country"
+            , inputOrTextFor Address.F_Email "contact-email"
+            , inputOrTextFor Address.F_Phone "contact-phone"
+            , inputOrTextFor Address.F_CompanyName "contact-company"
+            , inputOrTextFor Address.F_StreetAddress "contact-street-address"
+            , inputOrTextFor Address.F_ZipCode "contact-zip-code"
+            , inputOrTextFor Address.F_City "contact-city"
+            , inputOrTextFor Address.F_Country "contact-country"
             ]
 
 

@@ -8,7 +8,7 @@ import Html.Attributes as Attrs
 import Html.Events as Evts
 import Json.Decode as Json
 import Json.Encode as Json
-import Scrive.Data.Address as CD
+import Scrive.Data.Address as A
 import Scrive.Data.ContactDetails as CD
 import Scrive.Data.RetentionPolicy as RP
 import Scrive.Data.Tag as Tag exposing (ArchivedTag, SomeTag, Tag)
@@ -33,7 +33,7 @@ type EditFocus
     = FocusTag TagsForm.TagInProgress
     | FocusPolicyAdd RP.DataRetentionPolicy
     | FocusPolicyEdit ( RP.DataRetentionPolicy, Int )
-    | FocusContactsEdit ( CD.Field, String )
+    | FocusContactsEdit ( A.Field, String )
     | NotEditing
 
 
@@ -69,15 +69,15 @@ type ViewJson
 type Msg
     = NoOp
     | ClearEditFocus
-    | SetContactMethod CD.PreferredContact
-    | EditContactsField ( CD.Field, String )
+    | SetContactMethod A.PreferredContact
+    | EditContactsField ( A.Field, String )
     | SetTagInProgress TagsForm.TagInProgress
     | TryToCreateTag { newName : String, newValue : String }
     | TryToRestoreTag ArchivedTag { newValue : String }
     | TryToChangeTag Tag { newValue : String }
     | ArchiveTag Tag
     | RemoveTag SomeTag
-    | TryToUpdateAddress CD.DraftAddress
+    | TryToUpdateAddress A.DraftAddress
     | SelectPolicyToAdd RP.DataRetentionPolicy
     | AddSelectedPolicy
     | EditPolicyTimeout RP.DataRetentionPolicy Int
@@ -105,7 +105,7 @@ update msg model =
                             let
                                 resValidDraftAddress =
                                     -- just revalidating address with new contact method
-                                    CD.toDraft userGroup.contactDetails.address
+                                    A.toDraft userGroup.contactDetails.address
                                         |> V.validate (addressValidator pmethod)
                             in
                             case resValidDraftAddress of
@@ -120,7 +120,7 @@ update msg model =
             let
                 preferredMethod =
                     Result.map (.contactDetails >> .address >> .preferredContactMethod) model.userGroup
-                        |> Result.withDefault CD.PC_None -- if result is erronous, we won't update anything anyway
+                        |> Result.withDefault A.PC_None -- if result is erronous, we won't update anything anyway
 
                 resValidDraftAddress =
                     V.validate (addressValidator preferredMethod) newDraftAddress
@@ -382,7 +382,7 @@ restoreTag validTag =
             )
 
 
-updateAddress : Valid CD.DraftAddress -> UG.UserGroup -> UG.UserGroup
+updateAddress : Valid A.DraftAddress -> UG.UserGroup -> UG.UserGroup
 updateAddress validDraftAddress ugroup =
     let
         curDetails =
@@ -391,12 +391,12 @@ updateAddress validDraftAddress ugroup =
     { ugroup
         | contactDetails =
             { curDetails
-                | address = CD.fromDraft curDetails.address.preferredContactMethod validDraftAddress
+                | address = A.fromDraft curDetails.address.preferredContactMethod validDraftAddress
             }
     }
 
 
-updateContactMethod : CD.PreferredContact -> UG.UserGroup -> UG.UserGroup
+updateContactMethod : A.PreferredContact -> UG.UserGroup -> UG.UserGroup
 updateContactMethod pcontact ugroup =
     let
         curDetails =
@@ -522,7 +522,7 @@ viewDebugInfo model =
                 FocusTag tip -> "Tag : " ++ TagsForm.tagInProgressToString tip
                 FocusPolicyAdd policy -> "Policy add : " ++ RP.toString policy
                 FocusPolicyEdit ( policy, intVal ) -> "Policy edit : " ++ RP.toString policy ++ " (" ++ String.fromInt intVal ++ ")"
-                FocusContactsEdit ( cdField, value ) -> "Contacts edit : " ++ CD.fieldToLabel cdField ++ " (" ++ value ++ ")"
+                FocusContactsEdit ( cdField, value ) -> "Contacts edit : " ++ A.fieldToLabel cdField ++ " (" ++ value ++ ")"
                 NotEditing -> "Not editing"
         , Html.hr [] []
         , Html.button [ Evts.onClick <| ToggleJsonMode NoJson, Attrs.class Style.button ] [ Html.text "No JSON" ]
