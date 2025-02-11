@@ -109,110 +109,74 @@ textInputDisabled label value =
 
 
 type alias SelectConfig a msg =
-  { label : Element msg
+  { label : String
   , selected : a
   , options : List a
-  , toOptionLabel : a -> Element msg
-  , isOpen : Bool
-  , onOpen : Bool -> msg
+  , toOptionLabel : a -> String
+  , fromOptionLabel : String -> Maybe a
   , onSelect : a -> msg
+  , id : String
   }
 
 
 select : SelectConfig a msg -> Element msg
 select config =
-  E.el [ E.below (if config.isOpen then (selectDropdown config) else E.none) ] <|
-    I.button
-        [ E.htmlAttribute (HE.stopPropagationOn "click" (D.succeed (config.onOpen (not config.isOpen), True))) ]
-        { onPress = Just (config.onOpen (not config.isOpen))
-        , label = selectAnchor config
-        }
+  let toPx int =
+        String.fromInt int ++ "px"
 
+      decodeOption str =
+        case config.fromOptionLabel str of
+          Just option ->
+            D.succeed option
 
-selectAnchor : SelectConfig a msg -> Element msg
-selectAnchor config =
-  let viewInput =
-        E.row
-          [ E.paddingXY T.space3 T.space3
-          , E.width E.fill
-          , B.width 1
-          , B.rounded T.space1
-          , B.color T.gray200
-          , E.focused
-              [ B.color T.blue400
-              , B.shadow
-                  { offset = ( 0, 0 )
-                  , size = 4
-                  , blur = 0
-                  , color = T.blue50
-                  }
-              ]
-          ]
-
-      viewLabel =
-        E.el
-          [ F.size T.fontSize2
-          , F.color T.gray700
-          , E.width E.fill
-          ]
-          config.label
-
-      viewChevron =
-        E.el [ F.color T.gray500, E.alignRight ] <|
-          if config.isOpen
-              then icon T.fontSize3 I.chevronUp
-              else icon T.fontSize3 I.chevronDown
+          Nothing ->
+            D.fail "Unknown option"
   in
-  E.column
-    [ E.spacing T.space2
-    , E.width (E.minimum T.space16 E.shrink)
+  E.el [ E.width (E.minimum T.space16 E.shrink) ] <| E.html <|
+    H.div
+      [ HA.style "display" "inline-flex"
+      , HA.style "width" "100%"
+      , HA.style "flex-direction" "column"
+      , HA.style "gap" (toPx T.space2)
+      ]
+      [ H.label
+          [ HA.for config.id
+          , HA.style "font-size" (toPx T.fontSize2)
+          , HA.style "color" "#344055"
+          ]
+          [ H.text config.label ]
+      , H.node "style" [] [ H.text
+          """ .scrive-select-container:focus-within { border: 1px solid #53b1fd; box-shadow: 0px 0px 4px #eff8ff; }
+              .scrive-select:focus { outline: none; }
+          """
+          ]
+      , H.div
+          [ HA.style "border-radius" (toPx T.space1)
+          , HA.style "border" "1px solid #ebecf0"
+          , HA.style "width" "100%"
+          , HA.class "scrive-select-container"
+          ]
+          [ H.select
+              [ HA.id config.id
+              , HA.style "width" "100%"
+              , HA.class "scrive-select"
+              , HA.style "border-radius" (toPx T.space1)
+              , HA.style "padding" (toPx T.space2 ++ " " ++ toPx T.space3)
+              , HA.style "border-right" (toPx T.space2 ++ " solid #fff")
+              , HE.on "change" (HE.targetValue |> D.andThen decodeOption |> D.map config.onSelect)
+              ]
+              (List.map (selectOption config) config.options)
+          ]
+      ]
+
+
+selectOption : SelectConfig a msg -> a -> Html msg
+selectOption config option =
+  H.option
+    [ HA.value (config.toOptionLabel option)
+    , HA.selected (option == config.selected)
     ]
-    [ viewLabel
-    , viewInput
-        [ config.toOptionLabel config.selected
-        , viewChevron
-        ]
-    ]
-
-
-selectDropdown : SelectConfig a msg -> Element msg
-selectDropdown config =
-  E.column
-    [ BG.color T.white
-    , B.width 1
-    , B.rounded T.space1
-    , B.color T.gray200
-    , E.moveDown T.space1
-    , E.width (E.minimum T.space16 E.shrink)
-    , E.height (E.maximum T.space15 E.fill)
-    , E.scrollbarX
-    ] <|
-      let viewOne option =
-            I.button
-              [ E.paddingXY T.space3 T.space3
-              , E.width E.fill
-              , F.size T.fontSize2
-              , F.color T.gray900
-              , E.mouseOver [ BG.color T.gray50 ]
-              , E.focused [ BG.color T.blue50 ]
-              ]
-              { label = viewLabel option, onPress = Just (config.onSelect option) }
-
-          viewLabel option =
-            E.row
-              [ E.width E.fill
-              , E.spacing T.space2
-              ]
-              [ config.toOptionLabel option
-              , E.el [ F.color T.blue500, E.alignRight ] (viewCheck option)
-              ]
-
-          viewCheck option =
-            if option == config.selected
-              then icon T.fontSize2 I.check
-              else E.none
-        in
-        List.map viewOne config.options
+    [ H.text (config.toOptionLabel option) ]
 
 
 

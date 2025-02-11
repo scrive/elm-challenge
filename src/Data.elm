@@ -2,7 +2,7 @@ module Data exposing
   ( data
   , decodeUserGroup
   , UserGroup, UserGroupChild, Settings, ContactDetails, ContactMethod(..), Address, Tag
-  , contactMethodToString
+  , contactMethodToString, stringToContactMethod
   )
 
 
@@ -79,10 +79,25 @@ type alias Tag =
 
 contactMethodToString : ContactMethod -> String
 contactMethodToString method =
-  case method of
-    Email -> "E-mail"
-    Phone -> "Phone"
-    Post -> "Post"
+  List.filter (\(m, _) -> m == method) contactMethodStringPairs
+    |> List.head
+    |> Maybe.map Tuple.second
+    |> Maybe.withDefault ""
+
+
+stringToContactMethod : String -> Maybe ContactMethod
+stringToContactMethod str =
+  List.filter (\(_, string) -> str == string) contactMethodStringPairs
+    |> List.head
+    |> Maybe.map Tuple.first
+
+
+contactMethodStringPairs : List ( ContactMethod, String )
+contactMethodStringPairs =
+  [ ( Email, "E-mail" )
+  , ( Phone, "Phone" )
+  , ( Post, "Post" )
+  ]
 
 
 

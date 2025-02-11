@@ -21,16 +21,12 @@ import Validate
 
 
 type alias Model =
-    { userGroup : Data.UserGroup
-    , isPreferredMethodSelectOpen : Bool
-    }
+    { userGroup : Data.UserGroup }
 
 
 init : Data.UserGroup -> ( Model, Cmd Msg )
 init userGroup =
-    ( { userGroup = userGroup
-      , isPreferredMethodSelectOpen = False
-      }
+    ( { userGroup = userGroup }
     , Cmd.none
     )
 
@@ -41,8 +37,7 @@ init userGroup =
 
 type Msg
     = OnChangeUserInheritance String
-    | OnTogglePreferredMethodSelect Bool
-    | OnSelectPreferredMethod Data.ContactMethod
+    | OnChangePreferredMethod Data.ContactMethod
     | OnChangeEmail String
     | OnChangePhone String
     | OnChangeCompanyName String
@@ -62,10 +57,7 @@ update msg model =
             , Cmd.none
             )
 
-        OnTogglePreferredMethodSelect isOpen ->
-            ( { model | isPreferredMethodSelectOpen = isOpen }, Cmd.none )
-
-        OnSelectPreferredMethod method ->
+        OnChangePreferredMethod method ->
             ( updateAddress model <| \address ->
                 { address | preferredContactMethod = method }
             , Cmd.none
@@ -181,13 +173,13 @@ viewContactDetailsEditable model address =
         ]
         [ E.el [ F.color T.gray800 ] (E.text "Please fill in your contact details.")
         , Ui.select
-            { label = E.text "Preferred contact method"
+            { label = "Preferred contact method"
             , selected = address.preferredContactMethod
             , options = [ Data.Email, Data.Phone, Data.Post ]
-            , toOptionLabel = \method -> E.text (Data.contactMethodToString method)
-            , isOpen = model.isPreferredMethodSelectOpen
-            , onOpen = OnTogglePreferredMethodSelect
-            , onSelect = OnSelectPreferredMethod
+            , toOptionLabel = Data.contactMethodToString
+            , fromOptionLabel = Data.stringToContactMethod
+            , onSelect = OnChangePreferredMethod
+            , id = "preferred-contact-method"
             }
 
         , E.wrappedRow
