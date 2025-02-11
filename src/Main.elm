@@ -11,23 +11,13 @@ import Json.Decode
 ---- MODEL ----
 
 
-type Page
-    = LoadingSuccess Model
-    | LoadingFailed Json.Decode.Error
-
-
 type alias Model =
     { userGroup : Data.UserGroup }
 
 
-init : ( Page, Cmd Msg )
-init =
-    case Json.Decode.decodeString Data.decodeUserGroup Data.data of
-        Ok userGroup ->
-            ( LoadingSuccess { userGroup = userGroup }, Cmd.none )
-
-        Err decodeError ->
-            ( LoadingFailed decodeError, Cmd.none )
+init : Data.UserGroup -> ( Model, Cmd Msg )
+init userGroup =
+    ( { userGroup = userGroup }, Cmd.none )
 
 
 
@@ -38,7 +28,7 @@ type Msg
     = NoOp
 
 
-update : Msg -> Page -> ( Page, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update _ model =
     ( model, Cmd.none )
 
@@ -59,27 +49,53 @@ subheader text =
         [ Html.text text ]
 
 
-view : Page -> Html Msg
-view page =
-    case page of
-        LoadingSuccess model -> Html.text "Success!"
-        LoadingFailed decodingError -> Html.text (Json.Decode.errorToString decodingError)
+view : Model -> Html Msg
+view model =
+    Html.text "success!"
 
 
 
 ---- PROGRAM ----
 
 
+type Page
+    = LoadingSuccess Model
+    | LoadingFailed Json.Decode.Error
+
+
 main : Program () Page Msg
 main =
     Browser.application
         { view =
-            \model ->
+            \page ->
                 { title = "Scrive elm challenge task"
-                , body = [ view model ]
+                , body =
+                    [ case page of
+                        LoadingSuccess model ->
+                            view model
+
+                        LoadingFailed decodingError ->
+                            Html.text (Json.Decode.errorToString decodingError)
+                    ]
                 }
-        , init = \_ _ _ -> init
-        , update = update
+        , init =
+            \_ _ _ ->
+                case Json.Decode.decodeString Data.decodeUserGroup Data.data of
+                    Ok userGroup ->
+                        init userGroup
+                            |> Tuple.mapFirst LoadingSuccess
+
+                    Err decodeError ->
+                        ( LoadingFailed decodeError, Cmd.none )
+        , update =
+            \msg page ->
+                case page of
+                    LoadingSuccess model ->
+                        update msg model
+                            |> Tuple.mapFirst LoadingSuccess
+
+                    LoadingFailed _ ->
+                        ( page, Cmd.none )
         , subscriptions = always Sub.none
         , onUrlRequest = always NoOp
         , onUrlChange = always NoOp
