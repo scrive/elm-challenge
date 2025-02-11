@@ -144,12 +144,7 @@ view model =
                 , E.spacing T.space4
                 ]
                 [ E.el [ F.size T.fontSize3 ] (E.text "Address")
-                , case model.userGroup.contactDetails.inheritedFrom of
-                    Nothing ->
-                        viewContactDetailsEditable model model.userGroup.contactDetails.address
-
-                    Just _ ->
-                        viewContactDetails model.userGroup.contactDetails.address
+                , viewContactDetails model model.userGroup.contactDetails.address
                 ]
             ]
         ]
@@ -162,11 +157,20 @@ viewInheritUserInput contactDetails =
         , value = Maybe.withDefault "" contactDetails.inheritedFrom
         , placeholder = "User id"
         , label = "Inherit from user"
+        , disabled = False
         }
 
 
-viewContactDetailsEditable : Model -> Data.Address -> Element Msg
-viewContactDetailsEditable model address =
+viewContactDetails : Model -> Data.Address -> Element Msg
+viewContactDetails model address =
+    let isDisabled =
+            case model.userGroup.contactDetails.inheritedFrom of
+                Nothing ->
+                    False
+
+                Just _ ->
+                    True
+    in
     E.column
         [ E.width E.fill
         , E.spacing T.space5
@@ -180,6 +184,7 @@ viewContactDetailsEditable model address =
             , fromOptionLabel = Data.stringToContactMethod
             , onSelect = OnChangePreferredMethod
             , id = "preferred-contact-method"
+            , disabled = isDisabled
             }
 
         , E.wrappedRow
@@ -191,12 +196,14 @@ viewContactDetailsEditable model address =
                 , value = address.email
                 , placeholder = "name@email.com"
                 , label = "E-mail"
+                , disabled = isDisabled
                 }
             , Ui.textInput
                 { onChange = OnChangePhone
                 , value = address.phone
                 , placeholder = "+4612345678"
                 , label = "Phone"
+                , disabled = isDisabled
                 }
             ]
         , E.wrappedRow
@@ -208,75 +215,55 @@ viewContactDetailsEditable model address =
                 , value = address.companyName
                 , placeholder = "Scrive"
                 , label = "Company Name"
+                , disabled = isDisabled
                 }
             , Ui.textInput
                 { onChange = OnChangeAddress
                 , value = address.address
                 , placeholder = "Grev Turegatan 11A"
                 , label = "Address"
+                , disabled = isDisabled
                 }
             , Ui.textInput
                 { onChange = OnChangeZipCode
                 , value = address.zip
                 , placeholder = "114 46"
                 , label = "Zip code"
+                , disabled = isDisabled
                 }
             , Ui.textInput
                 { onChange = OnChangeCity
                 , value = address.city
                 , placeholder = "Stockholm"
                 , label = "City"
+                , disabled = isDisabled
                 }
             , Ui.textInput
                 { onChange = OnChangeCountry
                 , value = address.country
                 , placeholder = "Sweden"
                 , label = "Country"
+                , disabled = isDisabled
                 }
             ]
-        , case Validate.validate (validator address) address of
-            Ok _ ->
-                Ui.button
-                    { label = E.text "Save"
-                    , onClick = Just NoOp
-                    }
+        , if isDisabled then
+            E.none
+          else
+            case Validate.validate (validator address) address of
+                Ok _ ->
+                    Ui.button
+                        { label = E.text "Save"
+                        , onClick = Just NoOp
+                        }
 
-            Err errors ->
-                E.column
-                    [ E.width E.fill
-                    , E.spacing T.space5
-                    ]
-                    [ E.column [ E.width E.fill, E.spacing T.space3, F.color T.red700 ] (List.map E.text errors)
-                    , Ui.button { label = E.text "Save", onClick = Nothing }
-                    ]
-        ]
-
-
-viewContactDetails : Data.Address -> Element Msg
-viewContactDetails { preferredContactMethod, email, phone, companyName, address, zip, city, country } =
-    E.column
-        [ E.width E.fill
-        , E.spacing T.space5
-        ]
-        [ E.el [ F.color T.gray800 ] (E.text "Contact details can not be edited when inherited from another user.")
-        , Ui.textInputDisabled "Preferred contact method" (Data.contactMethodToString preferredContactMethod)
-        , E.wrappedRow
-            [ E.width E.fill
-            , E.spacing T.space5
-            ]
-            [ Ui.textInputDisabled "E-mail" email
-            , Ui.textInputDisabled "Phone" phone
-            ]
-        , E.wrappedRow
-            [ E.width E.fill
-            , E.spacing T.space5
-            ]
-            [ Ui.textInputDisabled "Company Name" companyName
-            , Ui.textInputDisabled "Address" address
-            , Ui.textInputDisabled "Zip code" zip
-            , Ui.textInputDisabled "City" city
-            , Ui.textInputDisabled "Country" country
-            ]
+                Err errors ->
+                    E.column
+                        [ E.width E.fill
+                        , E.spacing T.space5
+                        ]
+                        [ E.column [ E.width E.fill, E.spacing T.space3, F.color T.red700 ] (List.map E.text errors)
+                        , Ui.button { label = E.text "Save", onClick = Nothing }
+                        ]
         ]
 
 

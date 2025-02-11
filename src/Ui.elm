@@ -1,6 +1,5 @@
 module Ui exposing
-  ( textInputDisabled
-  , textInput, TextInputConfig
+  ( textInput, TextInputConfig
   , select, SelectConfig
   , button, ButtonConfig
   )
@@ -18,6 +17,9 @@ import Element.Background as BG
 import Ui.Theme as T
 import FeatherIcons as I
 import Json.Decode as D
+import Accessibility.Aria
+import Accessibility.Key
+import Accessibility.Role
 
 
 
@@ -29,6 +31,7 @@ type alias TextInputConfig msg =
   , value : String
   , placeholder : String
   , onChange : String -> msg
+  , disabled : Bool
   }
 
 
@@ -36,7 +39,7 @@ textInput : TextInputConfig msg -> Element msg
 textInput config =
   let viewInput =
         I.text
-          [ E.paddingXY T.space3 T.space3
+          ([ E.paddingXY T.space3 T.space3
           , E.width E.fill
           , B.width 1
           , B.rounded T.space1
@@ -50,12 +53,22 @@ textInput config =
                   , color = T.blue50
                   }
               ]
-          ]
+          ] ++ disabledAttrs)
           { onChange = config.onChange
           , text = config.value
-          , placeholder = Just (I.placeholder [ F.color T.gray400, F.size T.fontSize2 ] (E.text config.placeholder))
+          , placeholder = Just (I.placeholder [ F.color T.gray500, F.size T.fontSize2 ] (E.text config.placeholder))
           , label = I.labelHidden config.label
           }
+
+      disabledAttrs =
+        if config.disabled then
+          [ E.htmlAttribute (HA.disabled True)
+          , E.htmlAttribute (Accessibility.Aria.disabled True)
+          , BG.color T.gray50
+          , F.color T.gray600
+          ]
+        else
+          []
 
       viewLabel =
         E.el
@@ -63,37 +76,6 @@ textInput config =
           , F.color T.gray600
           ]
           (E.text config.label)
-  in
-  E.column
-    [ E.spacing T.space2
-    , E.width (E.minimum T.space16 E.shrink)
-    ]
-    [ viewLabel
-    , viewInput
-    ]
-
-
-textInputDisabled : String -> String -> Element msg
-textInputDisabled label value =
-  let viewInput =
-        E.el
-          [ E.paddingXY T.space3 T.space3
-          , E.width E.fill
-          , E.height (E.px 40)
-          , B.width 1
-          , B.rounded T.space1
-          , B.color T.gray200
-          , BG.color T.gray50
-          , F.color T.gray600
-          ]
-          (E.text value)
-
-      viewLabel =
-        E.el
-          [ F.size T.fontSize2
-          , F.color T.gray600
-          ]
-          (E.text label)
   in
   E.column
     [ E.spacing T.space2
@@ -116,6 +98,7 @@ type alias SelectConfig a msg =
   , fromOptionLabel : String -> Maybe a
   , onSelect : a -> msg
   , id : String
+  , disabled : Bool
   }
 
 
@@ -131,6 +114,16 @@ select config =
 
           Nothing ->
             D.fail "Unknown option"
+
+      disabledAttrs =
+        if config.disabled then
+          [ HA.disabled True
+          , Accessibility.Aria.disabled True
+          , HA.style "background-color" "#f9fafb"
+          , HA.style "color" "#475468"
+          ]
+        else
+          []
   in
   E.el [ E.width (E.minimum T.space16 E.shrink) ] <| E.html <|
     H.div
@@ -157,14 +150,14 @@ select config =
           , HA.class "scrive-select-container"
           ]
           [ H.select
-              [ HA.id config.id
+              ([ HA.id config.id
               , HA.style "width" "100%"
               , HA.class "scrive-select"
               , HA.style "border-radius" (toPx T.space1)
               , HA.style "padding" (toPx T.space2 ++ " " ++ toPx T.space3)
               , HA.style "border-right" (toPx T.space2 ++ " solid #fff")
               , HE.on "change" (HE.targetValue |> D.andThen decodeOption |> D.map config.onSelect)
-              ]
+              ] ++ disabledAttrs)
               (List.map (selectOption config) config.options)
           ]
       ]
