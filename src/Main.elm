@@ -22,7 +22,11 @@ TODO
   disabling submit button.
 - If submit button is to remain disabled, reconsider styling. Needs contrast,
   but looks like secondary button currently.
-- Add autofill attributes to e-mail and phone?
+- Right now the value of the Inherited User field determines whether the
+  contact details can be edited. Alternatively, one could add a checkbox
+  to trigger the Inherited User field and choosing to inherit would feel
+  more intentional.
+- Add autofill attributes to e-mail and phone
 - This form doesn't actually submit anything, but it did, it should have a
   success message of some sort.
 - Prettier responsibility.
