@@ -163,48 +163,58 @@ viewContactDetailsEditable address =
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ Ui.textInput
-            { onChange = OnChangeEmail
-            , value = address.email
-            , placeholder = "name@email.com"
-            , label = "E-mail"
-            }
-        , Ui.textInput
-            { onChange = OnChangePhone
-            , value = address.phone
-            , placeholder = "+4612345678"
-            , label = "Phone"
-            }
-        , Ui.textInput
-            { onChange = OnChangeCompanyName
-            , value = address.companyName
-            , placeholder = "Scrive"
-            , label = "Company Name"
-            }
-        , Ui.textInput
-            { onChange = OnChangeAddress
-            , value = address.address
-            , placeholder = "Address"
-            , label = "Address"
-            }
-        , Ui.textInput
-            { onChange = OnChangeZipCode
-            , value = address.zip
-            , placeholder = "Zip code"
-            , label = "Zip code"
-            }
-        , Ui.textInput
-            { onChange = OnChangeCity
-            , value = address.city
-            , placeholder = "Stockholm"
-            , label = "City"
-            }
-        , Ui.textInput
-            { onChange = OnChangeCountry
-            , value = address.country
-            , placeholder = "Sweden"
-            , label = "Country"
-            }
+        [ E.wrappedRow
+            [ E.width E.fill
+            , E.spacing T.space5
+            ]
+            [ Ui.textInput
+                { onChange = OnChangeEmail
+                , value = address.email
+                , placeholder = "name@email.com"
+                , label = "E-mail"
+                }
+            , Ui.textInput
+                { onChange = OnChangePhone
+                , value = address.phone
+                , placeholder = "+4612345678"
+                , label = "Phone"
+                }
+            ]
+        , E.wrappedRow
+            [ E.width E.fill
+            , E.spacing T.space5
+            ]
+            [ Ui.textInput
+                { onChange = OnChangeCompanyName
+                , value = address.companyName
+                , placeholder = "Scrive"
+                , label = "Company Name"
+                }
+            , Ui.textInput
+                { onChange = OnChangeAddress
+                , value = address.address
+                , placeholder = "Address"
+                , label = "Address"
+                }
+            , Ui.textInput
+                { onChange = OnChangeZipCode
+                , value = address.zip
+                , placeholder = "Zip code"
+                , label = "Zip code"
+                }
+            , Ui.textInput
+                { onChange = OnChangeCity
+                , value = address.city
+                , placeholder = "Stockholm"
+                , label = "City"
+                }
+            , Ui.textInput
+                { onChange = OnChangeCountry
+                , value = address.country
+                , placeholder = "Sweden"
+                , label = "Country"
+                }
+            ]
         , case Validate.validate (validator address) address of
             Ok _ -> E.text "Ok button"
             Err errors -> E.column [ E.width E.fill ] (List.map E.text errors)
