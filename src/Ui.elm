@@ -72,7 +72,7 @@ textInputDisabled label value =
         E.el
           [ E.paddingXY T.space3 T.space3
           , E.width E.fill
-          , E.height (E.px 42)
+          , E.height (E.px 40)
           , B.width 1
           , B.rounded T.space1
           , B.color T.gray200
