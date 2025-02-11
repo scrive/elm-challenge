@@ -345,7 +345,7 @@ type Page
 
 main : Program () Page Msg
 main =
-    Browser.application
+    Browser.document
         { view =
             \page ->
                 { title = "Scrive elm challenge task"
@@ -369,7 +369,7 @@ main =
                     ]
                 }
         , init =
-            \_ _ _ ->
+            \_ ->
                 case Json.Decode.decodeString Data.decodeUserGroup Data.data of
                     Ok userGroup ->
                         init userGroup
@@ -387,6 +387,4 @@ main =
                     LoadingFailed _ ->
                         ( page, Cmd.none )
         , subscriptions = always Sub.none
-        , onUrlRequest = always NoOp
-        , onUrlChange = always NoOp
         }
