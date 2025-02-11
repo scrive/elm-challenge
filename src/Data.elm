@@ -1,7 +1,7 @@
 module Data exposing
   ( data
   , decodeUserGroup
-  , UserGroup, UserGroupChild, Settings, ContactDetails, Address, Tag
+  , UserGroup, UserGroupChild, Settings, ContactDetails, ContactMethod(..), Address, Tag
   )
 
 
@@ -50,8 +50,8 @@ type alias ContactDetails =
 
 type alias Address =
   { preferredContactMethod : ContactMethod
-  , email : Maybe String
-  , phone : Maybe String
+  , email : String
+  , phone : String
   , companyName : String
   , address : String
   , zip : String
@@ -121,8 +121,8 @@ decodeAddress : D.Decoder Address
 decodeAddress =
   D.map8 Address
     (D.field "preferred_contact_method" decodeContactMethod)
-    (D.field "email" (D.nullable D.string))
-    (D.field "phone" (D.nullable D.string))
+    (D.field "email" decodeNullOrString)
+    (D.field "phone" decodeNullOrString)
     (D.field "company_name" D.string)
     (D.field "address" D.string)
     (D.field "zip" D.string)
@@ -147,6 +147,12 @@ decodeTag =
   D.map2 Tag
     (D.field "name" D.string)
     (D.oneOf [ D.map Just (D.field "value" D.string), D.succeed Nothing ])
+
+
+decodeNullOrString : D.Decoder String
+decodeNullOrString =
+  D.nullable D.string
+    |> D.map (Maybe.withDefault "")
 
 
 data : String

@@ -13,6 +13,7 @@ import Element.Events as EE
 import Element.Background as BG
 import Ui.Theme as T
 import Ui
+import Validate
 
 
 
@@ -55,13 +56,13 @@ update msg model =
 
         OnChangeEmail str ->
             ( updateAddress model <| \address ->
-                { address | email = if isBlank str then Nothing else Just str }
+                { address | email = str }
             , Cmd.none
             )
 
         OnChangePhone str ->
             ( updateAddress model <| \address ->
-                { address | phone = if isBlank str then Nothing else Just str }
+                { address | phone = str }
             , Cmd.none
             )
 
@@ -111,7 +112,7 @@ updateAddress ({ userGroup } as model) func =
 
 
 
----- VIEW ----
+-- VIEW
 
 
 view : Model -> Element Msg
@@ -157,53 +158,56 @@ viewInheritUserInput contactDetails =
 
 
 viewContactDetailsEditable : Data.Address -> Element Msg
-viewContactDetailsEditable { email, phone, companyName, address, zip, city, country } =
+viewContactDetailsEditable address =
     E.column
         [ E.width E.fill
         , E.spacing T.space5
         ]
         [ Ui.textInput
             { onChange = OnChangeEmail
-            , value = Maybe.withDefault "" email
+            , value = address.email
             , placeholder = "name@email.com"
             , label = "E-mail"
             }
         , Ui.textInput
             { onChange = OnChangePhone
-            , value = Maybe.withDefault "" phone
+            , value = address.phone
             , placeholder = "+4612345678"
             , label = "Phone"
             }
         , Ui.textInput
             { onChange = OnChangeCompanyName
-            , value = companyName
+            , value = address.companyName
             , placeholder = "Scrive"
             , label = "Company Name"
             }
         , Ui.textInput
             { onChange = OnChangeAddress
-            , value = address
+            , value = address.address
             , placeholder = "Address"
             , label = "Address"
             }
         , Ui.textInput
             { onChange = OnChangeZipCode
-            , value = zip
+            , value = address.zip
             , placeholder = "Zip code"
             , label = "Zip code"
             }
         , Ui.textInput
             { onChange = OnChangeCity
-            , value = city
+            , value = address.city
             , placeholder = "Stockholm"
             , label = "City"
             }
         , Ui.textInput
             { onChange = OnChangeCountry
-            , value = country
+            , value = address.country
             , placeholder = "Sweden"
             , label = "Country"
             }
+        , case Validate.validate (validator address) address of
+            Ok _ -> E.text "Ok button"
+            Err errors -> E.column [ E.width E.fill ] (List.map E.text errors)
         ]
 
 
@@ -213,8 +217,8 @@ viewContactDetails { email, phone, companyName, address, zip, city, country } =
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ Ui.textInputDisabled "E-mail" (Maybe.withDefault "" email)
-        , Ui.textInputDisabled "Phone" (Maybe.withDefault "" phone)
+        [ Ui.textInputDisabled "E-mail" email
+        , Ui.textInputDisabled "Phone" phone
         , Ui.textInputDisabled "Company Name" companyName
         , Ui.textInputDisabled "Address" address
         , Ui.textInputDisabled "Zip code" zip
@@ -224,7 +228,41 @@ viewContactDetails { email, phone, companyName, address, zip, city, country } =
 
 
 
----- PROGRAM ----
+-- VALIDATION
+
+
+validator : Data.Address -> Validate.Validator String Data.Address
+validator address =
+    case address.preferredContactMethod of
+        Data.Email ->
+            Validate.all
+                [ Validate.ifInvalidEmail .email (\_ -> "Please enter a valid e-mail.") ]
+
+        Data.Phone ->
+            Validate.all
+                [ Validate.ifBlank .phone "Please enter a valid phone." ]
+
+        Data.Post ->
+            Validate.all
+                [ Validate.ifBlank .companyName "Company name must not be blank."
+                , Validate.ifBlank .address "Address must not be blank."
+                , Validate.ifBlank .zip "Zip code must not be blank."
+                , Validate.ifBlank .city "City must not be blank."
+                , Validate.ifBlank .country "Country must not be blank."
+                ]
+
+
+
+-- HELPERS
+
+
+isBlank : String -> Bool
+isBlank str =
+    String.isEmpty (String.trim str)
+
+
+
+-- PROGRAM
 
 
 type Page
@@ -269,11 +307,3 @@ main =
         , onUrlRequest = always NoOp
         , onUrlChange = always NoOp
         }
-
-
--- HELPERS
-
-
-isBlank : String -> Bool
-isBlank str =
-    String.isEmpty (String.trim str)
