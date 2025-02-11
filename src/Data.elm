@@ -2,6 +2,7 @@ module Data exposing
   ( data
   , decodeUserGroup
   , UserGroup, UserGroupChild, Settings, ContactDetails, ContactMethod(..), Address, Tag
+  , contactMethodToString
   )
 
 
@@ -70,6 +71,22 @@ type alias Tag =
   { name : String
   , value : Maybe String
   }
+
+
+
+-- MANIPULATIONS
+
+
+contactMethodToString : ContactMethod -> String
+contactMethodToString method =
+  case method of
+    Email -> "E-mail"
+    Phone -> "Phone"
+    Post -> "Post"
+
+
+
+-- DECODERS
 
 
 decodeUserGroup : D.Decoder UserGroup

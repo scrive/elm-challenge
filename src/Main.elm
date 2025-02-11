@@ -21,12 +21,18 @@ import Validate
 
 
 type alias Model =
-    { userGroup : Data.UserGroup }
+    { userGroup : Data.UserGroup
+    , isPreferredMethodSelectOpen : Bool
+    }
 
 
 init : Data.UserGroup -> ( Model, Cmd Msg )
 init userGroup =
-    ( { userGroup = userGroup }, Cmd.none )
+    ( { userGroup = userGroup
+      , isPreferredMethodSelectOpen = False
+      }
+    , Cmd.none
+    )
 
 
 
@@ -35,6 +41,8 @@ init userGroup =
 
 type Msg
     = OnChangeUserInheritance String
+    | OnTogglePreferredMethodSelect Bool
+    | OnSelectPreferredMethod Data.ContactMethod
     | OnChangeEmail String
     | OnChangePhone String
     | OnChangeCompanyName String
@@ -51,6 +59,15 @@ update msg model =
         OnChangeUserInheritance str ->
             ( updateContactDetails model <| \contactDetails ->
                 { contactDetails | inheritedFrom = if isBlank str then Nothing else Just str }
+            , Cmd.none
+            )
+
+        OnTogglePreferredMethodSelect isOpen ->
+            ( { model | isPreferredMethodSelectOpen = isOpen }, Cmd.none )
+
+        OnSelectPreferredMethod method ->
+            ( updateAddress model <| \address ->
+                { address | preferredContactMethod = method }
             , Cmd.none
             )
 
@@ -138,7 +155,7 @@ view model =
                 [ E.el [ F.size T.fontSize3 ] (E.text "Address")
                 , case model.userGroup.contactDetails.inheritedFrom of
                     Nothing ->
-                        viewContactDetailsEditable model.userGroup.contactDetails.address
+                        viewContactDetailsEditable model model.userGroup.contactDetails.address
 
                     Just _ ->
                         viewContactDetails model.userGroup.contactDetails.address
@@ -157,13 +174,23 @@ viewInheritUserInput contactDetails =
         }
 
 
-viewContactDetailsEditable : Data.Address -> Element Msg
-viewContactDetailsEditable address =
+viewContactDetailsEditable : Model -> Data.Address -> Element Msg
+viewContactDetailsEditable model address =
     E.column
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ E.wrappedRow
+        [ Ui.select
+            { label = E.text "Preferred contact method"
+            , selected = address.preferredContactMethod
+            , options = [ Data.Email, Data.Phone, Data.Post ]
+            , toOptionLabel = \method -> E.text (Data.contactMethodToString method)
+            , isOpen = model.isPreferredMethodSelectOpen
+            , onOpen = OnTogglePreferredMethodSelect
+            , onSelect = OnSelectPreferredMethod
+            }
+
+        , E.wrappedRow
             [ E.width E.fill
             , E.spacing T.space5
             ]
@@ -222,12 +249,13 @@ viewContactDetailsEditable address =
 
 
 viewContactDetails : Data.Address -> Element Msg
-viewContactDetails { email, phone, companyName, address, zip, city, country } =
+viewContactDetails { preferredContactMethod, email, phone, companyName, address, zip, city, country } =
     E.column
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ E.wrappedRow
+        [ Ui.textInputDisabled "Preferred contact method" (Data.contactMethodToString preferredContactMethod)
+        , E.wrappedRow
             [ E.width E.fill
             , E.spacing T.space5
             ]
@@ -299,7 +327,17 @@ main =
                 , body =
                     [ case page of
                         LoadingSuccess model ->
-                            E.layout [] (view model)
+                            E.layoutWith
+                                { options =
+                                      [ E.focusStyle
+                                          { borderColor = Nothing
+                                          , backgroundColor = Nothing
+                                          , shadow = Nothing
+                                          }
+                                      ]
+                                }
+                                []
+                                (view model)
 
                         LoadingFailed decodingError ->
                             Html.text (Json.Decode.errorToString decodingError)
