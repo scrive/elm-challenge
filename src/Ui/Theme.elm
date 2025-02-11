@@ -91,8 +91,7 @@ space21 = 896  -- 16 * 56
 space22 = 1024 -- 16 * 64
 space23 = 1280 -- 16 * 80
 
-desktopWidth = space22
-desktopWidthWide = space23
+desktopWidth = space19
 
 fontSize0 = 10
 fontSize1 = 12

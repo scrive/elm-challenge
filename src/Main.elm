@@ -243,8 +243,20 @@ viewContactDetailsEditable model address =
                 }
             ]
         , case Validate.validate (validator address) address of
-            Ok _ -> E.text "Ok button"
-            Err errors -> E.column [ E.width E.fill ] (List.map E.text errors)
+            Ok _ ->
+                Ui.button
+                    { label = E.text "Save"
+                    , onClick = Just NoOp
+                    }
+
+            Err errors ->
+                E.column
+                    [ E.width E.fill
+                    , E.spacing T.space5
+                    ]
+                    [ E.column [ E.width E.fill, E.spacing T.space3, F.color T.red700 ] (List.map E.text errors)
+                    , Ui.button { label = E.text "Save", onClick = Nothing }
+                    ]
         ]
 
 

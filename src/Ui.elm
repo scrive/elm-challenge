@@ -2,6 +2,7 @@ module Ui exposing
   ( textInputDisabled
   , textInput, TextInputConfig
   , select, SelectConfig
+  , button, ButtonConfig
   )
 
 
@@ -212,6 +213,62 @@ selectDropdown config =
               else E.none
         in
         List.map viewOne config.options
+
+
+
+-- BUTTON
+
+
+
+type alias ButtonConfig msg =
+  { label : Element msg
+  , onClick : Maybe msg
+  }
+
+
+button : ButtonConfig msg -> Element msg
+button config =
+  let actionAttrs =
+        case config.onClick of
+          Nothing ->
+            [ BG.color T.blue300
+            , B.color T.blue300
+            , F.color T.white
+            ]
+
+          Just _ ->
+            [ E.mouseOver
+                [ BG.color T.blue600
+                , F.color T.white
+                ]
+            , E.focused
+                [ BG.color T.blue500
+                , F.color T.white
+                , B.shadow
+                    { offset = ( 0, 0 )
+                    , size = 4
+                    , blur = 0
+                    , color = T.blue200
+                    }
+                ]
+            ]
+  in
+  I.button
+    ([ E.paddingXY 16 10
+    , BG.color T.blue500
+    , F.center
+    , F.size T.fontSize2
+    , F.color T.white
+    , B.width 1
+    , B.rounded 4
+    , B.color T.blue500
+    ] ++ actionAttrs)
+    { label = config.label
+    , onPress = config.onClick
+    }
+
+
+-- HELPERS
 
 
 icon : Float -> I.Icon -> Element msg
