@@ -175,7 +175,11 @@ viewContactDetails model address =
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ E.el [ F.color T.gray800 ] (E.text "Please fill in your contact details.")
+        [ E.el [ F.color T.gray800 ] <| E.text <|
+            if isDisabled then
+                "Contact details can not be edited when inherited from another user."
+            else
+                "Please fill in your contact details."
         , Ui.select
             { label = "Preferred contact method"
             , selected = address.preferredContactMethod
