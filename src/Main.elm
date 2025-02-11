@@ -98,7 +98,7 @@ view model =
                         viewContactDetailsEditable model.userGroup.contactDetails
 
                     Just _ ->
-                        viewContactDetails model.userGroup.contactDetails
+                        viewContactDetails model.userGroup.contactDetails.address
                 ]
             ]
         ]
@@ -129,14 +129,20 @@ viewContactDetailsEditable contactDetails =
         ]
 
 
-viewContactDetails : Data.ContactDetails -> Element Msg
-viewContactDetails contactDetails =
+viewContactDetails : Data.Address -> Element Msg
+viewContactDetails { email, phone, companyName, address, zip, city, country } =
     E.column
         [ E.width E.fill
         , E.spacing T.space5
         ]
         [ E.el [ F.color T.gray600 ] (E.text "Inherited contact details are not editable.")
-        , Ui.textInputDisabled "E-mail" (Maybe.withDefault "" contactDetails.address.email)
+        , Ui.textInputDisabled "E-mail" (Maybe.withDefault "" email)
+        , Ui.textInputDisabled "Phone" (Maybe.withDefault "" phone)
+        , Ui.textInputDisabled "Company Name" companyName
+        , Ui.textInputDisabled "Address" address
+        , Ui.textInputDisabled "Zip code" zip
+        , Ui.textInputDisabled "City" city
+        , Ui.textInputDisabled "Country" country
         ]
 
 

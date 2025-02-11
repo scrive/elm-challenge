@@ -77,6 +77,7 @@ textInputDisabled label value =
           , B.rounded T.space1
           , B.color T.gray200
           , BG.color T.gray50
+          , F.color T.gray600
           ]
           (E.text value)
 
