@@ -127,8 +127,8 @@ updateAddress ({ userGroup } as model) func =
 view : Model -> Element Msg
 view model =
     E.column
-        [ E.width (E.px T.desktopWidth)
-        , E.paddingXY T.space3 T.space10
+        [ E.width (E.maximum T.desktopWidth E.fill)
+        , E.paddingXY T.space6 T.space9
         , E.centerX
         , E.spacing T.space5
         , F.size T.fontSize2
