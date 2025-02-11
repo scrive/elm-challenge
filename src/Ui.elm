@@ -12,14 +12,10 @@ import Element as E exposing (Element)
 import Element.Input as I
 import Element.Font as F
 import Element.Border as B
-import Element.Events as EE
 import Element.Background as BG
 import Ui.Theme as T
-import FeatherIcons as I
 import Json.Decode as D
 import Accessibility.Aria
-import Accessibility.Key
-import Accessibility.Role
 
 
 
@@ -176,7 +172,6 @@ selectOption config option =
 -- BUTTON
 
 
-
 type alias ButtonConfig msg =
   { label : Element msg
   , onClick : Maybe msg
@@ -224,15 +219,3 @@ button config =
     { label = config.label
     , onPress = config.onClick
     }
-
-
--- HELPERS
-
-
-icon : Float -> I.Icon -> Element msg
-icon size icon_ =
-  icon_
-    |> I.withSize size
-    |> I.toHtml []
-    |> E.html
-    |> E.el []

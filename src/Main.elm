@@ -3,14 +3,9 @@ module Main exposing (main)
 import Browser
 import Data
 import Html exposing (Html)
-import Html.Attributes as Attrs
 import Json.Decode
 import Element as E exposing (Element)
-import Element.Input as I
 import Element.Font as F
-import Element.Border as B
-import Element.Events as EE
-import Element.Background as BG
 import Ui.Theme as T
 import Ui
 import Validate

@@ -5,23 +5,9 @@ import Element as E
 
 white = E.rgb255 255 255 255
 black = E.rgb255 0 0 0
-transparent = E.rgba255 255 255 255 0
 
 
 -- COLORS
-
-
-theme25  = blue25
-theme50  = blue50
-theme100 = blue100
-theme200 = blue200
-theme300 = blue300
-theme400 = blue400
-theme500 = blue500
-theme600 = blue600
-theme700 = blue700
-theme800 = blue800
-theme900 = blue900
 
 
 gray25  = E.rgb255 252 252 253 -- #fcfcfd
@@ -106,4 +92,3 @@ fontSize8 = 36
 fontSize9 = 48
 fontSize10 = 60
 fontSize11 = 72
-
