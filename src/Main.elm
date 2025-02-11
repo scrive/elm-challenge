@@ -4,19 +4,30 @@ import Browser
 import Data
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Json.Decode
 
 
 
 ---- MODEL ----
 
 
+type Page
+    = LoadingSuccess Model
+    | LoadingFailed Json.Decode.Error
+
+
 type alias Model =
-    {}
+    { userGroup : Data.UserGroup }
 
 
-init : ( Model, Cmd Msg )
+init : ( Page, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    case Json.Decode.decodeString Data.decodeUserGroup Data.data of
+        Ok userGroup ->
+            ( LoadingSuccess { userGroup = userGroup }, Cmd.none )
+
+        Err decodeError ->
+            ( LoadingFailed decodeError, Cmd.none )
 
 
 
@@ -27,7 +38,7 @@ type Msg
     = NoOp
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Page -> ( Page, Cmd Msg )
 update _ model =
     ( model, Cmd.none )
 
@@ -48,22 +59,18 @@ subheader text =
         [ Html.text text ]
 
 
-view : Model -> Html Msg
-view _ =
-    Html.div [ Attrs.class "flex flex-col w-[1024px] items-center mx-auto mt-16 mb-48" ]
-        [ header "Let's start your task"
-        , subheader "Here are your data:"
-        , Html.pre [ Attrs.class "my-8 py-4 px-12 text-sm bg-slate-100 font-mono shadow rounded" ] [ Html.text Data.userGroup ]
-        , header "Now turn them into form."
-        , subheader "See README for details of the task. Good luck 🍀 "
-        ]
+view : Page -> Html Msg
+view page =
+    case page of
+        LoadingSuccess model -> Html.text "Success!"
+        LoadingFailed decodingError -> Html.text (Json.Decode.errorToString decodingError)
 
 
 
 ---- PROGRAM ----
 
 
-main : Program () Model Msg
+main : Program () Page Msg
 main =
     Browser.application
         { view =
