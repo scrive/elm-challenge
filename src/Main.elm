@@ -17,7 +17,7 @@ import Validate
 
 
 
----- MODEL ----
+-- MODEL
 
 
 type alias Model =
@@ -32,7 +32,7 @@ init userGroup =
 
 
 
----- UPDATE ----
+-- UPDATE
 
 
 type Msg
@@ -195,7 +195,6 @@ viewContactDetails model address =
             , id = "preferred-contact-method"
             , disabled = isDisabled
             }
-
         , E.wrappedRow
             [ E.width E.fill
             , E.spacing T.space5
