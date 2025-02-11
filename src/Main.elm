@@ -293,7 +293,7 @@ validator address =
 
         Data.Phone ->
             Validate.all
-                [ Validate.ifBlank .phone "Please enter a valid phone." ]
+                [ Validate.fromErrors ifInvalidPhone ]
 
         Data.Post ->
             Validate.all
@@ -303,6 +303,19 @@ validator address =
                 , Validate.ifBlank .city "City must not be blank."
                 , Validate.ifBlank .country "Country must not be blank."
                 ]
+
+
+ifInvalidPhone : Data.Address -> List String
+ifInvalidPhone address =
+    case String.toList address.phone of
+        '+' :: rest ->
+            if List.all Char.isDigit rest then
+                if List.length rest == 10 then [] else [ "Phone number must have exactly ten numbers." ]
+            else
+                [ "Phone number must be only contain numbers after the plus sign." ]
+
+        _ ->
+            [ "Phone number must begin with a plus sign." ]
 
 
 
