@@ -1,7 +1,7 @@
 module Data exposing
   ( data
   , decodeUserGroup
-  , UserGroup, UserGroupChild, Settings, ContactDetails, Tag
+  , UserGroup, UserGroupChild, Settings, ContactDetails, Address, Tag
   )
 
 

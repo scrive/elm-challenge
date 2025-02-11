@@ -5,6 +5,14 @@ import Data
 import Html exposing (Html)
 import Html.Attributes as Attrs
 import Json.Decode
+import Element as E exposing (Element)
+import Element.Input as I
+import Element.Font as F
+import Element.Border as B
+import Element.Events as EE
+import Element.Background as BG
+import Ui.Theme as T
+import Ui
 
 
 
@@ -25,33 +33,111 @@ init userGroup =
 
 
 type Msg
-    = NoOp
+    = OnChangeUserInheritance String
+    | OnChangeEmail String
+    | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update _ model =
-    ( model, Cmd.none )
+update msg model =
+    case msg of
+        OnChangeUserInheritance str ->
+            ( updateContactDetails model <| \contactDetails ->
+                { contactDetails | inheritedFrom = if String.isEmpty (String.trim str) then Nothing else Just str }
+            , Cmd.none
+            )
+
+        OnChangeEmail str ->
+            ( updateAddress model <| \address ->
+                { address | email = if String.isEmpty (String.trim str) then Nothing else Just str }
+            , Cmd.none
+            )
+
+        NoOp ->
+            ( model, Cmd.none )
+
+
+updateContactDetails : Model -> (Data.ContactDetails -> Data.ContactDetails) -> Model
+updateContactDetails ({ userGroup } as model) func =
+    { model | userGroup = { userGroup | contactDetails = func userGroup.contactDetails } }
+
+
+updateAddress : Model -> (Data.Address -> Data.Address) -> Model
+updateAddress ({ userGroup } as model) func =
+    let contactDetails = userGroup.contactDetails in
+    { model | userGroup = { userGroup | contactDetails = { contactDetails | address = func contactDetails.address } } }
 
 
 
 ---- VIEW ----
 
 
-header : String -> Html msg
-header text =
-    Html.span [ Attrs.class "p-2 text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-800" ]
-        [ Html.text text ]
-
-
-subheader : String -> Html msg
-subheader text =
-    Html.span [ Attrs.class "p-2 text-2xl font-extrabold text-slate-800" ]
-        [ Html.text text ]
-
-
-view : Model -> Html Msg
+view : Model -> Element Msg
 view model =
-    Html.text "success!"
+    E.column
+        [ E.width (E.px T.desktopWidth)
+        , E.paddingXY T.space3 T.space10
+        , E.centerX
+        , E.spacing T.space5
+        , F.size T.fontSize2
+        ]
+        [ E.el [ F.size T.fontSize4 ] (E.text "Contact Details")
+        , E.column
+            [ E.width E.fill
+            , E.spacing T.space5
+            ]
+            [ viewInheritUserInput model.userGroup.contactDetails
+
+            , E.column
+                [ E.width E.fill
+                , E.spacing T.space4
+                ]
+                [ E.el [ F.size T.fontSize3 ] (E.text "Address")
+                , case model.userGroup.contactDetails.inheritedFrom of
+                    Nothing ->
+                        viewContactDetailsEditable model.userGroup.contactDetails
+
+                    Just _ ->
+                        viewContactDetails model.userGroup.contactDetails
+                ]
+            ]
+        ]
+
+
+viewInheritUserInput : Data.ContactDetails -> Element Msg
+viewInheritUserInput contactDetails =
+    Ui.textInput
+        { onChange = OnChangeUserInheritance
+        , value = Maybe.withDefault "" contactDetails.inheritedFrom
+        , placeholder = "User id"
+        , label = "Inherit from user"
+        }
+
+
+viewContactDetailsEditable : Data.ContactDetails -> Element Msg
+viewContactDetailsEditable contactDetails =
+    E.column
+        [ E.width E.fill
+        , E.spacing T.space5
+        ]
+        [ Ui.textInput
+            { onChange = OnChangeEmail
+            , value = Maybe.withDefault "" contactDetails.address.email
+            , placeholder = "name@email.com"
+            , label = "E-mail"
+            }
+        ]
+
+
+viewContactDetails : Data.ContactDetails -> Element Msg
+viewContactDetails contactDetails =
+    E.column
+        [ E.width E.fill
+        , E.spacing T.space5
+        ]
+        [ E.el [ F.color T.gray600 ] (E.text "Inherited contact details are not editable.")
+        , Ui.textInputDisabled "E-mail" (Maybe.withDefault "" contactDetails.address.email)
+        ]
 
 
 
@@ -72,7 +158,7 @@ main =
                 , body =
                     [ case page of
                         LoadingSuccess model ->
-                            view model
+                            E.layout [] (view model)
 
                         LoadingFailed decodingError ->
                             Html.text (Json.Decode.errorToString decodingError)
