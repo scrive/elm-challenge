@@ -11,6 +11,52 @@ import Ui
 import Validate
 
 
+{-
+
+TODO
+
+- Debounce so errors show up after finished typing.
+- Arrange validations errors such that submit button doesn't jump.
+- Highlight invalid input fields and add Aria.invalid tags.
+- Maybe refocus on invalid field when attempting to submit instead of
+  disabling submit button.
+- If submit button is to remain disabled, reconsider styling. Needs contrast,
+  but looks like secondary button currently.
+- Add autofill attributes to e-mail and phone?
+- This form doesn't actually submit anything, but it did, it should have a
+  success message of some sort.
+- Prettier responsibility.
+- Maybe add cancel button to address edits?
+- Run elm-format and elm-review!
+
+
+NOTES
+
+- I suppress a null values in the email and phone field by transforming
+  it to a blank. This seemed sensible as it's displayed as blank, and we
+  would restore the null if necessary when sending the updated data back
+  to the server.
+- I'm usually an abbreviation hater, but for view libraries like Html and
+  elm-ui, I user them because otherwise they add so much visual noise to
+  the view code.
+- I could probably have used a library for the select component, but I am
+  also a using-libraries-I-haven't-read-the-code-of hater, so I just wrote
+  something from scratch!
+- I used elm-ui here, but this is not necessarily a good fit for your
+  production code, as it would possibly start having performance problems
+  on heavy UIs with lots of rerendering! I just love its type safety and
+  thoughtful API design.
+- I only did one task! Happy to do more, but didn't want to burden you with too much
+  code and thought this sample would be enough to assess the general quality.
+- The initial possibillity of a data decode error is such a trite Elm ritual, so I exiled
+  it to the bottom. I usually have a custom 'Program' in my applications to handle
+  common errors like that!
+- There are soo many opinions on what makes good accessibility! I'm curious
+  what your standards are within the company.
+
+-}
+
+
 
 -- MODEL
 
