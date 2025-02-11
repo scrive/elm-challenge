@@ -188,9 +188,10 @@ button config =
   let actionAttrs =
         case config.onClick of
           Nothing ->
-            [ BG.color T.blue300
-            , B.color T.blue300
-            , F.color T.white
+            [ BG.color T.white
+            , B.color T.blue500
+            , F.color T.blue600
+            , E.htmlAttribute (HA.style "cursor" "not-allowed")
             ]
 
           Just _ ->
