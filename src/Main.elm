@@ -35,6 +35,12 @@ init userGroup =
 type Msg
     = OnChangeUserInheritance String
     | OnChangeEmail String
+    | OnChangePhone String
+    | OnChangeCompanyName String
+    | OnChangeAddress String
+    | OnChangeZipCode String
+    | OnChangeCity String
+    | OnChangeCountry String
     | NoOp
 
 
@@ -43,13 +49,49 @@ update msg model =
     case msg of
         OnChangeUserInheritance str ->
             ( updateContactDetails model <| \contactDetails ->
-                { contactDetails | inheritedFrom = if String.isEmpty (String.trim str) then Nothing else Just str }
+                { contactDetails | inheritedFrom = if isBlank str then Nothing else Just str }
             , Cmd.none
             )
 
         OnChangeEmail str ->
             ( updateAddress model <| \address ->
-                { address | email = if String.isEmpty (String.trim str) then Nothing else Just str }
+                { address | email = if isBlank str then Nothing else Just str }
+            , Cmd.none
+            )
+
+        OnChangePhone str ->
+            ( updateAddress model <| \address ->
+                { address | phone = if isBlank str then Nothing else Just str }
+            , Cmd.none
+            )
+
+        OnChangeCompanyName str ->
+            ( updateAddress model <| \address ->
+                { address | companyName = str }
+            , Cmd.none
+            )
+
+        OnChangeAddress str ->
+            ( updateAddress model <| \address ->
+                { address | address = str }
+            , Cmd.none
+            )
+
+        OnChangeZipCode str ->
+            ( updateAddress model <| \address ->
+                { address | zip = str }
+            , Cmd.none
+            )
+
+        OnChangeCity str ->
+            ( updateAddress model <| \address ->
+                { address | city = str }
+            , Cmd.none
+            )
+
+        OnChangeCountry str ->
+            ( updateAddress model <| \address ->
+                { address | country = str }
             , Cmd.none
             )
 
@@ -95,7 +137,7 @@ view model =
                 [ E.el [ F.size T.fontSize3 ] (E.text "Address")
                 , case model.userGroup.contactDetails.inheritedFrom of
                     Nothing ->
-                        viewContactDetailsEditable model.userGroup.contactDetails
+                        viewContactDetailsEditable model.userGroup.contactDetails.address
 
                     Just _ ->
                         viewContactDetails model.userGroup.contactDetails.address
@@ -114,17 +156,53 @@ viewInheritUserInput contactDetails =
         }
 
 
-viewContactDetailsEditable : Data.ContactDetails -> Element Msg
-viewContactDetailsEditable contactDetails =
+viewContactDetailsEditable : Data.Address -> Element Msg
+viewContactDetailsEditable { email, phone, companyName, address, zip, city, country } =
     E.column
         [ E.width E.fill
         , E.spacing T.space5
         ]
         [ Ui.textInput
             { onChange = OnChangeEmail
-            , value = Maybe.withDefault "" contactDetails.address.email
+            , value = Maybe.withDefault "" email
             , placeholder = "name@email.com"
             , label = "E-mail"
+            }
+        , Ui.textInput
+            { onChange = OnChangePhone
+            , value = Maybe.withDefault "" phone
+            , placeholder = "+4612345678"
+            , label = "Phone"
+            }
+        , Ui.textInput
+            { onChange = OnChangeCompanyName
+            , value = companyName
+            , placeholder = "Scrive"
+            , label = "Company Name"
+            }
+        , Ui.textInput
+            { onChange = OnChangeAddress
+            , value = address
+            , placeholder = "Address"
+            , label = "Address"
+            }
+        , Ui.textInput
+            { onChange = OnChangeZipCode
+            , value = zip
+            , placeholder = "Zip code"
+            , label = "Zip code"
+            }
+        , Ui.textInput
+            { onChange = OnChangeCity
+            , value = city
+            , placeholder = "Stockholm"
+            , label = "City"
+            }
+        , Ui.textInput
+            { onChange = OnChangeCountry
+            , value = country
+            , placeholder = "Sweden"
+            , label = "Country"
             }
         ]
 
@@ -135,8 +213,7 @@ viewContactDetails { email, phone, companyName, address, zip, city, country } =
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ E.el [ F.color T.gray600 ] (E.text "Inherited contact details are not editable.")
-        , Ui.textInputDisabled "E-mail" (Maybe.withDefault "" email)
+        [ Ui.textInputDisabled "E-mail" (Maybe.withDefault "" email)
         , Ui.textInputDisabled "Phone" (Maybe.withDefault "" phone)
         , Ui.textInputDisabled "Company Name" companyName
         , Ui.textInputDisabled "Address" address
@@ -192,3 +269,11 @@ main =
         , onUrlRequest = always NoOp
         , onUrlChange = always NoOp
         }
+
+
+-- HELPERS
+
+
+isBlank : String -> Bool
+isBlank str =
+    String.isEmpty (String.trim str)
