@@ -138,7 +138,12 @@ view model =
             [ E.width E.fill
             , E.spacing T.space5
             ]
-            [ viewInheritUserInput model.userGroup.contactDetails
+            [ case model.userGroup.parentId of
+                Just _ ->
+                    viewInheritUserInput model.userGroup.contactDetails
+
+                Nothing ->
+                    E.none
             , E.column
                 [ E.width E.fill
                 , E.spacing T.space4

@@ -11,7 +11,7 @@ import Json.Decode as D
 
 type alias UserGroup =
   { id : String
-  , parentId : String
+  , parentId : Maybe String
   , name : String
   , children : List UserGroupChild
   , settings : Settings
@@ -108,7 +108,7 @@ decodeUserGroup : D.Decoder UserGroup
 decodeUserGroup =
   D.map7 UserGroup
     (D.field "id" D.string)
-    (D.field "parent_id" D.string)
+    (D.field "parent_id" (D.nullable D.string))
     (D.field "name" D.string)
     (D.field "children" (D.list decodeUserGroupChild))
     (D.field "settings" decodeSettings)
@@ -216,9 +216,9 @@ data =
     }
   },
   "contact_details": {
-    "inherited_from": "1",
+    "inherited_from": null,
     "address": {
-      "preferred_contact_method": "email",
+      "preferred_contact_method": "phone",
       "email": "scrive@scrive.com",
       "phone": null,
       "company_name": "Scrive",
