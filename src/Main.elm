@@ -276,15 +276,21 @@ validator address =
     case address.preferredContactMethod of
         Data.Email ->
             Validate.all
-                [ Validate.ifInvalidEmail .email (\_ -> "Please enter a valid e-mail.") ]
+                [ Validate.ifInvalidEmail .email (always "Please enter a valid e-mail.")
+                , ifNotBlank address.phone (Validate.fromErrors ifInvalidPhone)
+                ]
 
         Data.Phone ->
             Validate.all
-                [ Validate.fromErrors ifInvalidPhone ]
+                [ Validate.fromErrors ifInvalidPhone
+                , ifNotBlank address.email (Validate.ifInvalidEmail .email (always "Please enter a valid e-mail."))
+                ]
 
         Data.Post ->
             Validate.all
-                [ Validate.ifBlank .companyName "Company name must not be blank."
+                [ ifNotBlank address.email (Validate.ifInvalidEmail .email (always "Please enter a valid e-mail."))
+                , ifNotBlank address.phone (Validate.fromErrors ifInvalidPhone)
+                , Validate.ifBlank .companyName "Company name must not be blank."
                 , Validate.ifBlank .address "Address must not be blank."
                 , Validate.ifBlank .zip "Zip code must not be blank."
                 , Validate.ifBlank .city "City must not be blank."
@@ -303,6 +309,11 @@ ifInvalidPhone address =
 
         _ ->
             [ "Phone number must begin with a plus sign." ]
+
+
+ifNotBlank : String -> Validate.Validator String Data.Address -> Validate.Validator String Data.Address
+ifNotBlank str someValidator =
+    if isBlank str then Validate.fromErrors (always []) else someValidator
 
 
 
