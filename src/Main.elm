@@ -227,13 +227,23 @@ viewContactDetails { email, phone, companyName, address, zip, city, country } =
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ Ui.textInputDisabled "E-mail" email
-        , Ui.textInputDisabled "Phone" phone
-        , Ui.textInputDisabled "Company Name" companyName
-        , Ui.textInputDisabled "Address" address
-        , Ui.textInputDisabled "Zip code" zip
-        , Ui.textInputDisabled "City" city
-        , Ui.textInputDisabled "Country" country
+        [ E.wrappedRow
+            [ E.width E.fill
+            , E.spacing T.space5
+            ]
+            [ Ui.textInputDisabled "E-mail" email
+            , Ui.textInputDisabled "Phone" phone
+            ]
+        , E.wrappedRow
+            [ E.width E.fill
+            , E.spacing T.space5
+            ]
+            [ Ui.textInputDisabled "Company Name" companyName
+            , Ui.textInputDisabled "Address" address
+            , Ui.textInputDisabled "Zip code" zip
+            , Ui.textInputDisabled "City" city
+            , Ui.textInputDisabled "Country" country
+            ]
         ]
 
 
