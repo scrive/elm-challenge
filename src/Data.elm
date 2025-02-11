@@ -7,6 +7,7 @@ module Data exposing
 
 
 import Json.Decode as D
+import Dict exposing (Dict)
 
 
 type alias UserGroup =
@@ -77,27 +78,29 @@ type alias Tag =
 -- MANIPULATIONS
 
 
-contactMethodToString : ContactMethod -> String
-contactMethodToString method =
-  List.filter (\(m, _) -> m == method) contactMethodStringPairs
-    |> List.head
-    |> Maybe.map Tuple.second
-    |> Maybe.withDefault ""
-
-
 stringToContactMethod : String -> Maybe ContactMethod
 stringToContactMethod str =
-  List.filter (\(_, string) -> str == string) contactMethodStringPairs
-    |> List.head
-    |> Maybe.map Tuple.first
+  Dict.get str contactMethodDict
 
 
-contactMethodStringPairs : List ( ContactMethod, String )
-contactMethodStringPairs =
-  [ ( Email, "E-mail" )
-  , ( Phone, "Phone" )
-  , ( Post, "Post" )
-  ]
+contactMethodToString : ContactMethod -> String
+contactMethodToString method =
+  case method of
+    Email -> "E-mail"
+    Phone -> "Phone"
+    Post -> "Post"
+
+
+contactMethodDict : Dict String ContactMethod
+contactMethodDict =
+  let toPair method =
+        ( contactMethodToString method, method )
+  in
+  Dict.fromList
+    [ toPair Email
+    , toPair Phone
+    , toPair Post
+    ]
 
 
 
