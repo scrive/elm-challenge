@@ -147,7 +147,6 @@ view model =
             , E.spacing T.space5
             ]
             [ viewInheritUserInput model.userGroup.contactDetails
-
             , E.column
                 [ E.width E.fill
                 , E.spacing T.space4
@@ -180,7 +179,8 @@ viewContactDetailsEditable model address =
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ Ui.select
+        [ E.el [ F.color T.gray800 ] (E.text "Please fill in your contact details.")
+        , Ui.select
             { label = E.text "Preferred contact method"
             , selected = address.preferredContactMethod
             , options = [ Data.Email, Data.Phone, Data.Post ]
@@ -220,13 +220,13 @@ viewContactDetailsEditable model address =
             , Ui.textInput
                 { onChange = OnChangeAddress
                 , value = address.address
-                , placeholder = "Address"
+                , placeholder = "Grev Turegatan 11A"
                 , label = "Address"
                 }
             , Ui.textInput
                 { onChange = OnChangeZipCode
                 , value = address.zip
-                , placeholder = "Zip code"
+                , placeholder = "114 46"
                 , label = "Zip code"
                 }
             , Ui.textInput
@@ -254,7 +254,8 @@ viewContactDetails { preferredContactMethod, email, phone, companyName, address,
         [ E.width E.fill
         , E.spacing T.space5
         ]
-        [ Ui.textInputDisabled "Preferred contact method" (Data.contactMethodToString preferredContactMethod)
+        [ E.el [ F.color T.gray800 ] (E.text "Contact details can not be edited when inherited from another user.")
+        , Ui.textInputDisabled "Preferred contact method" (Data.contactMethodToString preferredContactMethod)
         , E.wrappedRow
             [ E.width E.fill
             , E.spacing T.space5
