@@ -219,9 +219,9 @@ data =
     }
   },
   "contact_details": {
-    "inherited_from": null,
+    "inherited_from": "1",
     "address": {
-      "preferred_contact_method": "phone",
+      "preferred_contact_method": "email",
       "email": "scrive@scrive.com",
       "phone": null,
       "company_name": "Scrive",
