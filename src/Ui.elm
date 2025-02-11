@@ -139,7 +139,7 @@ select config =
           ]
           [ H.text config.label ]
       , H.node "style" [] [ H.text
-          """ .scrive-select-container:focus-within { border: 1px solid #53b1fd; box-shadow: 0px 0px 4px #eff8ff; }
+          """ .scrive-select-container:focus-within { border: 1px solid #53b1fd !important; box-shadow: 0 0 0 4px #eff8ff; }
               .scrive-select:focus { outline: none; }
           """
           ]
