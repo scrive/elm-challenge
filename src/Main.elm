@@ -57,6 +57,7 @@ NOTES
   common errors like that!
 - There are soo many opinions on what makes good accessibility! I'm curious
   what your standards are within the company.
+- This code gets a 100% score on the Lighthouse checks on both mobile and desktop.
 
 -}
 
