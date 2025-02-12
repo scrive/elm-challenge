@@ -283,20 +283,15 @@ updateTags msg tags =
 
         SaveTag index ->
             case List.Extra.getAt index tags of
-                Just editableTag ->
-                    case editableTag of
-                        Editing tagString _ ->
-                            case Tag.make (currentTagNames tags) tagString of
-                                Ok tag ->
-                                    List.Extra.setAt index (NotEditing tag) tags
+                Just (Editing tagString _) ->
+                    case Tag.make (currentTagNames tags) tagString of
+                        Ok tag ->
+                            List.Extra.setAt index (NotEditing tag) tags
 
-                                Err error ->
-                                    List.Extra.setAt index (Editing tagString (Just error)) tags
+                        Err error ->
+                            List.Extra.setAt index (Editing tagString (Just error)) tags
 
-                        NotEditing _ ->
-                            tags
-
-                Nothing ->
+                _ ->
                     tags
 
         EditTag index ->
