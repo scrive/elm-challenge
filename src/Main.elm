@@ -29,7 +29,7 @@ TODO
 - Add autofill attributes to e-mail and phone
 - This form doesn't actually submit anything, but it did, it should have a
   success message of some sort.
-- Prettier responsibility.
+- Better responsiveness.
 - Maybe add cancel button to address edits?
 - Run elm-format and elm-review!
 
