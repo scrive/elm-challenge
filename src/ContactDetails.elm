@@ -1,6 +1,7 @@
 module ContactDetails exposing (Address, ContactDetails, PreferredContactMethod(..), decoder)
 
 import Json.Decode exposing (Decoder)
+import Json.Decode.Pipeline
 
 
 type alias ContactDetails =
@@ -30,15 +31,15 @@ type alias Address =
 
 addressDecoder : Decoder Address
 addressDecoder =
-    Json.Decode.map8 Address
-        (Json.Decode.field "preferred_contact_method" preferredContactMethodDecoder)
-        (Json.Decode.field "email" (Json.Decode.maybe Json.Decode.string))
-        (Json.Decode.field "phone" (Json.Decode.maybe Json.Decode.string))
-        (Json.Decode.field "company_name" (Json.Decode.maybe Json.Decode.string))
-        (Json.Decode.field "address" (Json.Decode.maybe Json.Decode.string))
-        (Json.Decode.field "zip" (Json.Decode.maybe Json.Decode.string))
-        (Json.Decode.field "city" (Json.Decode.maybe Json.Decode.string))
-        (Json.Decode.field "country" (Json.Decode.maybe Json.Decode.string))
+    Json.Decode.succeed Address
+        |> Json.Decode.Pipeline.required "preferred_contact_method" preferredContactMethodDecoder
+        |> Json.Decode.Pipeline.required "email" (Json.Decode.maybe Json.Decode.string)
+        |> Json.Decode.Pipeline.required "phone" (Json.Decode.maybe Json.Decode.string)
+        |> Json.Decode.Pipeline.required "company_name" (Json.Decode.maybe Json.Decode.string)
+        |> Json.Decode.Pipeline.required "address" (Json.Decode.maybe Json.Decode.string)
+        |> Json.Decode.Pipeline.required "zip" (Json.Decode.maybe Json.Decode.string)
+        |> Json.Decode.Pipeline.required "city" (Json.Decode.maybe Json.Decode.string)
+        |> Json.Decode.Pipeline.required "country" (Json.Decode.maybe Json.Decode.string)
 
 
 type PreferredContactMethod
