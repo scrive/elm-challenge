@@ -26,6 +26,7 @@ TODO
   contact details can be edited. Alternatively, one could add a checkbox
   to trigger the Inherited User field and choosing to inherit would feel
   more intentional.
+- Edits to contact details should probably reset if inheritance is changed? Not sure.
 - Add autofill attributes to e-mail and phone
 - This form doesn't actually submit anything, but it did, it should have a
   success message of some sort.
