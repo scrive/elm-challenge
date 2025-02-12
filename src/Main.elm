@@ -31,6 +31,7 @@ TODO
 - This form doesn't actually submit anything, but it did, it should have a
   success message of some sort.
 - Better responsiveness.
+- Nicer error styling.
 - Maybe add cancel button to address edits?
 - Run elm-format and elm-review!
 
