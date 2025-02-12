@@ -41,7 +41,7 @@ NOTES
   would restore the null if necessary when sending the updated data back
   to the server.
 - I'm usually an abbreviation hater, but for view libraries like Html and
-  elm-ui, I user them because otherwise they add so much visual noise to
+  elm-ui, I use them because otherwise they add so much visual noise to
   the view code.
 - I could probably have used a library for the select component, but I am
   also a using-libraries-I-haven't-read-the-code-of hater, so I just wrote
