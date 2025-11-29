@@ -1,10 +1,12 @@
 {
   "name": "elm-challenge",
   "version": "1.0.0",
+  "type": "module",
   "description": "Challenge for new Scrive elm developers",
   "scripts": {
     "postinstall": "elm-tooling install",
-    "start": "vite dev"
+    "start": "vite dev",
+    "build": "vite build"
   },
   "author": "Scrive",
   "license": "MIT",
