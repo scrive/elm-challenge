@@ -48,8 +48,8 @@ valueFromEditable editable =
             Value.toValue string
 
 
-updateIfEditable : Editable a -> a -> Editable a
-updateIfEditable editable newValue =
+updateIfEditable : a -> Editable a -> Editable a
+updateIfEditable newValue editable =
     case editable of
         Editable _ ->
             Value.toValue newValue |> Editable

@@ -80,14 +80,14 @@ update msg model =
         UpdateNewName nameString ->
             let
                 updateName tag =
-                    { tag | name = Editable.updateIfEditable tag.name nameString }
+                    { tag | name = Editable.updateIfEditable nameString tag.name }
             in
             ( { model | newTagForm = updateName model.newTagForm }, Cmd.none )
 
         UpdateNewValue valueString ->
             let
                 updateValue tag =
-                    { tag | value = Editable.updateIfEditable tag.value valueString }
+                    { tag | value = Editable.updateIfEditable valueString tag.value }
             in
             ( { model | newTagForm = updateValue model.newTagForm }, Cmd.none )
 
@@ -146,7 +146,7 @@ update msg model =
                     List.map
                         (\tag ->
                             if (Editable.valueFromEditable tag.name |> Value.fromValue) == nameString then
-                                { tag | value = Editable.updateIfEditable tag.value newValue }
+                                { tag | value = Editable.updateIfEditable newValue tag.value }
 
                             else
                                 tag
