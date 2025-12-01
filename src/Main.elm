@@ -93,22 +93,8 @@ update msg model =
 
         ClickedAddTag ->
             let
-                validateNameValue nameValue =
-                    let
-                        nameString =
-                            Value.fromValue nameValue
-                    in
-                    if String.isEmpty nameString then
-                        Value.addError "Name is required" nameValue
-
-                    else if List.any (.name >> Editable.valueFromEditable >> Value.fromValue >> (==) nameString) model.tags then
-                        Value.addError "Duplicate name" nameValue
-
-                    else
-                        Value.toValue nameString
-
                 validatedName =
-                    Editable.valueFromEditable model.newTagForm.name |> validateNameValue
+                    Editable.valueFromEditable model.newTagForm.name |> validateNameValue model.tags
             in
             if Value.isValid validatedName then
                 ( { model
@@ -186,6 +172,22 @@ update msg model =
 
         NoOp ->
             ( model, Cmd.none )
+
+
+validateNameValue : List Tag -> Value.Value String -> Value.Value String
+validateNameValue tags nameValue =
+    let
+        nameString =
+            Value.fromValue nameValue
+    in
+    if String.isEmpty nameString then
+        Value.addError "Name is required" nameValue
+
+    else if List.any (.name >> Editable.valueFromEditable >> Value.fromValue >> (==) nameString) tags then
+        Value.addError "Duplicate name" nameValue
+
+    else
+        Value.toValue nameString
 
 
 header : String -> Html msg
