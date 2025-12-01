@@ -378,7 +378,6 @@ inputField labelText editable toMsg =
                     , Events.onInput toMsg
                     , Attrs.class inputClass
                     , Attrs.maxlength 32
-                    , Attrs.required True
                     , Attrs.attribute "readonly" "true" |> AttrsExtra.attributeIf (not <| Editable.isEditable editable)
                     ]
                     []
