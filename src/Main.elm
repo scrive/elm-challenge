@@ -6,6 +6,7 @@ import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Attributes.Extra as AttrsExtra
 import Html.Events as Events
+import Html.Extra
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline
 import Shared.Button as Button
@@ -370,14 +371,10 @@ inputField labelText editable toMsg =
                     , Attrs.attribute "readonly" "true" |> AttrsExtra.attributeIf (not <| Editable.isEditable editable)
                     ]
                     []
-                , if Editable.isEditable editable then
-                    Html.text ""
-
-                  else
-                    Html.div
-                        [ Attrs.class "pointer-events-none absolute inset-0 flex items-center px-3 text-gray-700"
-                        ]
-                        [ Html.text valueString ]
+                , Html.div
+                    [ Attrs.class "pointer-events-none absolute inset-0 flex items-center px-3 text-gray-700" ]
+                    [ Html.text valueString ]
+                    |> Html.Extra.viewIf (Editable.isEditable editable |> not)
                 ]
             ]
         , Html.p
