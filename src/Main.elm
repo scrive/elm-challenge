@@ -122,8 +122,19 @@ update msg model =
                 )
 
         ClickedRemoveTag nameToRemove ->
+            let
+                updatedTags =
+                    List.filter (.name >> Editable.valueFromEditable >> Value.fromValue >> (/=) nameToRemove) model.tags
+
+                validatedName =
+                    Editable.valueFromEditable model.newTagForm.name |> validateNameValue updatedTags
+
+                updateName tag =
+                    { tag | name = Editable.valueToEditable validatedName }
+            in
             ( { model
-                | tags = List.filter (.name >> Editable.valueFromEditable >> Value.fromValue >> (/=) nameToRemove) model.tags
+                | tags = updatedTags
+                , newTagForm = updateName model.newTagForm
               }
             , Cmd.none
             )
