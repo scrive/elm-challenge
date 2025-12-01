@@ -1,4 +1,4 @@
-module Shared.Button exposing (Button, new, view, withClass, withIcon, withLabel, withTooltip)
+module Shared.Button exposing (Button, ButtonMsg(..), new, view, withClass, withIcon, withLabel, withTooltip)
 
 import Html exposing (Html)
 import Html.Attributes as Attrs
@@ -8,7 +8,7 @@ import Shared.Tooltip as Tooltip
 
 
 type alias Button msg =
-    { onClickMsg : msg
+    { msg : ButtonMsg msg
     , icon : Maybe Icon.IconType
     , tooltipText : Maybe String
     , class : String
@@ -16,9 +16,14 @@ type alias Button msg =
     }
 
 
-new : msg -> Button msg
+type ButtonMsg msg
+    = OnClick msg
+    | OnSubmit msg
+
+
+new : ButtonMsg msg -> Button msg
 new msg =
-    { onClickMsg = msg
+    { msg = msg
     , icon = Nothing
     , tooltipText = Nothing
     , class = ""
@@ -47,7 +52,7 @@ withLabel text button =
 
 
 view : Button msg -> Html msg
-view { onClickMsg, tooltipText, icon, label, class } =
+view { msg, tooltipText, icon, label, class } =
     let
         ( tooltipId, tooltipAttributes ) =
             let
@@ -70,14 +75,22 @@ view { onClickMsg, tooltipText, icon, label, class } =
 
                 ( Nothing, Nothing ) ->
                     []
+
+        ( clickAttrs, typeAttr ) =
+            case msg of
+                OnClick msg_ ->
+                    ( [ Events.onClick msg_ ], Attrs.type_ "button" )
+
+                OnSubmit _ ->
+                    ( [], Attrs.type_ "submit" )
     in
     (Html.button
-        ([ Attrs.type_ "button"
+        ([ typeAttr
          , Attrs.class class
          , Attrs.attribute "aria-label" (Maybe.withDefault "Button" label)
          ]
             ++ tooltipAttributes
-            ++ [ Events.onClick onClickMsg ]
+            ++ clickAttrs
         )
         content
         :: (Maybe.map (Tooltip.view tooltipId >> List.singleton) tooltipText |> Maybe.withDefault [])

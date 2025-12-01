@@ -204,10 +204,13 @@ view : Model -> Html Msg
 view model =
     let
         newTagFormView =
-            Html.div [ Attrs.class "mb-6 grid grid-cols-1 md:grid-cols-[2fr_2fr_auto] gap-3 items-center w-full max-w-full" ]
+            Html.form
+                [ Attrs.class "mb-6 grid grid-cols-1 md:grid-cols-[2fr_2fr_auto] gap-3 items-center w-full max-w-full"
+                , Events.preventDefaultOn "submit" (Decode.succeed ( ClickedAddTag, True ))
+                ]
                 [ inputField "Tag Name *" model.newTagForm.name UpdateNewName
                 , inputField "Tag Value" model.newTagForm.value UpdateNewValue
-                , Button.new ClickedAddTag
+                , Button.new (Button.OnSubmit ClickedAddTag)
                     |> Button.withClass "bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 transition w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400"
                     |> Button.withIcon Icon.Add
                     |> Button.withTooltip "Add new tag"
@@ -251,7 +254,7 @@ globalErrorView =
 refreshButtonView : Html Msg
 refreshButtonView =
     Html.div [ Attrs.class "flex justify-end py-4" ]
-        [ Button.new ClickedReloadData
+        [ Button.new (Button.OnClick ClickedReloadData)
             |> Button.withClass "ml-4 p-2 rounded-full bg-gray-200 hover:bg-gray-300 transition"
             |> Button.withIcon Icon.Refresh
             |> Button.withTooltip "Reload data"
@@ -287,7 +290,7 @@ tagView tag =
                     ]
                     []
                 , Html.div [ Attrs.class "relative flex items-start h-9 box-border" ]
-                    [ Button.new (ClickedEditTagValue False nameValue)
+                    [ Button.new (ClickedEditTagValue False nameValue |> Button.OnClick)
                         |> Button.withClass "w-8 h-8 flex items-center justify-center bg-gray-400 text-white rounded-md hover:bg-green-600 transition"
                         |> Button.withIcon Icon.Checkmark
                         |> Button.withTooltip "Confirm edit for tag"
@@ -302,7 +305,7 @@ tagView tag =
                     ]
                     [ Html.text valueValue ]
                 , Html.div [ Attrs.class "relative flex items-start h-9 box-border" ]
-                    [ Button.new (ClickedEditTagValue True nameValue)
+                    [ Button.new (ClickedEditTagValue True nameValue |> Button.OnClick)
                         |> Button.withClass "w-8 h-8 flex items-center justify-center bg-gray-400 text-white rounded-md hover:bg-yellow-500 transition"
                         |> Button.withIcon Icon.Edit
                         |> Button.withTooltip "Edit tag value"
@@ -311,7 +314,7 @@ tagView tag =
                 ]
             )
         , Html.div [ Attrs.class "relative flex items-start h-9 box-border" ]
-            [ Button.new (ClickedRemoveTag nameValue)
+            [ Button.new (ClickedRemoveTag nameValue |> Button.OnClick)
                 |> Button.withClass "w-8 h-8 flex items-center justify-center bg-gray-400 text-white rounded-md hover:bg-red-600 transition"
                 |> Button.withIcon Icon.Remove
                 |> Button.withTooltip "Remove tag"
