@@ -93,6 +93,6 @@ view { msg, tooltipText, icon, label, class } =
             ++ clickAttrs
         )
         content
-        :: (Maybe.map (Tooltip.view tooltipId >> List.singleton) tooltipText |> Maybe.withDefault [])
+        :: (Maybe.map (\text -> [ Tooltip.view { id = tooltipId, text = text } ]) tooltipText |> Maybe.withDefault [])
     )
         |> Html.div [ Attrs.class "relative flex items-center group" ]
