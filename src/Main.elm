@@ -4,6 +4,7 @@ import Browser
 import Data
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Html.Attributes.Extra as AttrsExtra
 import Html.Events as Events
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline
@@ -360,20 +361,14 @@ inputField labelText editable toMsg =
         , Html.div [ Attrs.class wrapperClass ]
             [ Html.div [ Attrs.class controlBoxClass ]
                 [ Html.input
-                    ([ Attrs.id labelText
-                     , Attrs.value valueString
-                     , Events.onInput toMsg
-                     , Attrs.class inputClass
-                     , Attrs.maxlength 32
-                     , Attrs.required True
-                     ]
-                        ++ (if Editable.isEditable editable then
-                                []
-
-                            else
-                                [ Attrs.attribute "readonly" "true" ]
-                           )
-                    )
+                    [ Attrs.id labelText
+                    , Attrs.value valueString
+                    , Events.onInput toMsg
+                    , Attrs.class inputClass
+                    , Attrs.maxlength 32
+                    , Attrs.required True
+                    , Attrs.attribute "readonly" "true" |> AttrsExtra.attributeIf (not <| Editable.isEditable editable)
+                    ]
                     []
                 , if Editable.isEditable editable then
                     Html.text ""
