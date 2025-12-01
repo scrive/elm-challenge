@@ -1,4 +1,4 @@
-module Shared.Value exposing (Value, addError, fromValue, getMaybeError, isInvalid, isValid, toValue)
+module Shared.Value exposing (Value, addError, fromValue, getMaybeError, isInvalid, isValid, validValue)
 
 
 type Value a
@@ -6,8 +6,8 @@ type Value a
     | Invalid String a
 
 
-toValue : a -> Value a
-toValue =
+validValue : a -> Value a
+validValue =
     Valid
 
 

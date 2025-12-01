@@ -22,7 +22,7 @@ setEditable : Editable a -> Editable a
 setEditable editable =
     case editable of
         Readonly value ->
-            Editable <| Value.toValue value
+            Editable <| Value.validValue value
 
         Editable _ ->
             editable
@@ -45,14 +45,14 @@ valueFromEditable editable =
             value
 
         Readonly string ->
-            Value.toValue string
+            Value.validValue string
 
 
 updateIfEditable : a -> Editable a -> Editable a
 updateIfEditable newValue editable =
     case editable of
         Editable _ ->
-            Value.toValue newValue |> Editable
+            Value.validValue newValue |> Editable
 
         Readonly value ->
             Readonly value

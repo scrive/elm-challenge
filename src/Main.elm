@@ -39,8 +39,8 @@ init =
 
 emptyNewTagForm : Tag
 emptyNewTagForm =
-    { name = Value.toValue "" |> Editable.valueToEditable
-    , value = Value.toValue "" |> Editable.valueToEditable
+    { name = Value.validValue "" |> Editable.valueToEditable
+    , value = Value.validValue "" |> Editable.valueToEditable
     }
 
 
@@ -200,7 +200,7 @@ validateNameValue tags nameValue =
         Value.addError "Duplicate name" nameValue
 
     else
-        Value.toValue nameString
+        Value.validValue nameString
 
 
 header : String -> Html msg
