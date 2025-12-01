@@ -42,13 +42,8 @@ isValid value =
 
 
 isInvalid : Value a -> Bool
-isInvalid value =
-    case value of
-        Invalid _ _ ->
-            True
-
-        Valid _ ->
-            False
+isInvalid =
+    not << isValid
 
 
 addError : String -> Value a -> Value a
