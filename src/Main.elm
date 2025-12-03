@@ -223,7 +223,7 @@ view model =
                 [ Attrs.class "mb-6 grid grid-cols-1 md:grid-cols-[2fr_2fr_auto] gap-3 items-center w-full max-w-full"
                 , Events.preventDefaultOn "submit" (Decode.succeed ( ClickedAddTag, True ))
                 ]
-                [ inputField "Tag Name *" model.newTagForm.name UpdateNewName
+                [ inputField "Tag Name (required)" model.newTagForm.name UpdateNewName
                 , inputField "Tag Value" model.newTagForm.value UpdateNewValue
                 , Button.new (Button.OnSubmit ClickedAddTag)
                     |> Button.withClass "bg-blue-600 text-white rounded-full shadow hover:bg-blue-700 transition w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400"
