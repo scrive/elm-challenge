@@ -1,4 +1,4 @@
-module Shared.Editable exposing (Editable, isEditable, setEditable, setReadonly, toReadonly, updateIfEditable, valueFromEditable, valueToEditable)
+module Shared.Editable exposing (Editable, isEditable, setEditable, setReadonly, toReadonly, toValue, updateIfEditable, valueToEditable)
 
 import Shared.Value as Value exposing (Value)
 
@@ -38,8 +38,8 @@ setReadonly editable =
             editable
 
 
-valueFromEditable : Editable a -> Value a
-valueFromEditable editable =
+toValue : Editable a -> Value a
+toValue editable =
     case editable of
         Editable value ->
             value

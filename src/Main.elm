@@ -96,7 +96,7 @@ update msg model =
         ClickedAddTag ->
             let
                 validatedName =
-                    Editable.valueFromEditable model.newTagForm.name |> validateNameValue model.tags
+                    Editable.toValue model.newTagForm.name |> validateNameValue model.tags
             in
             if Value.isValid validatedName then
                 ( { model
@@ -124,10 +124,10 @@ update msg model =
         ClickedRemoveTag nameToRemove ->
             let
                 updatedTags =
-                    List.filter (.name >> Editable.valueFromEditable >> Value.fromValue >> (/=) nameToRemove) model.tags
+                    List.filter (.name >> Editable.toValue >> Value.fromValue >> (/=) nameToRemove) model.tags
 
                 validatedName =
-                    Editable.valueFromEditable model.newTagForm.name |> validateNameValue updatedTags
+                    Editable.toValue model.newTagForm.name |> validateNameValue updatedTags
 
                 updateName tag =
                     { tag | name = Editable.valueToEditable validatedName }
@@ -144,7 +144,7 @@ update msg model =
                 updatedTags =
                     List.map
                         (\tag ->
-                            if (Editable.valueFromEditable tag.name |> Value.fromValue) == nameString then
+                            if (Editable.toValue tag.name |> Value.fromValue) == nameString then
                                 { tag | value = Editable.updateIfEditable newValue tag.value }
 
                             else
@@ -159,7 +159,7 @@ update msg model =
                 updatedTags =
                     List.map
                         (\tag ->
-                            if (Editable.valueFromEditable tag.name |> Value.fromValue) == tagName then
+                            if (Editable.toValue tag.name |> Value.fromValue) == tagName then
                                 { tag
                                     | value =
                                         if isEditable then
@@ -196,7 +196,7 @@ validateNameValue tags nameValue =
     if String.isEmpty nameString then
         Value.addError "Name is required" nameValue
 
-    else if List.any (.name >> Editable.valueFromEditable >> Value.fromValue >> (==) nameString) tags then
+    else if List.any (.name >> Editable.toValue >> Value.fromValue >> (==) nameString) tags then
         Value.addError "Duplicate name" nameValue
 
     else
@@ -281,10 +281,10 @@ tagView : Tag -> Html Msg
 tagView tag =
     let
         valueValue =
-            Editable.valueFromEditable tag.value |> Value.fromValue
+            Editable.toValue tag.value |> Value.fromValue
 
         nameValue =
-            Editable.valueFromEditable tag.name |> Value.fromValue
+            Editable.toValue tag.name |> Value.fromValue
     in
     Html.div
         [ Attrs.class "flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm min-h-[52px] box-border"
@@ -342,10 +342,10 @@ inputField : String -> Editable.Editable String -> (String -> Msg) -> Html Msg
 inputField labelText editable toMsg =
     let
         valueString =
-            Editable.valueFromEditable editable |> Value.fromValue
+            Editable.toValue editable |> Value.fromValue
 
         errorText =
-            Editable.valueFromEditable editable |> Value.getMaybeError
+            Editable.toValue editable |> Value.getMaybeError
 
         borderClass =
             case errorText of
