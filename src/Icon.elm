@@ -6,7 +6,7 @@ import Svg as Svg
 import Svg.Attributes as SvgAttr
 
 
-saveIcon : Html msg
+saveIcon : Html Never
 saveIcon =
     Html.span [ Attributes.attribute "aria-hidden" "true" ]
         [ Svg.svg
@@ -34,7 +34,7 @@ saveIcon =
         ]
 
 
-pencilIcon : Html msg
+pencilIcon : Html Never
 pencilIcon =
     Html.span [ Attributes.attribute "aria-hidden" "true" ]
         [ Svg.svg
@@ -67,7 +67,7 @@ pencilIcon =
         ]
 
 
-trashIcon : Html msg
+trashIcon : Html Never
 trashIcon =
     Html.span [ Attributes.attribute "aria-hidden" "true" ]
         [ Svg.svg

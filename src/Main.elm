@@ -8,6 +8,7 @@ import Data
 import Html exposing (Html)
 import Html.Attributes as Attributes
 import Html.Events as Events
+import Html.Extra
 import Icon
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline
@@ -71,6 +72,7 @@ type Msg
     = NoOp
     | EditTag Int
     | DeleteTag Int
+    | ConfirmDeleteTag Int
     | CancelPendingDelete Int
     | OpenAddForm
     | CloseAddForm
@@ -98,50 +100,30 @@ update msg model =
                     ( model, Cmd.none )
 
         DeleteTag index ->
-            case model.pendingDeleteOnIndex of
-                Just pendingIndex ->
-                    if pendingIndex == index then
-                        if Just index == model.editingTagIndex then
-                            ( { model
-                                | tags = List.Extra.removeAt index model.tags
-                                , editingTagIndex = Nothing
-                                , editingTagValue = ""
-                                , ariaLiveMessage = Just "Tag deleted successfully"
-                                , pendingDeleteOnIndex = Nothing
-                              }
-                            , Cmd.none
-                            )
+            ( { model
+                | pendingDeleteOnIndex = Just index
+                , ariaLiveMessage = Just "Click delete again to confirm"
+              }
+            , Task.perform (\_ -> CancelPendingDelete index)
+                (Task.succeed ()
+                    |> Task.andThen (always (Process.sleep 3000))
+                )
+            )
 
-                        else
-                            ( { model
-                                | tags = List.Extra.removeAt index model.tags
-                                , ariaLiveMessage = Just "Tag deleted successfully"
-                                , pendingDeleteOnIndex = Nothing
-                              }
-                            , Cmd.none
-                            )
+        ConfirmDeleteTag index ->
+            let
+                updatedModel =
+                    { model
+                        | tags = List.Extra.removeAt index model.tags
+                        , ariaLiveMessage = Just "Tag deleted successfully"
+                        , pendingDeleteOnIndex = Nothing
+                    }
+            in
+            if Just index == model.editingTagIndex then
+                ( { updatedModel | editingTagIndex = Nothing, editingTagValue = "" }, Cmd.none )
 
-                    else
-                        ( { model
-                            | pendingDeleteOnIndex = Just index
-                            , ariaLiveMessage = Just "Click delete again to confirm"
-                          }
-                        , Task.perform (\_ -> CancelPendingDelete index)
-                            (Task.succeed ()
-                                |> Task.andThen (always (Process.sleep 3000))
-                            )
-                        )
-
-                Nothing ->
-                    ( { model
-                        | pendingDeleteOnIndex = Just index
-                        , ariaLiveMessage = Just "Click delete again to confirm"
-                      }
-                    , Task.perform (\_ -> CancelPendingDelete index)
-                        (Task.succeed ()
-                            |> Task.andThen (always (Process.sleep 3000))
-                        )
-                    )
+            else
+                ( updatedModel, Cmd.none )
 
         CancelPendingDelete index ->
             if model.pendingDeleteOnIndex == Just index then
@@ -299,18 +281,6 @@ formView { tags, newTag, editingTagIndex, editingTagValue, addTagError, shouldSh
 
 tagView : Int -> Tag -> Bool -> String -> Maybe Int -> Html Msg
 tagView index { name, value } isBeingEdited editingValue pendingDeleteIndex =
-    let
-        tagValue =
-            case value of
-                Just tagValue_ ->
-                    tagValue_
-
-                Nothing ->
-                    ""
-
-        isDeletePending =
-            pendingDeleteIndex == Just index
-    in
     Html.li [ Attributes.class "grid grid-cols-12 items-center bg-white even:bg-gray-50 p-2 sm:p-3 rounded-md shadow-sm", Attributes.attribute "role" "listitem" ]
         [ Html.div [ Attributes.class "col-span-5 flex items-center" ] [ Html.span [ Attributes.class "text-slate-800 text-sm sm:text-base break-all" ] [ Html.text name ] ]
         , if isBeingEdited then
@@ -335,7 +305,12 @@ tagView index { name, value } isBeingEdited editingValue pendingDeleteIndex =
 
           else
             Html.div [ Attributes.class "col-span-4 flex items-center justify-center" ]
-                [ Html.span [ Attributes.class "text-center text-slate-800 text-sm sm:text-base break-all" ] [ Html.text tagValue ] ]
+                [ Html.Extra.viewMaybe
+                    (\tagValue ->
+                        Html.span [ Attributes.class "text-center text-slate-800 text-sm sm:text-base break-all" ] [ Html.text tagValue ]
+                    )
+                    value
+                ]
         , Html.div [ Attributes.class "col-span-3 flex flex-col sm:flex-row gap-1 sm:gap-3 justify-end items-end" ]
             [ if isBeingEdited then
                 Button.new
@@ -357,13 +332,13 @@ tagView index { name, value } isBeingEdited editingValue pendingDeleteIndex =
                     |> Button.withOnClick (EditTag index)
                     |> Button.withIconLeft (Just Icon.pencilIcon)
                     |> Button.view
-            , if isDeletePending then
+            , if pendingDeleteIndex == Just index then
                 Button.new
                     { class = "bg-red-600 text-white font-bold py-1 px-2 sm:py-2 sm:px-4 rounded border border-red-700 hover:bg-red-700 transition text-xs sm:text-sm animate-pulse"
                     , label = "Confirm delete"
                     }
                     |> Button.withAriaLabel ("Click again to confirm deleting tag " ++ name)
-                    |> Button.withOnClick (DeleteTag index)
+                    |> Button.withOnClick (ConfirmDeleteTag index)
                     |> Button.view
 
               else

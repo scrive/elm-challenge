@@ -2,15 +2,17 @@ module Button exposing (new, view, withAriaLabel, withFormId, withIconLeft, with
 
 import Html as Html exposing (Html)
 import Html.Attributes as Attributes
+import Html.Attributes.Extra
 import Html.Events as Events
+import Html.Extra
 
 
 type Button msg
     = Settings
         { class : String
         , label : String
-        , leftIcon : Maybe (Html msg)
-        , rightIcon : Maybe (Html msg)
+        , leftIcon : Maybe (Html Never)
+        , rightIcon : Maybe (Html Never)
         , onClickMsg : Maybe msg
         , buttonType : String
         , additionalAttributes : List (Html.Attribute msg)
@@ -58,12 +60,12 @@ withOnClick msg (Settings model) =
     Settings { model | onClickMsg = Just msg }
 
 
-withIconLeft : Maybe (Html msg) -> Button msg -> Button msg
+withIconLeft : Maybe (Html Never) -> Button msg -> Button msg
 withIconLeft icon (Settings model) =
     Settings { model | leftIcon = icon }
 
 
-withIconRight : Maybe (Html msg) -> Button msg -> Button msg
+withIconRight : Maybe (Html Never) -> Button msg -> Button msg
 withIconRight icon (Settings model) =
     Settings { model | rightIcon = icon }
 
@@ -74,31 +76,16 @@ withType buttonType (Settings model) =
 
 
 view : Button msg -> Html msg
-view (Settings model) =
+view (Settings { class, buttonType, additionalAttributes, onClickMsg, leftIcon, rightIcon, label }) =
     Html.button
-        ([ Attributes.class (model.class ++ " flex items-center justify-center gap-2")
-         , Attributes.type_ model.buttonType
+        ([ Attributes.class (class ++ " flex items-center justify-center gap-2")
+         , Attributes.type_ buttonType
+         , Html.Attributes.Extra.attributeMaybe (\msg -> Events.onClick msg) onClickMsg
          ]
-            ++ model.additionalAttributes
-            ++ (case model.onClickMsg of
-                    Just msg ->
-                        [ Events.onClick msg ]
-
-                    Nothing ->
-                        []
-               )
+            ++ additionalAttributes
         )
-        [ case model.leftIcon of
-            Just icon ->
-                icon
-
-            Nothing ->
-                Html.text ""
-        , Html.text model.label
-        , case model.rightIcon of
-            Just icon ->
-                icon
-
-            Nothing ->
-                Html.text ""
+    <|
+        [ Html.Extra.viewMaybe Html.Extra.static leftIcon
+        , Html.text label
+        , Html.Extra.viewMaybe Html.Extra.static rightIcon
         ]

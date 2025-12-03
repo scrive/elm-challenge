@@ -4,13 +4,9 @@ import Button
 import Html exposing (Html)
 import Html.Attributes as Attributes
 import Html.Events as Events
+import Html.Extra
 import Icon
 import Types exposing (Tag)
-
-
-requiredAsterisk : Html msg
-requiredAsterisk =
-    Html.span [ Attributes.class "text-red-500", Attributes.attribute "aria-hidden" "true" ] [ Html.text "\u{200A}*\u{00A0}" ]
 
 
 type alias FormModel msg =
@@ -23,17 +19,22 @@ type alias FormModel msg =
     }
 
 
+requiredAsteriskView : Html msg
+requiredAsteriskView =
+    Html.span [ Attributes.class "text-red-500", Attributes.attribute "aria-hidden" "true" ] [ Html.text "\u{200A}*\u{00A0}" ]
+
+
+errorMessageView : String -> Html msg
+errorMessageView errorMessage =
+    Html.div [ Attributes.class "p-3 bg-rose-100 border border-rose-400 text-rose-700 rounded" ] [ Html.text errorMessage ]
+
+
 view : FormModel msg -> Html msg
 view { newTag, formErrorMessage, newTagNameInputMsg, newTagValueInputMsg, addTagMsg, cancelMsg } =
     Html.section [ Attributes.class "w-full max-w-lg mx-auto flex flex-col gap-4 p-4 border border-gray-200 rounded" ]
         [ Html.h3 [ Attributes.class "text-lg font-bold" ] [ Html.text "Add a new tag" ]
-        , case formErrorMessage of
-            Just error ->
-                Html.div [ Attributes.class "p-3 bg-rose-100 border border-rose-400 text-rose-700 rounded" ]
-                    [ Html.text error ]
-
-            Nothing ->
-                Html.text ""
+        , Html.p [ Attributes.class "text-sm text-gray-600" ] [ Html.text "* Required fields" ]
+        , Html.Extra.viewMaybe errorMessageView formErrorMessage
         , Html.form
             [ Attributes.id "add-tag-form"
             , Attributes.class "flex flex-col gap-4"
@@ -42,7 +43,7 @@ view { newTag, formErrorMessage, newTagNameInputMsg, newTagValueInputMsg, addTag
             [ Html.label [ Attributes.class "flex flex-col gap-1 text-sm font-medium" ]
                 [ Html.p []
                     [ Html.text "Tag name"
-                    , requiredAsterisk
+                    , requiredAsteriskView
                     ]
                 , Html.input
                     [ Attributes.type_ "text"
