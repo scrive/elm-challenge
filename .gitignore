@@ -1,2 +1,5 @@
 node_modules
 elm-stuff
+
+dist
+.DS_Store
